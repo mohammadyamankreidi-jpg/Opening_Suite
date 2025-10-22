@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShiftStart – Schoonmaak klussen</title>
+  
+  <style>
+    :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
+    .title{margin:0 0 12px;font-size:clamp(20px,3.2vw,30px)}
+    .grid{display:grid;gap:14px}
+    .btn{display:block;width:100%;text-align:center;text-decoration:none;color:var(--text);background:#111722;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-weight:700}
+    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+    .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
+    .tools{display:flex;gap:8px;flex-wrap:wrap}
+    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
+    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
+    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
+    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    li.item{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
+    li.item.done{opacity:.6;text-decoration:line-through}
+    input[type="checkbox"]{transform:scale(1.2)}
+    .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
+    footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+  </style>
+
+  
+  <script>
+    function makeChecklist({KEY, defaultItems}){
+      const elList = document.getElementById('list');
+      const elNew = document.getElementById('newItem');
+      function save(d){ localStorage.setItem(KEY, JSON.stringify(d)); }
+      function load(){
+        const raw = localStorage.getItem(KEY);
+        if(!raw){ const init=(defaultItems||[]).map(t=>({text:t,done:false})); save(init); return init; }
+        try{ return JSON.parse(raw) }catch(e){ save([]); return []; }
+      }
+      function render(){
+        const data = load();
+        elList.innerHTML = '';
+        data.forEach((it,i)=>{
+          const li = document.createElement('li');
+          li.className = 'item' + (it.done ? ' done' : '');
+          const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=it.done;
+          cb.addEventListener('change', ()=>toggle(i));
+          const span = document.createElement('div'); span.textContent = it.text; span.style.flex='1';
+          span.addEventListener('click', ()=>toggle(i));
+          li.append(cb,span); elList.appendChild(li);
+        });
+      }
+      function toggle(i){ const d=load(); d[i].done=!d[i].done; save(d); render(); }
+      function add(t){ const c=(t||'').trim(); if(!c) return; const d=load(); d.push({text:c,done:false}); save(d); render(); }
+      function reset(){ const d=load().map(x=>({...x,done:false})); save(d); render(); }
+      function seed(){ const init=(defaultItems||[]).map(t=>({text:t,done:false})); save(init); render(); }
+      document.getElementById('btnAdd').onclick=()=>{ add(elNew.value); elNew.value=''; elNew.focus(); };
+      elNew.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); add(elNew.value); elNew.value=''; }});
+      document.getElementById('btnReset').onclick=reset;
+      document.getElementById('btnSeed').onclick=seed;
+      render();
+    }
+  </script>
+
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav"><a href="index.html">← Terug</a></nav>
+    <header class="panel card">
+      <div class="brand">
+        <div class="h">ShiftStart</div>
+        <div class="s">Schoonmaak klussen</div>
+      </div>
+      <div class="tools">
+        <button id="btnSeed" title="Zet standaardlijst terug">Herstel lijst</button>
+        <button id="btnReset" title="Zet alle vinkjes uit">Alles herstellen</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="add">
+        <input id="newItem" type="text" placeholder="Nieuw item toevoegen..." />
+        <button id="btnAdd">Toevoegen</button>
+      </div>
+      <ul id="list"></ul>
+      <p class="hint">Klik op de tekst of het vinkje om af te strepen.</p>
+    </div>
+
+    <footer class="note">ShiftStart · lokaal opgeslagen</footer>
+  </div>
+
+  <script>
+    makeChecklist({
+      KEY: "shiftstart_schoonmaak",
+      defaultItems: []
+    });
+  </script>
+</body>
+</html>
