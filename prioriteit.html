@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShiftStart – Prioriteit</title>
+  <style>
+    :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
+    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+    .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
+    .tools{display:flex;gap:8px;flex-wrap:wrap}
+    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
+    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
+    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
+    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    li.item{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
+    li.item.done{opacity:.6;text-decoration:line-through}
+    input[type="checkbox"]{transform:scale(1.2)}
+    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
+    footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav"><a href="index.html">← Terug</a></nav>
+    <header class="panel card">
+      <div class="brand"><div class="h">ShiftStart</div><div class="s">Prioriteit</div></div>
+      <div class="tools"><button id="btnSeed">Herstel lijst</button><button id="btnReset">Alles herstellen</button></div>
+    </header>
+
+    <div class="card">
+      <div class="add"><input id="newItem" type="text" placeholder="Nieuw item toevoegen..." /><button id="btnAdd">Toevoegen</button></div>
+      <ul id="list"></ul>
+      <p class="hint">Klik op de tekst of het vinkje om af te strepen. Synchroniseert voor iedereen.</p>
+    </div>
+    <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+    import { firebaseConfig } from "./firebase-config.js";
+
+    // Firebase init
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const auth = getAuth(app);
+    await signInAnonymously(auth);
+
+    // UI
+    const elList = document.getElementById('list');
+    const elNew  = document.getElementById('newItem');
+    const seedItems = [
+      "15:15 Afzuiging aan",
+      "15:15 Fietsen naar buiten en Dweilen"
+    ];
+    const DOC_ID = "shiftstart_prioriteit"; // zelfde naam als in Firestore
+
+    function render(items){
+      elList.innerHTML = "";
+      items.forEach((it, i)=>{
+        const li = document.createElement('li');
+        li.className = "item" + (it.done ? " done" : "");
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=it.done;
+        cb.addEventListener('change', ()=>toggle(i));
+        const span = document.createElement('div'); span.textContent = it.text; span.style.flex='1';
+        span.addEventListener('click', ()=>toggle(i));
+        li.append(cb,span); elList.appendChild(li);
+      });
+    }
+    async function save(items){
+      await setDoc(doc(db,"lists",DOC_ID),{items,updatedAt:serverTimestamp()},{merge:true});
+    }
+
+    let current = [];
+    onSnapshot(doc(db,"lists",DOC_ID), snap=>{
+      if(snap.exists()){ current = snap.data().items || []; }
+      else { current = seedItems.map(t=>({text:t,done:false})); save(current); }
+      render(current);
+    });
+
+    function toggle(i){ const next=current.slice(); next[i]={...next[i],done:!next[i].done}; save(next); }
+    function add(t){ t=(t||"").trim(); if(!t) return; save([...current,{text:t,done:false}]); }
+    function reset(){ save(current.map(x=>({...x,done:false}))); }
+    function seed(){ save(seedItems.map(t=>({text:t,done:false}))); }
+
+    document.getElementById('btnAdd').onclick = ()=>{ add(elNew.value); elNew.value=""; elNew.focus(); };
+    elNew.addEventListener('keydown', e=>{ if(e.key==="Enter"){ e.preventDefault(); add(elNew.value); elNew.value=""; }});
+    document.getElementById('btnReset').onclick = reset;
+    document.getElementById('btnSeed').onclick  = seed;
+  </script>
+</body>
+</html>
