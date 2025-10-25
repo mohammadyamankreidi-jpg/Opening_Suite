@@ -23,6 +23,7 @@
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+    li.item.dragging { opacity: .6; outline: 1px dashed #6aa0ff; }
   </style>
 </head>
 <body>
@@ -40,60 +41,190 @@
     </div>
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+  import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+  import { firebaseConfig } from "./firebase-config.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-    import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-    import { firebaseConfig } from "./firebase-config.js";
+  // === INIT ===
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
 
-    // Firebase init
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
-    const auth = getAuth(app);
-    await signInAnonymously(auth);
+  const DOC_ID = "shiftstart_prioriteit";
 
-    // UI
-    const elList = document.getElementById('list');
-    const elNew  = document.getElementById('newItem');
-    const seedItems = [
-      "15:15 Afzuiging aan",
-      "15:15 Fietsen naar buiten en Dweilen"
-    ];
-    const DOC_ID = "shiftstart_prioriteit"; // zelfde naam als in Firestore
+  // === UI refs ===
+  const elList  = document.getElementById("list");
+  const elNew   = document.getElementById("newItem");
+  const btnAdd  = document.getElementById("btnAdd");
+  const btnSeed = document.getElementById("btnSeed");
+  const btnReset= document.getElementById("btnReset");
 
-    function render(items){
-      elList.innerHTML = "";
-      items.forEach((it, i)=>{
-        const li = document.createElement('li');
-        li.className = "item" + (it.done ? " done" : "");
-        const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=it.done;
-        cb.addEventListener('change', ()=>toggle(i));
-        const span = document.createElement('div'); span.textContent = it.text; span.style.flex='1';
-        span.addEventListener('click', ()=>toggle(i));
-        li.append(cb,span); elList.appendChild(li);
-      });
+  // Zorg dat er een tools-balk is
+  let tools = document.querySelector(".tools");
+  if (!tools) {
+    tools = document.createElement("div");
+    tools.className = "tools";
+    (elList?.parentElement || document.body).insertBefore(tools, elList);
+  }
+  const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+  const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
+  tools.append(btnEdit, btnView);
+
+  // === STATE ===
+  let dataMap = {};   // { "Tekst": boolean }
+  let order   = [];   // ["Tekst A","Tekst B",...]
+  let canEdit = false;
+
+  // Auth: e-mail inloggen = bewerken; anoniem = alleen afvinken
+  onAuthStateChanged(auth, user => {
+    canEdit = !!user && !!user.email;
+    updateUI();
+    render();
+  });
+
+  // Altijd anoniem ingelogd (zodat iedereen kan lezen/afvinken)
+  try { await signInAnonymously(auth); } catch (e) {}
+
+  // Live Firestore data
+  onSnapshot(doc(db, "lists", DOC_ID), snap => {
+    if (snap.exists()) {
+      const d = snap.data();
+      dataMap = d.items || {};
+      order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
+      // keys die nog niet in order staan, achteraan toevoegen
+      Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
+    } else {
+      dataMap = {}; order = [];
+      save({ items: dataMap, order });
     }
-    async function save(items){
-      await setDoc(doc(db,"lists",DOC_ID),{items,updatedAt:serverTimestamp()},{merge:true});
-    }
+    render();
+  });
 
-    let current = [];
-    onSnapshot(doc(db,"lists",DOC_ID), snap=>{
-      if(snap.exists()){ current = snap.data().items || []; }
-      else { current = seedItems.map(t=>({text:t,done:false})); save(current); }
-      render(current);
+  function save(payload) {
+    return setDoc(doc(db, "lists", DOC_ID),
+      { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+  }
+
+  // ====== RENDER + DRAG ======
+  function render() {
+    if (!elList) return;
+    elList.innerHTML = "";
+    const labels = order.length ? order.slice() : Object.keys(dataMap);
+
+    labels.forEach((label, idx) => {
+      const li = document.createElement("li");
+      li.className = "item" + (dataMap[label] ? " done" : "");
+      li.dataset.index = String(idx);
+
+      // checkbox
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = !!dataMap[label];
+      cb.addEventListener("change", () => toggle(label));
+
+      // tekst
+      const span = document.createElement("div");
+      span.textContent = label; span.style.flex = "1";
+      span.addEventListener("click", () => toggle(label));
+
+      // drag-handle (alleen in bewerk-modus)
+      if (canEdit) {
+        li.draggable = true;
+        const handle = document.createElement("div");
+        handle.textContent = "⋮⋮";
+        handle.title = "Versleep om te ordenen";
+        handle.style.cursor = "grab";
+        handle.style.opacity = "0.8";
+
+        li.addEventListener("dragstart", e => {
+          li.classList.add("dragging");
+          e.dataTransfer.setData("text/plain", String(idx));
+        });
+        li.addEventListener("dragend", () => li.classList.remove("dragging"));
+        li.addEventListener("dragover", e => e.preventDefault());
+        li.addEventListener("drop", e => {
+          e.preventDefault();
+          const from = Number(e.dataTransfer.getData("text/plain"));
+          const to   = Number(li.dataset.index);
+          if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+            const next = order.slice();
+            const [moved] = next.splice(from, 1);
+            next.splice(to, 0, moved);
+            order = next;
+            render();       // visueel bijwerken
+            save({ order }); // volgorde opslaan
+          }
+        });
+        li.append(cb, span, handle);
+      } else {
+        li.append(cb, span);
+      }
+
+      elList.appendChild(li);
     });
+  }
 
-    function toggle(i){ const next=current.slice(); next[i]={...next[i],done:!next[i].done}; save(next); }
-    function add(t){ t=(t||"").trim(); if(!t) return; save([...current,{text:t,done:false}]); }
-    function reset(){ save(current.map(x=>({...x,done:false}))); }
-    function seed(){ save(seedItems.map(t=>({text:t,done:false}))); }
+  // ====== ACTIES ======
+  function toggle(label) {
+    const next = { ...dataMap, [label]: !dataMap[label] };
+    save({ items: next });
+  }
 
-    document.getElementById('btnAdd').onclick = ()=>{ add(elNew.value); elNew.value=""; elNew.focus(); };
-    elNew.addEventListener('keydown', e=>{ if(e.key==="Enter"){ e.preventDefault(); add(elNew.value); elNew.value=""; }});
-    document.getElementById('btnReset').onclick = reset;
-    document.getElementById('btnSeed').onclick  = seed;
-  </script>
+  function addItem(t) {
+    if (!canEdit) return;
+    t = (t || "").trim();
+    if (!t || (t in dataMap)) return;
+    const nextMap = { ...dataMap, [t]: false };
+    const nextOrder = order.concat(t);
+    save({ items: nextMap, order: nextOrder });
+  }
+
+  function resetAll() {
+    if (!canEdit) return;
+    const next = Object.fromEntries(Object.keys(dataMap).map(k => [k, false]));
+    save({ items: next });
+  }
+
+  function seedAll() {
+    if (!canEdit) return;
+    const seed = {
+      "15:15 Afzuiging aan": false,
+      "15:15 Fietsen naar buiten en Dweilen": false
+    };
+    save({ items: seed, order: Object.keys(seed) });
+  }
+
+  // UI events
+  btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value = ""; elNew.focus(); });
+  elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value = ""; }});
+  btnReset&& (btnReset.onclick = resetAll);
+  btnSeed && (btnSeed.onclick  = seedAll);
+
+  // Bewerk-modus schakelen
+  btnEdit.onclick = async () => {
+    const email = prompt("Email voor bewerken:");
+    const pwd   = prompt("Wachtwoord:");
+    if (!email || !pwd) return;
+    try { await signInWithEmailAndPassword(auth, email, pwd); alert("Bewerk-modus aan"); }
+    catch (e) { alert("Inloggen mislukt"); }
+  };
+  btnView.onclick = async () => {
+    try { await signOut(auth); } catch (e) {}
+    await signInAnonymously(auth);
+    alert("Alleen afvinken");
+  };
+
+  function updateUI() {
+    [btnAdd, btnSeed, btnReset, elNew].forEach(el => {
+      if (!el) return;
+      el.disabled = !canEdit;
+      el.style.opacity = canEdit ? 1 : 0.6;
+      el.style.pointerEvents = canEdit ? "auto" : "none";
+    });
+  }
+</script>
+ 
+
 </body>
 </html>
