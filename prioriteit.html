@@ -202,19 +202,25 @@
   btnSeed && (btnSeed.onclick  = seedAll);
 
   // Bewerk-modus schakelen
-  btnEdit.onclick = async () => {
-    const email = prompt("Email voor bewerken:");
-    const pwd   = prompt("Wachtwoord:");
-    if (!email || !pwd) return;
-    try { await signInWithEmailAndPassword(auth, email, pwd); alert("Bewerk-modus aan"); }
-    catch (e) { alert("Inloggen mislukt"); }
-  };
-  btnView.onclick = async () => {
-    try { await signOut(auth); } catch (e) {}
-    await signInAnonymously(auth);
-    alert("Alleen afvinken");
-  };
+ btnEdit.onclick = async () => {
+  const email = prompt("Email voor bewerken:");
+  const pwd   = prompt("Wachtwoord:");
+  if (!email || !pwd) return;
+  try {
+    // eerst anonieme sessie verlaten
+    try { await signOut(auth); } catch(e){}
+    await signInWithEmailAndPassword(auth, email, pwd);
+    alert("Bewerk-modus aan ✅");
+  } catch (e) {
+    alert("Inloggen mislukt: " + (e.code || e.message));
+  }
+};
 
+btnView.onclick = async () => {
+  try { await signOut(auth); } catch(e){}
+  await signInAnonymously(auth);
+  alert("Alleen afvinken 🔒");
+};
   function updateUI() {
     [btnAdd, btnSeed, btnReset, elNew].forEach(el => {
       if (!el) return;
