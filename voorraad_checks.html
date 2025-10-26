@@ -92,11 +92,21 @@
     <footer class="note">ShiftStart · lokaal opgeslagen</footer>
   </div>
 
-  <script>
-    makeChecklist({
-      KEY: "shiftstart_voorraad",
-      defaultItems: ['Kleine bakjes voor saus', 'Milkshake bekers en deksels', 'Rietjes', 'Sauzen check', 'Servetten', 'Siropen milkshake', 'Thee check', 'Verpakking en snackzakken', 'Vriezers bijvullen', 'Vuilniszak', 'Wraps', 'Zout', 'Bubble tea bekers', 'Popping', 'Siropen en popping', 'Salade spullen check', 'Dranken bijvullen', 'Genoeg wisselgeld', 'Groente check', 'Houdertjes', 'Inpakzakken', 'Kaassaus check', 'Kassabon']
-    });
-  </script>
+  <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+import { firebaseConfig } from "./firebase-config.js?v=11";
+
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+// elk document krijgt zijn eigen ID in Firestore
+const DOC_ID = "voorraad_checks";
+
+// hier komt exact dezelfde code als bij prioriteit
+// (dezelfde structuur voor taken, vinkjes, opslaan, sync enz.)
+</script>
 </body>
 </html>
