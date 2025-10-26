@@ -234,7 +234,6 @@ function updateUI(){
 }
   // === INIT ===
   const app  = initializeApp(firebaseConfig);
-  alert("API:" + (firebaseConfig?.apiKey || "leeg"));
   const db   = getFirestore(app);
   const auth = getAuth(app);
 
@@ -295,62 +294,66 @@ function updateUI(){
 
   // ====== RENDER + DRAG ======
   function render() {
-    if (!elList) return;
-    elList.innerHTML = "";
-    const labels = order.length ? order.slice() : Object.keys(dataMap);
+  if (!elList) return;
+  elList.innerHTML = "";
+  const labels = order.length ? order.slice() : Object.keys(dataMap);
 
-    labels.forEach((label, idx) => {
-      const li = document.createElement("li");
-      li.className = "item" + (dataMap[label] ? " done" : "");
-      li.dataset.index = String(idx);
+  labels.forEach((label, idx) => {
+    const li = document.createElement("li");
+    li.className = "item" + (dataMap[label] ? " done" : "");
+    li.dataset.index = String(idx);
 
-      // checkbox
-      const cb = document.createElement("input");
-      cb.type = "checkbox"; cb.checked = !!dataMap[label];
-      cb.addEventListener("change", () => toggle(label));
+    // checkbox
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!dataMap[label];
+    cb.addEventListener("change", () => toggle(label));
 
-      // tekst
-      const span = document.createElement("div");
-      span.textContent = label; span.style.flex = "1";
-      span.addEventListener("click", () => toggle(label));
+    // tekst (voor rode lijn via CSS)
+    const span = document.createElement("div");
+    span.className = "label";
+    span.textContent = label;
+    span.style.flex = "1";
+    span.addEventListener("click", () => toggle(label));
 
-      // drag-handle (alleen in bewerk-modus)
-      if (canEdit) {
-        li.draggable = true;
-        const handle = document.createElement("div");
-        handle.textContent = "⋮⋮";
-        handle.title = "Versleep om te ordenen";
-        handle.style.cursor = "grab";
-        handle.style.opacity = "0.8";
+    if (canEdit) {
+      // prullenbakje
+      const trash = document.createElement("button");
+      trash.className = "trash";
+      trash.title = "Verwijderen";
+      trash.textContent = "🗑️";
+      trash.onclick = () => removeItem(label);
 
-        li.addEventListener("dragstart", e => {
-          li.classList.add("dragging");
-          e.dataTransfer.setData("text/plain", String(idx));
-        });
-        li.addEventListener("dragend", () => li.classList.remove("dragging"));
-        li.addEventListener("dragover", e => e.preventDefault());
-        li.addEventListener("drop", e => {
-          e.preventDefault();
-          const from = Number(e.dataTransfer.getData("text/plain"));
-          const to   = Number(li.dataset.index);
-          if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
-            const next = order.slice();
-            const [moved] = next.splice(from, 1);
-            next.splice(to, 0, moved);
-            order = next;
-            render();       // visueel bijwerken
-            save({ order }); // volgorde opslaan
-          }
-        });
-        li.append(cb, span, handle);
-      } else {
-        li.append(cb, span);
-      }
+      // drag & drop
+      li.draggable = true;
+      li.addEventListener("dragstart", e => {
+        li.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", String(idx));
+      });
+      li.addEventListener("dragend", () => li.classList.remove("dragging"));
+      li.addEventListener("dragover", e => e.preventDefault());
+      li.addEventListener("drop", e => {
+        e.preventDefault();
+        const from = Number(e.dataTransfer.getData("text/plain"));
+        const to   = Number(li.dataset.index);
+        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+          const next = order.slice();
+          const [moved] = next.splice(from, 1);
+          next.splice(to, 0, moved);
+          order = next;
+          render();
+          save({ order });  // volgorde opslaan
+        }
+      });
 
-      elList.appendChild(li);
-    });
-  }
+      li.append(cb, span, trash);
+    } else {
+      li.append(cb, span);
+    }
 
+    elList.appendChild(li);
+  });
+}
+    
   // ====== ACTIES ======
   function toggle(label) {
     const next = { ...dataMap, [label]: !dataMap[label] };
@@ -365,12 +368,28 @@ function updateUI(){
     const nextOrder = order.concat(t);
     save({ items: nextMap, order: nextOrder });
   }
+  function removeItem(label){
+  if (!canEdit) return;
+  const nextMap = { ...dataMap }; 
+  delete nextMap[label];
+  const nextOrder = order.filter(x => x !== label);
+  save({ items: nextMap, order: nextOrder });
+}
+  
+  
 
   function resetAll() {
     if (!canEdit) return;
     const next = Object.fromEntries(Object.keys(dataMap).map(k => [k, false]));
     save({ items: next });
   }
+  function removeItem(label){
+  if (!canEdit) return;
+  const nextMap = { ...dataMap }; 
+  delete nextMap[label];
+  const nextOrder = order.filter(x => x !== label);
+  save({ items: nextMap, order: nextOrder });
+}
 
   function seedAll() {
     if (!canEdit) return;
@@ -380,7 +399,13 @@ function updateUI(){
     };
     save({ items: seed, order: Object.keys(seed) });
   }
-
+function removeItem(label){
+  if (!canEdit) return;
+  const nextMap = { ...dataMap }; 
+  delete nextMap[label];
+  const nextOrder = order.filter(x => x !== label);
+  save({ items: nextMap, order: nextOrder });
+}
   // UI events
   btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value = ""; elNew.focus(); });
   elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value = ""; }});
