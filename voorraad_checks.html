@@ -27,6 +27,20 @@
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    li.item { display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #262c39; border-radius:10px; }
+li.item .label { flex:1; cursor:pointer; }
+li.item.done .label{
+  text-decoration: line-through;
+  text-decoration-color:#ff3b30;
+  text-decoration-thickness: 3px;
+}
+li.item .trash{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border:1px solid #444; border-radius:6px;
+  background:#151a23; cursor:pointer; opacity:.85;
+}
+li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
+.tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
   </style>
 
   
