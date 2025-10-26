@@ -57,5 +57,129 @@ li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
       <footer class="note">Opslag via localStorage · Werkt offline</footer>
     </div>
   </div>
+  <div class="tools"></div>
+<div class="add" id="addHome" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin:8px 0;">
+  <input id="homeTitle" type="text" placeholder="Knopnaam (bijv. Prioriteit)" />
+  <input id="homeHref"  type="text" placeholder="Link (bijv. prioriteit.html)" />
+  <button id="homeAdd">➕</button>
+</div>
+<ul id="homeList"></ul>
+<p class="hint">Opslag via Firestore • gedeeld voor iedereen</p>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+import { firebaseConfig } from "./firebase-config.js?v=12";
+
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+const DOC_ID = "home_links"; // Firestore: lists/home_links
+
+const elList   = document.getElementById("homeList");
+const elTitle  = document.getElementById("homeTitle");
+const elHref   = document.getElementById("homeHref");
+const btnAdd   = document.getElementById("homeAdd");
+
+let tools = document.querySelector(".tools");
+const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen bekijken";
+tools.append(btnEdit, btnView);
+
+let canEdit = false;
+let items = {};   // {id: {title,href}}
+let order = [];   // [id, ...]
+
+onAuthStateChanged(auth, user => { canEdit = !!user && !!user.email; updateUI(); render(); });
+try{ await signInAnonymously(auth);}catch(e){}
+
+onSnapshot(doc(db,"lists",DOC_ID), snap=>{
+  if(snap.exists()){
+    const d = snap.data(); items = d.items||{}; order = Array.isArray(d.order)? d.order.filter(id=>items[id]) : Object.keys(items);
+  } else {
+    items = {
+      prior: {title:"Prioriteit", href:"prioriteit.html"},
+      voorraad: {title:"Voorraad & Checks", href:"voorraad_checks.html"},
+      schoon: {title:"Schoonmaak klussen", href:"schoonmaak_klussen.html"}
+    };
+    order = ["prior","voorraad","schoon"];
+    save({items, order});
+  }
+  render();
+});
+
+function save(payload){ return setDoc(doc(db,"lists",DOC_ID),{...payload,updatedAt:serverTimestamp()},{merge:true}); }
+
+function render(){
+  elList.innerHTML = "";
+  order.forEach((id, idx)=>{
+    const it = items[id]; if(!it) return;
+    const li = document.createElement("li"); li.className = "item"; li.dataset.index=String(idx);
+
+    const a = document.createElement("a"); a.className="label"; a.textContent = it.title; a.href = it.href;
+    if (canEdit) a.target="_self";
+
+    if (canEdit){
+      const trash = document.createElement("button"); trash.className="trash"; trash.textContent="🗑️";
+      trash.onclick = ()=> removeItem(id);
+
+      li.draggable = true;
+      li.addEventListener("dragstart", e=>{ li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+      li.addEventListener("dragend",   ()=> li.classList.remove("dragging"));
+      li.addEventListener("dragover",  e=> e.preventDefault());
+      li.addEventListener("drop", e=>{
+        e.preventDefault();
+        const from = Number(e.dataTransfer.getData("text/plain"));
+        const to   = Number(li.dataset.index);
+        if(Number.isFinite(from)&&Number.isFinite(to)&&from!==to){
+          const next = order.slice(); const [m] = next.splice(from,1); next.splice(to,0,m);
+          order = next; render(); save({order});
+        }
+      });
+
+      li.append(a, trash);
+    } else {
+      li.append(a);
+    }
+
+    elList.appendChild(li);
+  });
+}
+
+btnAdd.onclick = ()=>{
+  if(!canEdit) return;
+  const title = (elTitle.value||"").trim();
+  const href  = (elHref.value||"").trim();
+  if(!title || !href) return;
+  const id = (Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  const nextItems = {...items, [id]:{title, href}};
+  const nextOrder = order.concat(id);
+  save({items: nextItems, order: nextOrder});
+  elTitle.value=""; elHref.value="";
+};
+
+function removeItem(id){
+  if(!canEdit) return;
+  const nextItems = {...items}; delete nextItems[id];
+  const nextOrder = order.filter(x=>x!==id);
+  save({items: nextItems, order: nextOrder});
+}
+
+// slot
+btnEdit.onclick = async ()=>{
+  const email = prompt("Email:");
+  const pwd   = prompt("Wachtwoord:");
+  if(!email||!pwd) return;
+  try{ try{await signOut(auth);}catch(e){}; await signInWithEmailAndPassword(auth,email,pwd); alert("Bewerk-modus aan ✅"); }
+  catch(e){ alert("Inloggen mislukt: "+(e.code||e.message)); }
+};
+btnView.onclick = async ()=>{ try{await signOut(auth);}catch(e){}; await signInAnonymously(auth); alert("Alleen bekijken 🔒"); };
+
+function updateUI(){
+  document.getElementById("addHome").style.display = canEdit ? "grid" : "none";
+}
+</script>
 </body>
 </html>
