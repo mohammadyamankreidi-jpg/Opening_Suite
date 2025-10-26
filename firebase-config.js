@@ -1,8 +1,9 @@
-export const firebaseConfig = {
-  apiKey: "AIzaSyD...JOUW_SLEUTEL...",
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDSiAVpmm7E4M9RQz7EWWCaTNwFUiIkKHY",
   authDomain: "shiftstart-e0de1.firebaseapp.com",
   projectId: "shiftstart-e0de1",
-  storageBucket: "shiftstart-e0de1.appspot.com",
+  storageBucket: "shiftstart-e0de1.firebasestorage.app",
   messagingSenderId: "813927560829",
   appId: "1:813927560829:web:664de447ca9fd52428e314"
 };
