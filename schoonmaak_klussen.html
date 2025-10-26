@@ -105,22 +105,183 @@ li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
 
     <footer class="note">ShiftStart · lokaal opgeslagen</footer>
   </div>
-
- <script type="module">
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js?v=11";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+import { firebaseConfig } from "./firebase-config.js?v=12";
 
+// === Init ===
 const app  = initializeApp(firebaseConfig);
 const db   = getFirestore(app);
 const auth = getAuth(app);
 
-// elk document krijgt zijn eigen ID in Firestore
-const DOC_ID = "schoonmaak_klussen";
+// <<< PAS DIT AAN PER PAGINA >>>
+const DOC_ID = "schoonmaak_klussen"
 
-// hier komt exact dezelfde code als bij prioriteit
-// (dezelfde structuur voor taken, vinkjes, opslaan, sync enz.)
+// === UI refs ===
+const elList  = document.getElementById("list");
+const elNew   = document.getElementById("newItem");
+const btnAdd  = document.getElementById("btnAdd");
+const btnSeed = document.getElementById("btnSeed");
+const btnReset= document.getElementById("btnReset");
+
+// toolbar (slot-knoppen)
+let tools = document.querySelector(".tools");
+if (!tools) {
+  tools = document.createElement("div");
+  tools.className = "tools";
+  (elList?.parentElement || document.body).insertBefore(tools, elList);
+}
+const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
+tools.append(btnEdit, btnView);
+
+// === State ===
+let dataMap = {};  // { label: boolean }
+let order   = [];  // [label, ...]
+let canEdit = false;
+
+// Auth: iedereen anoniem (lezen/afvinken), jij met e-mail = bewerken
+onAuthStateChanged(auth, user => {
+  canEdit = !!user && !!user.email;
+  updateUI(); render();
+});
+try { await signInAnonymously(auth); } catch(e){}
+
+// Realtime Firestore
+onSnapshot(doc(db, "lists", DOC_ID), snap => {
+  if (snap.exists()) {
+    const d = snap.data();
+    dataMap = d.items || {};
+    order = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
+    Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
+  } else {
+    dataMap = {}; order = [];
+    save({ items: dataMap, order });
+  }
+  render();
+});
+
+function save(payload){
+  return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
+}
+
+// === Render ===
+function render(){
+  if (!elList) return;
+  elList.innerHTML = "";
+  const labels = order.length? order.slice() : Object.keys(dataMap);
+
+  labels.forEach((label, idx) => {
+    const li = document.createElement("li");
+    li.className = "item" + (dataMap[label] ? " done" : "");
+    li.dataset.index = String(idx);
+
+    // checkbox
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!dataMap[label];
+    cb.addEventListener("change", () => toggle(label));
+
+    // tekst
+    const span = document.createElement("div");
+    span.className = "label";
+    span.textContent = label;
+    span.addEventListener("click", () => toggle(label));
+
+    // delete-knop alleen in bewerk-modus
+    if (canEdit) {
+      const trash = document.createElement("button");
+      trash.className = "trash";
+      trash.title = "Verwijderen";
+      trash.textContent = "🗑️";
+      trash.onclick = () => removeItem(label);
+
+      // drag
+      li.draggable = true;
+      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+      li.addEventListener("dragover",  e => e.preventDefault());
+      li.addEventListener("drop", e => {
+        e.preventDefault();
+        const from = Number(e.dataTransfer.getData("text/plain"));
+        const to   = Number(li.dataset.index);
+        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+          const next = order.slice();
+          const [moved] = next.splice(from, 1);
+          next.splice(to, 0, moved);
+          order = next;
+          render();
+          save({ order });
+        }
+      });
+
+      li.append(cb, span, trash);
+    } else {
+      li.append(cb, span);
+    }
+
+    elList.appendChild(li);
+  });
+}
+
+// === Actions ===
+function toggle(label){
+  const next = { ...dataMap, [label]: !dataMap[label] };
+  save({ items: next });
+}
+
+function addItem(t){
+  if (!canEdit) return;
+  t = (t||"").trim();
+  if (!t || (t in dataMap)) return;
+  const nextMap = { ...dataMap, [t]: false };
+  const nextOrder = order.concat(t);
+  save({ items: nextMap, order: nextOrder });
+}
+
+function removeItem(label){
+  if (!canEdit) return;
+  const nextMap = { ...dataMap }; delete nextMap[label];
+  const nextOrder = order.filter(x => x !== label);
+  save({ items: nextMap, order: nextOrder });
+}
+
+function resetAll(){
+  if (!canEdit) return;
+  const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
+  save({ items: next });
+}
+function seedAll(){
+  if (!canEdit) return; // zet hier jouw eigen seed voor die pagina
+  const seed = { "15:15 Afzuiging aan": false, "15:15 Fietsen naar buiten en Dweilen": false };
+  save({ items: seed, order: Object.keys(seed) });
+}
+
+// UI events
+btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
+elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+btnReset&& (btnReset.onclick = resetAll);
+btnSeed && (btnSeed.onclick  = seedAll);
+
+// Slot-knoppen
+btnEdit.onclick = async () => {
+  const email = prompt("Email voor bewerken:");
+  const pwd   = prompt("Wachtwoord:");
+  if (!email || !pwd) return;
+  try { try{ await signOut(auth);}catch(e){}; await signInWithEmailAndPassword(auth, email, pwd); alert("Bewerk-modus aan ✅"); }
+  catch(e){ alert("Inloggen mislukt: " + (e.code || e.message)); }
+};
+btnView.onclick = async () => { try{ await signOut(auth);}catch(e){}; await signInAnonymously(auth); alert("Alleen afvinken 🔒"); };
+
+function updateUI(){
+  [btnAdd, btnSeed, btnReset, elNew].forEach(el=>{
+    if(!el) return;
+    el.disabled = !canEdit;
+    el.style.opacity = canEdit ? 1 : 0.6;
+    el.style.pointerEvents = canEdit ? "auto" : "none";
+  });
+}
 </script>
 </body>
 </html>
