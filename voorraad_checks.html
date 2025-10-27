@@ -42,43 +42,6 @@ li.item .trash{
 li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
 .tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
   </style>
-
-  
-  <script>
-    function makeChecklist({KEY, defaultItems}){
-      const elList = document.getElementById('list');
-      const elNew = document.getElementById('newItem');
-      function save(d){ localStorage.setItem(KEY, JSON.stringify(d)); }
-      function load(){
-        const raw = localStorage.getItem(KEY);
-        if(!raw){ const init=(defaultItems||[]).map(t=>({text:t,done:false})); save(init); return init; }
-        try{ return JSON.parse(raw) }catch(e){ save([]); return []; }
-      }
-      function render(){
-        const data = load();
-        elList.innerHTML = '';
-        data.forEach((it,i)=>{
-          const li = document.createElement('li');
-          li.className = 'item' + (it.done ? ' done' : '');
-          const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=it.done;
-          cb.addEventListener('change', ()=>toggle(i));
-          const span = document.createElement('div'); span.textContent = it.text; span.style.flex='1';
-          span.addEventListener('click', ()=>toggle(i));
-          li.append(cb,span); elList.appendChild(li);
-        });
-      }
-      function toggle(i){ const d=load(); d[i].done=!d[i].done; save(d); render(); }
-      function add(t){ const c=(t||'').trim(); if(!c) return; const d=load(); d.push({text:c,done:false}); save(d); render(); }
-      function reset(){ const d=load().map(x=>({...x,done:false})); save(d); render(); }
-      function seed(){ const init=(defaultItems||[]).map(t=>({text:t,done:false})); save(init); render(); }
-      document.getElementById('btnAdd').onclick=()=>{ add(elNew.value); elNew.value=''; elNew.focus(); };
-      elNew.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); add(elNew.value); elNew.value=''; }});
-      document.getElementById('btnReset').onclick=reset;
-      document.getElementById('btnSeed').onclick=seed;
-      render();
-    }
-  </script>
-
 </head>
 <body>
   <div class="wrap">
@@ -103,7 +66,7 @@ li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
       <p class="hint">Klik op de tekst of het vinkje om af te strepen.</p>
     </div>
 
-    <footer class="note">ShiftStart · lokaal opgeslagen</footer>
+  <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
  <script type="module">
