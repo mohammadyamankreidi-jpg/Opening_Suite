@@ -4,85 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Schoonmaak klussen</title>
-  
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    .title{margin:0 0 12px;font-size:clamp(20px,3.2vw,30px)}
-    .grid{display:grid;gap:14px}
-    .btn{display:block;width:100%;text-align:center;text-decoration:none;color:var(--text);background:#111722;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-weight:700}
     header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
     .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-    .tools{display:flex;gap:8px;flex-wrap:wrap}
+    .tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
     button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
     .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
     input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
     ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
     li.item{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
-    li.item.done{opacity:.6;text-decoration:line-through}
-    input[type="checkbox"]{transform:scale(1.2)}
+    li.item .label{flex:1;cursor:pointer}
+    li.item.done .label{ text-decoration:line-through; text-decoration-color:#ff3b30; text-decoration-thickness:3px; }
+    li.item .trash{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.85}
+    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
-    li.item { display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #262c39; border-radius:10px; }
-li.item .label { flex:1; cursor:pointer; }
-li.item.done .label{
-  text-decoration: line-through;
-  text-decoration-color:#ff3b30;
-  text-decoration-thickness: 3px;
-}
-li.item .trash{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; border:1px solid #444; border-radius:6px;
-  background:#151a23; cursor:pointer; opacity:.85;
-}
-li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
-.tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
   </style>
-
-  
-  <script>
-    function makeChecklist({KEY, defaultItems}){
-      const elList = document.getElementById('list');
-      const elNew = document.getElementById('newItem');
-      function save(d){ localStorage.setItem(KEY, JSON.stringify(d)); }
-      function load(){
-        const raw = localStorage.getItem(KEY);
-        if(!raw){ const init=(defaultItems||[]).map(t=>({text:t,done:false})); save(init); return init; }
-        try{ return JSON.parse(raw) }catch(e){ save([]); return []; }
-      }
-      function render(){
-        const data = load();
-        elList.innerHTML = '';
-        data.forEach((it,i)=>{
-          const li = document.createElement('li');
-          li.className = 'item' + (it.done ? ' done' : '');
-          const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=it.done;
-          cb.addEventListener('change', ()=>toggle(i));
-          const span = document.createElement('div'); span.textContent = it.text; span.style.flex='1';
-          span.addEventListener('click', ()=>toggle(i));
-          li.append(cb,span); elList.appendChild(li);
-        });
-      }
-      function toggle(i){ const d=load(); d[i].done=!d[i].done; save(d); render(); }
-      function add(t){ const c=(t||'').trim(); if(!c) return; const d=load(); d.push({text:c,done:false}); save(d); render(); }
-      function reset(){ const d=load().map(x=>({...x,done:false})); save(d); render(); }
-      function seed(){ const init=(defaultItems||[]).map(t=>({text:t,done:false})); save(init); render(); }
-      document.getElementById('btnAdd').onclick=()=>{ add(elNew.value); elNew.value=''; elNew.focus(); };
-      elNew.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); add(elNew.value); elNew.value=''; }});
-      document.getElementById('btnReset').onclick=reset;
-      document.getElementById('btnSeed').onclick=seed;
-      render();
-    }
-  </script>
-
 </head>
 <body>
   <div class="wrap">
     <nav class="nav"><a href="index.html">← Terug</a></nav>
+
     <header class="panel card">
       <div class="brand">
         <div class="h">ShiftStart</div>
@@ -103,185 +51,148 @@ li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
       <p class="hint">Klik op de tekst of het vinkje om af te strepen.</p>
     </div>
 
-    <footer class="note">ShiftStart · lokaal opgeslagen</footer>
+    <!-- ✅ Hier staat de footer zichtbaar in de body -->
+    <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js?v=13";
 
-// === Init ===
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
-const auth = getAuth(app);
+  <!-- ✅ Script hoort onderaan, niet in de head -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+    import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+    import { firebaseConfig } from "./firebase-config.js?v=13";
 
-// <<< PAS DIT AAN PER PAGINA >>>
-const DOC_ID = "schoonmaak_klussen"
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
 
-// === UI refs ===
-const elList  = document.getElementById("list");
-const elNew   = document.getElementById("newItem");
-const btnAdd  = document.getElementById("btnAdd");
-const btnSeed = document.getElementById("btnSeed");
-const btnReset= document.getElementById("btnReset");
+    const DOC_ID = "schoonmaak_klussen";
 
-// toolbar (slot-knoppen)
-let tools = document.querySelector(".tools");
-if (!tools) {
-  tools = document.createElement("div");
-  tools.className = "tools";
-  (elList?.parentElement || document.body).insertBefore(tools, elList);
-}
-const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
-tools.append(btnEdit, btnView);
+    const elList  = document.getElementById("list");
+    const elNew   = document.getElementById("newItem");
+    const btnAdd  = document.getElementById("btnAdd");
+    const btnSeed = document.getElementById("btnSeed");
+    const btnReset= document.getElementById("btnReset");
 
-// === State ===
-let dataMap = {};  // { label: boolean }
-let order   = [];  // [label, ...]
-let canEdit = false;
+    let tools = document.querySelector(".tools");
+    if (!tools) { tools = document.createElement("div"); tools.className = "tools"; (elList?.parentElement || document.body).insertBefore(tools, elList); }
+    const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+    const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
+    tools.append(btnEdit, btnView);
 
-// Auth: iedereen anoniem (lezen/afvinken), jij met e-mail = bewerken
-onAuthStateChanged(auth, user => {
-  canEdit = !!user && !!user.email;
-  updateUI(); render();
-});
-try { await signInAnonymously(auth); } catch(e){}
+    let dataMap = {};
+    let order   = [];
+    let canEdit = false;
 
-// Realtime Firestore
-onSnapshot(doc(db, "lists", DOC_ID), snap => {
-  if (snap.exists()) {
-    const d = snap.data();
-    dataMap = d.items || {};
-    order = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
-    Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
-  } else {
-    dataMap = {}; order = [];
-    save({ items: dataMap, order });
-  }
-  render();
-});
+    onAuthStateChanged(auth, user => { canEdit = !!user && !!user.email; updateUI(); render(); });
+    try { await signInAnonymously(auth); } catch(e){}
 
-function save(payload){
-  return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
-}
+    onSnapshot(doc(db, "lists", DOC_ID), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        dataMap = d.items || {};
+        order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
+        Object.keys(dataMap).forEach(k => { if(!order.includes(k)) order.push(k); });
+      } else {
+        dataMap = {}; order = []; save({ items: dataMap, order });
+      }
+      render();
+    });
 
-// === Render ===
-function render(){
-  if (!elList) return;
-  elList.innerHTML = "";
-  const labels = order.length? order.slice() : Object.keys(dataMap);
+    function save(payload){ return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true }); }
 
-  labels.forEach((label, idx) => {
-    const li = document.createElement("li");
-    li.className = "item" + (dataMap[label] ? " done" : "");
-    li.dataset.index = String(idx);
+    function render(){
+      if (!elList) return;
+      elList.innerHTML = "";
+      const labels = order.length ? order.slice() : Object.keys(dataMap);
 
-    // checkbox
-    const cb = document.createElement("input");
-    cb.type = "checkbox"; cb.checked = !!dataMap[label];
-    cb.addEventListener("change", () => toggle(label));
+      labels.forEach((label, idx) => {
+        const li = document.createElement("li");
+        li.className = "item" + (dataMap[label] ? " done" : "");
+        li.dataset.index = String(idx);
 
-    // tekst
-    const span = document.createElement("div");
-    span.className = "label";
-    span.textContent = label;
-    span.addEventListener("click", () => toggle(label));
+        const cb = document.createElement("input");
+        cb.type = "checkbox"; cb.checked = !!dataMap[label];
+        cb.addEventListener("change", () => toggle(label));
 
-    // delete-knop alleen in bewerk-modus
-    if (canEdit) {
-      const trash = document.createElement("button");
-      trash.className = "trash";
-      trash.title = "Verwijderen";
-      trash.textContent = "🗑️";
-      trash.onclick = () => removeItem(label);
+        const span = document.createElement("div");
+        span.className = "label";
+        span.textContent = label;
+        span.addEventListener("click", () => toggle(label));
 
-      // drag
-      li.draggable = true;
-      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
-      li.addEventListener("dragover",  e => e.preventDefault());
-      li.addEventListener("drop", e => {
-        e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
-          const next = order.slice();
-          const [moved] = next.splice(from, 1);
-          next.splice(to, 0, moved);
-          order = next;
-          render();
-          save({ order });
+        if (canEdit) {
+          const trash = document.createElement("button");
+          trash.className = "trash"; trash.title = "Verwijderen"; trash.textContent = "🗑️";
+          trash.onclick = () => removeItem(label);
+
+          li.draggable = true;
+          li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+          li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+          li.addEventListener("dragover",  e => e.preventDefault());
+          li.addEventListener("drop", e => {
+            e.preventDefault();
+            const from = Number(e.dataTransfer.getData("text/plain"));
+            const to   = Number(li.dataset.index);
+            if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+              const next = order.slice();
+              const [moved] = next.splice(from, 1);
+              next.splice(to, 0, moved);
+              order = next; render(); save({ order });
+            }
+          });
+
+          li.append(cb, span, trash);
+        } else {
+          li.append(cb, span);
         }
-      });
 
-      li.append(cb, span, trash);
-    } else {
-      li.append(cb, span);
+        elList.appendChild(li);
+      });
     }
 
-    elList.appendChild(li);
-  });
-}
+    function toggle(label){ const next = { ...dataMap, [label]: !dataMap[label] }; save({ items: next }); }
+    function addItem(t){
+      if (!canEdit) return;
+      t = (t||"").trim(); if (!t || (t in dataMap)) return;
+      const nextMap = { ...dataMap, [t]: false };
+      const nextOrder = order.concat(t);
+      save({ items: nextMap, order: nextOrder });
+    }
+    function removeItem(label){
+      if (!canEdit) return;
+      const nextMap = { ...dataMap }; delete nextMap[label];
+      const nextOrder = order.filter(x => x !== label);
+      save({ items: nextMap, order: nextOrder });
+    }
+    function resetAll(){ if (!canEdit) return; const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false])); save({ items: next }); }
+    function seedAll(){
+      if (!canEdit) return;
+      const seed = { "15:15 Afzuiging aan": false, "15:15 Fietsen naar buiten en Dweilen": false };
+      save({ items: seed, order: Object.keys(seed) });
+    }
 
-// === Actions ===
-function toggle(label){
-  const next = { ...dataMap, [label]: !dataMap[label] };
-  save({ items: next });
-}
+    btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
+    elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+    btnReset&& (btnReset.onclick = resetAll);
+    btnSeed && (btnSeed.onclick  = seedAll);
 
-function addItem(t){
-  if (!canEdit) return;
-  t = (t||"").trim();
-  if (!t || (t in dataMap)) return;
-  const nextMap = { ...dataMap, [t]: false };
-  const nextOrder = order.concat(t);
-  save({ items: nextMap, order: nextOrder });
-}
+    btnEdit.onclick = async () => {
+      const email = prompt("Email voor bewerken:");
+      const pwd   = prompt("Wachtwoord:");
+      if (!email || !pwd) return;
+      try { try{ await signOut(auth);}catch(e){}; await signInWithEmailAndPassword(auth, email, pwd); alert("Bewerk-modus aan ✅"); }
+      catch(e){ alert("Inloggen mislukt: " + (e.code || e.message)); }
+    };
+    btnView.onclick = async () => { try{ await signOut(auth);}catch(e){}; await signInAnonymously(auth); alert("Alleen afvinken 🔒"); };
 
-function removeItem(label){
-  if (!canEdit) return;
-  const nextMap = { ...dataMap }; delete nextMap[label];
-  const nextOrder = order.filter(x => x !== label);
-  save({ items: nextMap, order: nextOrder });
-}
-
-function resetAll(){
-  if (!canEdit) return;
-  const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
-  save({ items: next });
-}
-function seedAll(){
-  if (!canEdit) return; // zet hier jouw eigen seed voor die pagina
-  const seed = { "15:15 Afzuiging aan": false, "15:15 Fietsen naar buiten en Dweilen": false };
-  save({ items: seed, order: Object.keys(seed) });
-}
-
-// UI events
-btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
-elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
-btnReset&& (btnReset.onclick = resetAll);
-btnSeed && (btnSeed.onclick  = seedAll);
-
-// Slot-knoppen
-btnEdit.onclick = async () => {
-  const email = prompt("Email voor bewerken:");
-  const pwd   = prompt("Wachtwoord:");
-  if (!email || !pwd) return;
-  try { try{ await signOut(auth);}catch(e){}; await signInWithEmailAndPassword(auth, email, pwd); alert("Bewerk-modus aan ✅"); }
-  catch(e){ alert("Inloggen mislukt: " + (e.code || e.message)); }
-};
-btnView.onclick = async () => { try{ await signOut(auth);}catch(e){}; await signInAnonymously(auth); alert("Alleen afvinken 🔒"); };
-
-function updateUI(){
-  [btnAdd, btnSeed, btnReset, elNew].forEach(el=>{
-    if(!el) return;
-    el.disabled = !canEdit;
-    el.style.opacity = canEdit ? 1 : 0.6;
-    el.style.pointerEvents = canEdit ? "auto" : "none";
-  });
-}
-</script>
+    function updateUI(){
+      [btnAdd, btnSeed, btnReset, elNew].forEach(el=>{
+        if(!el) return;
+        el.disabled = !canEdit;
+        el.style.opacity = canEdit ? 1 : 0.6;
+        el.style.pointerEvents = canEdit ? "auto" : "none";
+      });
+    }
+  </script>
 </body>
 </html>
