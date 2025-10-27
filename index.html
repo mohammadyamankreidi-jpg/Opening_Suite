@@ -25,184 +25,168 @@
     .hint{color:#9fb0cb;font-size:12px;margin-top:8px}
   </style>
 </head>
-<body>
+  <body>
   <div class="wrap">
     <header class="panel card">
-      <div class="brand"><div class="h">ShiftStart</div><div class="s">Startpagina</div></div>
-      <div class="tools">
-        <button id="btnEdit">🔓 Bewerk-modus</button>
-        <button id="btnView">🔒 Alleen bekijken</button>
+      <div class="brand">
+        <div class="h">ShiftStart</div>
+        <div class="s">Startpagina</div>
       </div>
+      <div class="tools"></div>
     </header>
 
     <div class="card">
-      <!-- ✅ Statische fallback die altijd zichtbaar is -->
-      <ul id="list">
-        <li class="item"><a class="label" href="prioriteit.html">Prioriteit</a><button class="trash">🗑️</button></li>
-        <li class="item"><a class="label" href="voorraad_checks.html">Voorraad & Checks</a><button class="trash">🗑️</button></li>
-        <li class="item"><a class="label" href="schoonmaak_klussen.html">Schoonmaak klussen</a><button class="trash">🗑️</button></li>
-      </ul>
-
-      <!-- verschijnt pas als Firebase werkt en jij ingelogd bent -->
-      <div class="add" id="addBar">
-        <input id="newItem" type="text" placeholder="Nieuwe knop (naam)..." />
+      <div class="add">
+        <input id="newTitle" type="text" placeholder="Knopnaam (bv. Prioriteit)" />
+        <input id="newHref"  type="text" placeholder="Link (bv. prioriteit.html)" />
         <button id="btnAdd">Toevoegen</button>
       </div>
 
-      <p class="hint">🔐 Toevoegen/verwijderen/slepen kan na inloggen met 🔓 Bewerk-modus.</p>
+      <ul id="pages"></ul>
+      <p class="hint">🔒 In niet-bewerkmodus kun je alleen openen. Na inloggen kun je toevoegen, verwijderen en ordenen.</p>
     </div>
 
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
-<script type="module">
-const elList  = document.getElementById("list");
-const addBar  = document.getElementById("addBar");
-const elNew   = document.getElementById("newItem");
-const btnAdd  = document.getElementById("btnAdd");
-const btnEdit = document.getElementById("btnEdit");
-const btnView = document.getElementById("btnView");
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+    import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+    import { firebaseConfig } from "./firebase-config.js?v=14";
 
-let canEdit = false;
-let pages   = null; // null = nog geen Firestore, object = Firestore actief
-let auth, db, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut, doc, onSnapshot, setDoc, serverTimestamp;
+    // === init
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
 
-// Helpers
-function setEditMode(enabled){
-  canEdit = enabled;
-  // show/hide controls
-  addBar.style.display = (pages && canEdit) ? "grid" : "none";
-  document.querySelectorAll(".trash").forEach(btn=>{
-    btn.style.display = (pages && canEdit) ? "inline-flex" : "none";
-  });
-  // make items draggable only when edit + pages
-  Array.from(elList.children).forEach((li, idx)=>{
-    li.draggable = !!(pages && canEdit);
-    if (pages && canEdit) {
-      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
-      li.addEventListener("dragover",  e => e.preventDefault());
-      li.addEventListener("drop", e => {
-        e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Array.from(elList.children).indexOf(li);
-        if (!pages || !Number.isFinite(from) || !Number.isFinite(to) || from===to) return;
-        const keys = Object.keys(pages);
-        const [moved] = keys.splice(from,1);
-        keys.splice(to,0,moved);
-        const reordered = {};
-        keys.forEach(k => reordered[k] = pages[k]);
-        savePages(reordered);
+    // Firestore doc voor home
+    const HOME_ID = "home_links"; // /lists/home_links
+
+    // UI refs
+    const elList   = document.getElementById("pages");
+    const elTitle  = document.getElementById("newTitle");
+    const elHref   = document.getElementById("newHref");
+    const btnAdd   = document.getElementById("btnAdd");
+    const tools    = document.querySelector(".tools");
+
+    // Slotknoppen
+    const btnEdit  = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+    const btnView  = document.createElement("button"); btnView.textContent = "🔒 Alleen openen";
+    tools.append(btnEdit, btnView);
+
+    let canEdit = false;
+    let pages = []; // [{t:"Prioriteit", href:"prioriteit.html"}, ...]
+
+    onAuthStateChanged(auth, u => {
+      canEdit = !!u && !!u.email;
+      updateUI(); render();
+    });
+
+    // altijd anoniem ingelogd iig
+    try { await signInAnonymously(auth); } catch(e) {}
+
+    // data laden (eenmalig, simple)
+    async function load(){
+      const ref = doc(db, "lists", HOME_ID);
+      const snap = await getDoc(ref);
+      if (snap.exists()){
+        const d = snap.data();
+        pages = Array.isArray(d.pages) ? d.pages : [];
+      } else {
+        pages = [
+          { t:"Prioriteit",        href:"prioriteit.html" },
+          { t:"Voorraad & Checks", href:"voorraad_checks.html" },
+          { t:"Schoonmaak klussen",href:"schoonmaak_klussen.html" }
+        ];
+        await save();
+      }
+      render();
+    }
+    load();
+
+    function save(){
+      return setDoc(doc(db, "lists", HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge:true });
+    }
+
+    function updateUI(){
+      [elTitle, elHref, btnAdd].forEach(el=>{
+        if(!el) return;
+        el.disabled = !canEdit;
+        el.style.opacity = canEdit ? 1 : 0.6;
+        el.style.pointerEvents = canEdit ? "auto" : "none";
       });
     }
-  });
-}
-function renderFromObject(obj){
-  elList.innerHTML = "";
-  Object.entries(obj).forEach(([name, href])=>{
-    const li = document.createElement("li");
-    li.className = "item";
-    const a = document.createElement("a");
-    a.className = "label"; a.href = href; a.textContent = name;
-    const trash = document.createElement("button");
-    trash.className = "trash"; trash.textContent = "🗑️";
-    trash.onclick = ()=>{ if (!pages || !canEdit) return; const next = {...pages}; delete next[name]; savePages(next); };
-    li.append(a, trash);
-    elList.appendChild(li);
-  });
-  setEditMode(canEdit);
-}
-function currentDomAsObject(){
-  const out = {};
-  Array.from(elList.querySelectorAll("li")).forEach(li=>{
-    const a = li.querySelector("a.label");
-    if (a) out[a.textContent.trim()] = a.getAttribute("href");
-  });
-  return out;
-}
-async function savePages(newObj){
-  if (!db) return;
-  const { doc, setDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js");
-  await setDoc(doc(db,"lists","shiftstart_home"), { pages:newObj, updatedAt: serverTimestamp() }, { merge:true });
-}
 
-// Boot: probeer Firebase dynamisch. Als het faalt → we houden de fallback zichtbaar.
-(async ()=>{
-  try {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js");
-    const firestore = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js");
-    const authmod   = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js");
-    const { firebaseConfig } = await import("./firebase-config.js?v=15");
+    function render(){
+      elList.innerHTML = "";
+      pages.forEach((p, idx) => {
+        const li = document.createElement("li");
+        li.className = "item"; li.dataset.index = String(idx);
 
-    ({ doc, onSnapshot, setDoc, serverTimestamp } = firestore);
-    ({ getAuth: (g)=>auth=g(), signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } = { 
-      getAuth: authmod.getAuth, 
-      signInAnonymously: authmod.signInAnonymously,
-      signInWithEmailAndPassword: authmod.signInWithEmailAndPassword,
-      onAuthStateChanged: authmod.onAuthStateChanged,
-      signOut: authmod.signOut
-    });
+        const a = document.createElement("a");
+        a.href = p.href; a.textContent = p.t; a.className = "label";
+        a.style.textDecoration = "none"; a.style.color = "inherit";
+        a.target = "_self";
 
-    const app = initializeApp(firebaseConfig);
-    const { getFirestore } = firestore;
-    db = getFirestore(app);
+        if (canEdit){
+          // drag
+          li.draggable = true;
+          li.addEventListener("dragstart", e => {
+            li.classList.add("dragging");
+            e.dataTransfer.setData("text/plain", String(idx));
+          });
+          li.addEventListener("dragend", () => li.classList.remove("dragging"));
+          li.addEventListener("dragover", e => e.preventDefault());
+          li.addEventListener("drop", e => {
+            e.preventDefault();
+            const from = Number(e.dataTransfer.getData("text/plain"));
+            const to   = Number(li.dataset.index);
+            if (Number.isFinite(from) && Number.isFinite(to) && from !== to){
+              const next = pages.slice();
+              const [m] = next.splice(from, 1);
+              next.splice(to, 0, m);
+              pages = next; render(); save();
+            }
+          });
 
-    // Auth: anoniem default
-    try { await signInAnonymously(auth); } catch(e){}
+          // delete
+          const trash = document.createElement("button");
+          trash.className = "trash"; trash.title = "Verwijderen"; trash.textContent = "🗑️";
+          trash.onclick = () => { pages = pages.filter((_,i)=>i!==idx); render(); save(); };
 
-    // Realtime home-links
-    onSnapshot(doc(db,"lists","shiftstart_home"), snap=>{
-      if (snap.exists()) {
-        pages = snap.data().pages || {};
-        if (Object.keys(pages).length === 0) {
-          // Als leeg: initialiseer vanuit DOM
-          pages = currentDomAsObject();
-          savePages(pages);
+          li.append(a, trash);
+        } else {
+          li.append(a);
         }
-        renderFromObject(pages);
-      } else {
-        pages = currentDomAsObject(); // pak de fallback en maak doc aan zodra user toevoegt
-        renderFromObject(pages);
-      }
-    });
 
-    // Slot knoppen
-    btnEdit.onclick = async ()=>{
-      const email = prompt("Email:");
+        elList.appendChild(li);
+      });
+    }
+
+    // acties
+    btnAdd.onclick = () => {
+      const t = (elTitle.value||"").trim();
+      const h = (elHref.value||"").trim();
+      if (!t || !h) return;
+      pages = pages.concat({ t, href:h });
+      elTitle.value=""; elHref.value=""; elTitle.focus();
+      render(); save();
+    };
+
+    // slot toggles
+    btnEdit.onclick = async () => {
+      const email = prompt("Email voor bewerken:");
       const pwd   = prompt("Wachtwoord:");
       if (!email || !pwd) return;
-      try { await signOut(auth); await signInWithEmailAndPassword(auth,email,pwd); setEditMode(true); alert("Bewerk-modus aan ✅"); }
+      try { try{ await signOut(auth);}catch(e){}; await signInWithEmailAndPassword(auth, email, pwd); alert("Bewerk-modus aan ✅"); }
       catch(e){ alert("Inloggen mislukt: " + (e.code || e.message)); }
     };
-    btnView.onclick = async ()=>{
-      try { await signOut(auth);} catch(e){}
+    btnView.onclick = async () => {
+      try{ await signOut(auth);}catch(e){}
       await signInAnonymously(auth);
-      setEditMode(false);
-      alert("Alleen bekijken 🔒");
+      alert("Alleen openen 🔒");
     };
-
-    // Voeg toe
-    btnAdd.onclick = ()=>{
-      if (!pages) return; // nog geen firebase ready
-      if (!canEdit) return;
-      const name = (elNew.value||"").trim();
-      if (!name) return;
-      const file = name.toLowerCase().replace(/\s+/g,"_") + ".html";
-      const next = { ...pages, [name]: file };
-      savePages(next);
-      elNew.value = "";
-    };
-
-    // update UI bij auth wissel
-    onAuthStateChanged(auth, user => {
-      setEditMode(!!user && !!user.email);
-    });
-
-  } catch (e) {
-    // Firebase faalde -> laat fallback staan, disable edit
-    setEditMode(false);
-  }
-})();
-</script>
+  </script>
 </body>
 </html>
