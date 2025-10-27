@@ -3,223 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ShiftStart</title>
-  
+  <title>ShiftStart – Start</title>
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    .title{margin:0 0 12px;font-size:clamp(20px,3.2vw,30px)}
-    .grid{display:grid;gap:14px}
-    .btn{display:block;width:100%;text-align:center;text-decoration:none;color:var(--text);background:#111722;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-weight:700}
     header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
     .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-    .tools{display:flex;gap:8px;flex-wrap:wrap}
+    .tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
     button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
-    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
-    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
+    .add{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin:8px 0 4px}
+    .add input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
     ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
     li.item{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
-    li.item.done{opacity:.6;text-decoration:line-through}
-    input[type="checkbox"]{transform:scale(1.2)}
-    .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
+    li.item .label{flex:1;text-decoration:none;color:var(--text)}
+    li.item .trash{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.85}
+    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
-    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
-    li.item { display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #262c39; border-radius:10px; }
-li.item .label { flex:1; cursor:pointer; }
-li.item.done .label{
-  text-decoration: line-through;
-  text-decoration-color:#ff3b30;
-  text-decoration-thickness: 3px;
-}
-li.item .trash{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; border:1px solid #444; border-radius:6px;
-  background:#151a23; cursor:pointer; opacity:.85;
-}
-li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
-.tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
   </style>
-
 </head>
 <body>
   <div class="wrap">
+    <header class="panel card">
+      <div class="brand"><div class="h">ShiftStart</div><div class="s">Startpagina</div></div>
+      <div class="tools"></div>
+    </header>
+
     <div class="card">
-      <h1 class="title">ShiftStart</h1>
-      <p class="hint">Kies een lijst.</p>
-      <div class="grid">
-        <a class="btn" href="prioriteit.html">Prioriteit</a>
-        <a class="btn" href="voorraad_checks.html">Voorraad &amp; Checks</a>
-        <a class="btn" href="schoonmaak_klussen.html">Schoonmaak klussen</a>
+      <!-- verschijnt alleen in bewerk-modus -->
+      <div class="add" id="addHome" style="display:none">
+        <input id="homeTitle" type="text" placeholder="Knopnaam (bijv. Prioriteit)" />
+        <input id="homeHref"  type="text" placeholder="Link (bijv. prioriteit.html)" />
+        <button id="homeAdd">➕</button>
       </div>
-      <footer class="note">Opslag via localStorage · Werkt offline</footer>
+      <ul id="homeList"></ul>
+      <p class="hint" style="color:var(--muted);font-size:12px;margin:6px 2px 0">
+        🔐 Alleen jij kunt knoppen toevoegen/verwijderen en ordenen (na inloggen).
+      </p>
     </div>
+
+    <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
-  <div class="tools"></div>
-<div class="add" id="addHome" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin:8px 0;">
-  <input id="homeTitle" type="text" placeholder="Knopnaam (bijv. Prioriteit)" />
-  <input id="homeHref"  type="text" placeholder="Link (bijv. prioriteit.html)" />
-  <button id="homeAdd">➕</button>
-</div>
-<ul id="homeList"></ul>
-<p class="hint">Opslag via Firestore • gedeeld voor iedereen</p>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js?v=13";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+    import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+    import { firebaseConfig } from "./firebase-config.js?v=13";
 
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
-const auth = getAuth(app);
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
 
-const DOC_ID = "home_links"; // Firestore: lists/home_links
+    const DOC_ID = "home_links"; // Firestore: lists/home_links
 
-// ==== UI ====
-let tools = document.querySelector(".tools");
-if (!tools) {
-  tools = document.createElement("div");
-  tools.className = "tools";
-  document.body.prepend(tools);
-}
-const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen bekijken";
-tools.append(btnEdit, btnView);
+    // tools/slot
+    let tools = document.querySelector(".tools");
+    const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+    const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen bekijken";
+    tools.append(btnEdit, btnView);
 
-// maak add-balk als die niet bestaat
-let addBar = document.getElementById("addHome");
-if (!addBar) {
-  addBar = document.createElement("div");
-  addBar.id = "addHome";
-  addBar.style.display = "none"; // standaard verborgen
-  addBar.style.gridTemplateColumns = "1fr 1fr auto";
-  addBar.style.gap = "10px";
-  addBar.style.margin = "8px 0";
-  addBar.className = "add";
-  addBar.innerHTML = `
-    <input id="homeTitle" type="text" placeholder="Knopnaam (bijv. Prioriteit)" />
-    <input id="homeHref"  type="text" placeholder="Link (bijv. prioriteit.html)" />
-    <button id="homeAdd">➕</button>
-  `;
-  tools.insertAdjacentElement("afterend", addBar);
-}
-const elTitle = document.getElementById("homeTitle");
-const elHref  = document.getElementById("homeHref");
-const btnAdd  = document.getElementById("homeAdd");
+    // addbar + lijst
+    const addBar = document.getElementById("addHome");
+    const elTitle = document.getElementById("homeTitle");
+    const elHref  = document.getElementById("homeHref");
+    const btnAdd  = document.getElementById("homeAdd");
+    const elList  = document.getElementById("homeList");
 
-let elList = document.getElementById("homeList");
-if (!elList) {
-  elList = document.createElement("ul");
-  elList.id = "homeList";
-  addBar.insertAdjacentElement("afterend", elList);
-}
+    // state
+    let canEdit = false;
+    let items = {};   // {id:{title,href}}
+    let order = [];   // [id,...]
 
-// ==== STATE ====
-let canEdit = false;
-let items = {};   // {id: {title,href}}
-let order = [];   // [id, ...]
+    onAuthStateChanged(auth, user => { canEdit = !!user && !!user.email; updateUI(); render(); });
+    try { await signInAnonymously(auth); } catch(e){}
 
-onAuthStateChanged(auth, user => { canEdit = !!user && !!user.email; updateUI(); render(); });
-try { await signInAnonymously(auth); } catch(e){}
+    onSnapshot(doc(db,"lists",DOC_ID), snap=>{
+      if (snap.exists()) {
+        const d = snap.data();
+        items = d.items || {};
+        order = Array.isArray(d.order) ? d.order.filter(id => !!items[id]) : Object.keys(items);
+      } else {
+        // eerste keer: seed met jouw 3 pagina’s
+        items = {
+          prior:    { title:"Prioriteit",         href:"prioriteit.html" },
+          voorraad: { title:"Voorraad & Checks",  href:"voorraad_checks.html" },
+          schoon:   { title:"Schoonmaak klussen", href:"schoonmaak_klussen.html" }
+        };
+        order = ["prior","voorraad","schoon"];
+        save({ items, order });
+      }
+      render();
+    });
 
-onSnapshot(doc(db,"lists",DOC_ID), snap=>{
-  if (snap.exists()) {
-    const d = snap.data();
-    items = d.items || {};
-    order = Array.isArray(d.order) ? d.order.filter(id => !!items[id]) : Object.keys(items);
-  } else {
-    // eerste keer: seeds
-    items = {
-      prior:    { title:"Prioriteit",         href:"prioriteit.html" },
-      voorraad: { title:"Voorraad & Checks",  href:"voorraad_checks.html" },
-      schoon:   { title:"Schoonmaak klussen", href:"schoonmaak_klussen.html" }
-    };
-    order = ["prior","voorraad","schoon"];
-    save({ items, order });
-  }
-  render();
-});
-
-function save(payload){ return setDoc(doc(db,"lists",DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true }); }
-
-function render(){
-  elList.innerHTML = "";
-  order.forEach((id, idx)=>{
-    const it = items[id]; if(!it) return;
-    const li = document.createElement("li");
-    li.className = "item"; li.dataset.index = String(idx);
-
-    const a = document.createElement("a");
-    a.className = "label";
-    a.textContent = it.title;
-    a.href = it.href;
-
-    if (canEdit) {
-      const trash = document.createElement("button");
-      trash.className = "trash"; trash.textContent = "🗑️"; trash.title = "Verwijderen";
-      trash.onclick = ()=> removeItem(id);
-
-      li.draggable = true;
-      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
-      li.addEventListener("dragover",  e => e.preventDefault());
-      li.addEventListener("drop", e => {
-        e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
-          const next = order.slice();
-          const [moved] = next.splice(from,1);
-          next.splice(to,0,moved);
-          order = next; render(); save({ order });
-        }
-      });
-
-      li.append(a, trash);
-    } else {
-      li.append(a);
+    function save(payload){
+      return setDoc(doc(db,"lists",DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
     }
 
-    elList.appendChild(li);
-  });
-}
+    function render(){
+      elList.innerHTML = "";
+      order.forEach((id, idx)=>{
+        const it = items[id]; if(!it) return;
+        const li = document.createElement("li");
+        li.className = "item"; li.dataset.index = String(idx);
 
-btnAdd.onclick = ()=>{
-  if (!canEdit) return;
-  const title = (elTitle.value||"").trim();
-  const href  = (elHref.value||"").trim();
-  if (!title || !href) return;
-  const id = (Date.now().toString(36)+Math.random().toString(36).slice(2,6));
-  const nextItems = { ...items, [id]: { title, href } };
-  const nextOrder = order.concat(id);
-  save({ items: nextItems, order: nextOrder });
-  elTitle.value = ""; elHref.value = "";
-};
+        const a = document.createElement("a");
+        a.className = "label";
+        a.textContent = it.title;
+        a.href = it.href;
 
-function removeItem(id){
-  if (!canEdit) return;
-  const nextItems = { ...items }; delete nextItems[id];
-  const nextOrder = order.filter(x => x !== id);
-  save({ items: nextItems, order: nextOrder });
-}
+        if (canEdit) {
+          const trash = document.createElement("button");
+          trash.className = "trash"; trash.textContent = "🗑️"; trash.title = "Verwijderen";
+          trash.onclick = ()=> removeItem(id);
 
-// slot
-btnEdit.onclick = async ()=>{
-  const email = prompt("Email:");
-  const pwd   = prompt("Wachtwoord:");
-  if (!email || !pwd) return;
-  try { try{ await signOut(auth); }catch(e){}; await signInWithEmailAndPassword(auth,email,pwd); alert("Bewerk-modus aan ✅"); }
-  catch(e){ alert("Inloggen mislukt: "+(e.code||e.message)); }
-};
-btnView.onclick = async ()=>{ try{ await signOut(auth); }catch(e){}; await signInAnonymously(auth); alert("Alleen bekijken 🔒"); };
+          li.draggable = true;
+          li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+          li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+          li.addEventListener("dragover",  e => e.preventDefault());
+          li.addEventListener("drop", e => {
+            e.preventDefault();
+            const from = Number(e.dataTransfer.getData("text/plain"));
+            const to   = Number(li.dataset.index);
+            if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+              const next = order.slice();
+              const [moved] = next.splice(from,1);
+              next.splice(to,0,moved);
+              order = next; render(); save({ order });
+            }
+          });
 
-function updateUI(){
-  // "Knopnaam/Link" alleen zichtbaar in bewerk-modus
-  addBar.style.display = canEdit ? "grid" : "none";
-}
-</script>
+          li.append(a, trash);
+        } else {
+          li.append(a);
+        }
+        elList.appendChild(li);
+      });
+    }
+
+    // acties op home
+    btnAdd.onclick = ()=>{
+      if (!canEdit) return;
+      const title = (elTitle.value||"").trim();
+      const href  = (elHref.value||"").trim();
+      if (!title || !href) return;
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+      const nextItems = { ...items, [id]: { title, href } };
+      const nextOrder = order.concat(id);
+      save({ items: nextItems, order: nextOrder });
+      elTitle.value = ""; elHref.value = "";
+    };
+
+    function removeItem(id){
+      if (!canEdit) return;
+      const nextItems = { ...items }; delete nextItems[id];
+      const nextOrder = order.filter(x => x !== id);
+      save({ items: nextItems, order: nextOrder });
+    }
+
+    // slot
+    btnEdit.onclick = async ()=>{
+      const email = prompt("Email:");
+      const pwd   = prompt("Wachtwoord:");
+      if (!email || !pwd) return;
+      try { try{ await signOut(auth);}catch(e){}; await signInWithEmailAndPassword(auth,email,pwd); alert("Bewerk-modus aan ✅"); }
+      catch(e){ alert("Inloggen mislukt: " + (e.code || e.message)); }
+    };
+    btnView.onclick = async ()=>{ try{ await signOut(auth);}catch(e){}; await signInAnonymously(auth); alert("Alleen bekijken 🔒"); };
+
+    function updateUI(){ addBar.style.display = canEdit ? "grid" : "none"; }
+  </script>
 </body>
 </html>
