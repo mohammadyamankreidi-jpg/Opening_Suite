@@ -56,10 +56,10 @@ li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js?v=14";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
+import { firebaseConfig } from "./firebase-config.js?v=15"; // LET OP: ./ geen /
 
 // === Init ===
 const app  = initializeApp(firebaseConfig);
