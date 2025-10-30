@@ -4,48 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Voorraad & Checks</title>
-  
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    .title{margin:0 0 12px;font-size:clamp(20px,3.2vw,30px)}
-    .grid{display:grid;gap:14px}
-    .btn{display:block;width:100%;text-align:center;text-decoration:none;color:var(--text);background:#111722;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-weight:700}
     header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
     .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-    .tools{display:flex;gap:8px;flex-wrap:wrap}
+    .tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
     button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
     .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
     input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
     ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
     li.item{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
-    li.item.done{opacity:.6;text-decoration:line-through}
-    input[type="checkbox"]{transform:scale(1.2)}
+    li.item .label{flex:1;cursor:pointer}
+    li.item.done .label{ text-decoration:line-through; text-decoration-color:#ff3b30; text-decoration-thickness:3px; }
+    li.item .trash{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.85}
+    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
+    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
-    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
-    li.item { display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #262c39; border-radius:10px; }
-li.item .label { flex:1; cursor:pointer; }
-li.item.done .label{
-  text-decoration: line-through;
-  text-decoration-color:#ff3b30;
-  text-decoration-thickness: 3px;
-}
-li.item .trash{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; border:1px solid #444; border-radius:6px;
-  background:#151a23; cursor:pointer; opacity:.85;
-}
-li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
-.tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
   </style>
 </head>
 <body>
   <div class="wrap">
     <nav class="nav"><a href="index.html">← Terug</a></nav>
+
     <header class="panel card">
       <div class="brand">
         <div class="h">ShiftStart</div>
@@ -63,189 +48,189 @@ li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
         <button id="btnAdd">Toevoegen</button>
       </div>
       <ul id="list"></ul>
-      <p class="hint">Klik op de tekst of het vinkje om af te strepen.</p>
+      <p class="hint">Klik op de tekst of het vinkje om af te strepen. Synchroniseert voor iedereen.</p>
     </div>
 
-  <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
+    <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
- <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js?v=15"; // LET OP: ./ geen /
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    import { firebaseConfig } from "./firebase-config.js?v=15";
 
-// === Init ===
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
-const auth = getAuth(app);
+    /* === Init === */
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const DOC_ID = "voorraad_checks";
 
-// <<< PAS DIT AAN PER PAGINA >>>
-const DOC_ID = "voorraad_checks" 
+    /* === UI refs === */
+    const elList  = document.getElementById("list");
+    const elNew   = document.getElementById("newItem");
+    const btnAdd  = document.getElementById("btnAdd");
+    const btnSeed = document.getElementById("btnSeed");
+    const btnReset= document.getElementById("btnReset");
+    const tools   = document.querySelector(".tools");
 
-// === UI refs ===
-const elList  = document.getElementById("list");
-const elNew   = document.getElementById("newItem");
-const btnAdd  = document.getElementById("btnAdd");
-const btnSeed = document.getElementById("btnSeed");
-const btnReset= document.getElementById("btnReset");
+    /* === Slot knoppen (gedeeld via localStorage, geen auth) === */
+    const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+    const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
+    tools.append(btnEdit, btnView);
 
-// toolbar (slot-knoppen)
-let tools = document.querySelector(".tools");
-if (!tools) {
-  tools = document.createElement("div");
-  tools.className = "tools";
-  (elList?.parentElement || document.body).insertBefore(tools, elList);
-}
-const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
-tools.append(btnEdit, btnView);
+    /* === State === */
+    let dataMap = {};        // { label: boolean }
+    let order   = [];        // volgorde labels
+    let canEdit = (localStorage.getItem("editMode") === "1");
 
-// === State ===
-let dataMap = {};  // { label: boolean }
-let order   = [];  // [label, ...]
-let canEdit = false;
+    /* === Realtime Firestore === */
+    onSnapshot(doc(db, "lists", DOC_ID), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        dataMap = d.items || {};
+        order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
+        Object.keys(dataMap).forEach(k => { if(!order.includes(k)) order.push(k); });
+      } else {
+        dataMap = {}; order = [];
+        save({ items: dataMap, order });
+      }
+      render();
+    });
 
-// Auth: iedereen anoniem (lezen/afvinken), jij met e-mail = bewerken
-onAuthStateChanged(auth, user => {
-  canEdit = !!user && !!user.email;
-  updateUI(); render();
-});
-try { await signInAnonymously(auth); } catch(e){}
-
-// Realtime Firestore
-onSnapshot(doc(db, "lists", DOC_ID), snap => {
-  if (snap.exists()) {
-    const d = snap.data();
-    dataMap = d.items || {};
-    order = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
-    Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
-  } else {
-    dataMap = {}; order = [];
-    save({ items: dataMap, order });
-  }
-  render();
-});
-
-function save(payload){
-  return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
-}
-
-// === Render ===
-function render(){
-  if (!elList) return;
-  elList.innerHTML = "";
-  const labels = order.length? order.slice() : Object.keys(dataMap);
-
-  labels.forEach((label, idx) => {
-    const li = document.createElement("li");
-    li.className = "item" + (dataMap[label] ? " done" : "");
-    li.dataset.index = String(idx);
-
-    // checkbox
-    const cb = document.createElement("input");
-    cb.type = "checkbox"; cb.checked = !!dataMap[label];
-    cb.addEventListener("change", () => toggle(label));
-
-    // tekst
-    const span = document.createElement("div");
-    span.className = "label";
-    span.textContent = label;
-    span.addEventListener("click", () => toggle(label));
-
-    // delete-knop alleen in bewerk-modus
-    if (canEdit) {
-      const trash = document.createElement("button");
-      trash.className = "trash";
-      trash.title = "Verwijderen";
-      trash.textContent = "🗑️";
-      trash.onclick = () => removeItem(label);
-
-      // drag
-      li.draggable = true;
-      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
-      li.addEventListener("dragover",  e => e.preventDefault());
-      li.addEventListener("drop", e => {
-        e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
-          const next = order.slice();
-          const [moved] = next.splice(from, 1);
-          next.splice(to, 0, moved);
-          order = next;
-          render();
-          save({ order });
-        }
-      });
-
-      li.append(cb, span, trash);
-    } else {
-      li.append(cb, span);
+    function save(payload){
+      return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
     }
 
-    elList.appendChild(li);
-  });
-}
+    /* === UI helpers === */
+    function updateUI(){
+      [btnAdd, elNew, btnSeed, btnReset].forEach(el=>{
+        if(!el) return;
+        el.disabled = !canEdit;
+        el.style.opacity = canEdit ? 1 : 0.6;
+        el.style.pointerEvents = canEdit ? "auto" : "none";
+      });
+      [...elList.querySelectorAll(".trash")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
+    }
 
-// === Actions ===
-function toggle(label){
-  const next = { ...dataMap, [label]: !dataMap[label] };
-  save({ items: next });
-}
+    /* === Render === */
+    function render(){
+      if (!elList) return;
+      elList.innerHTML = "";
+      const labels = order.length ? order.slice() : Object.keys(dataMap);
 
-function addItem(t){
-  if (!canEdit) return;
-  t = (t||"").trim();
-  if (!t || (t in dataMap)) return;
-  const nextMap = { ...dataMap, [t]: false };
-  const nextOrder = order.concat(t);
-  save({ items: nextMap, order: nextOrder });
-}
+      labels.forEach((label, idx) => {
+        const li = document.createElement("li");
+        li.className = "item" + (dataMap[label] ? " done" : "");
+        li.dataset.index = String(idx);
 
-function removeItem(label){
-  if (!canEdit) return;
-  const nextMap = { ...dataMap }; delete nextMap[label];
-  const nextOrder = order.filter(x => x !== label);
-  save({ items: nextMap, order: nextOrder });
-}
+        const cb = document.createElement("input");
+        cb.type = "checkbox"; cb.checked = !!dataMap[label];
+        cb.addEventListener("change", () => toggle(label));
 
-function resetAll(){
-  if (!canEdit) return;
-  const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
-  save({ items: next });
-}
-function seedAll(){
-  if (!canEdit) return; // zet hier jouw eigen seed voor die pagina
-  const seed = { "15:15 Afzuiging aan": false, "15:15 Fietsen naar buiten en Dweilen": false };
-  save({ items: seed, order: Object.keys(seed) });
-}
+        const span = document.createElement("div");
+        span.className = "label";
+        span.textContent = label;
+        span.addEventListener("click", () => toggle(label));
 
-// UI events
-btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
-elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
-btnReset&& (btnReset.onclick = resetAll);
-btnSeed && (btnSeed.onclick  = seedAll);
+        if (canEdit) {
+          // delete met bevestiging
+          const trash = document.createElement("button");
+          trash.className = "trash"; trash.title = "Verwijderen"; trash.textContent = "🗑️";
+          trash.onclick = () => {
+            if (!confirm(`Verwijder "${label}"?`)) return;
+            removeItem(label);
+          };
 
-// Slot-knoppen
-btnEdit.onclick = async () => {
-  const email = prompt("Email voor bewerken:");
-  const pwd   = prompt("Wachtwoord:");
-  if (!email || !pwd) return;
-  try { try{ await signOut(auth);}catch(e){}; await signInWithEmailAndPassword(auth, email, pwd); alert("Bewerk-modus aan ✅"); }
-  catch(e){ alert("Inloggen mislukt: " + (e.code || e.message)); }
-};
-btnView.onclick = async () => { try{ await signOut(auth);}catch(e){}; await signInAnonymously(auth); alert("Alleen afvinken 🔒"); };
+          // drag & drop volgorde
+          li.draggable = true;
+          li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+          li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+          li.addEventListener("dragover",  e => e.preventDefault());
+          li.addEventListener("drop", e => {
+            e.preventDefault();
+            const from = Number(e.dataTransfer.getData("text/plain"));
+            const to   = Number(li.dataset.index);
+            if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+              const next = order.slice();
+              const [moved] = next.splice(from, 1);
+              next.splice(to, 0, moved);
+              order = next; render(); save({ order });
+            }
+          });
 
-function updateUI(){
-  [btnAdd, btnSeed, btnReset, elNew].forEach(el=>{
-    if(!el) return;
-    el.disabled = !canEdit;
-    el.style.opacity = canEdit ? 1 : 0.6;
-    el.style.pointerEvents = canEdit ? "auto" : "none";
-  });
-}
-</script>
+          li.append(cb, span, trash);
+        } else {
+          li.append(cb, span);
+        }
+
+        elList.appendChild(li);
+      });
+
+      updateUI();
+    }
+
+    /* === Actions === */
+    function toggle(label){
+      const next = { ...dataMap, [label]: !dataMap[label] };
+      save({ items: next });
+    }
+    function addItem(t){
+      if (!canEdit) return;
+      t = (t||"").trim();
+      if (!t || (t in dataMap)) return;
+      const nextMap = { ...dataMap, [t]: false };
+      const nextOrder = order.concat(t);
+      save({ items: nextMap, order: nextOrder });
+    }
+    function removeItem(label){
+      if (!canEdit) return;
+      const nextMap = { ...dataMap }; delete nextMap[label];
+      const nextOrder = order.filter(x => x !== label);
+      save({ items: nextMap, order: nextOrder });
+    }
+
+    // Reset & Seed (alleen in bewerk-modus)
+    function resetAll(){
+      if (!canEdit) return;
+      if (!confirm("Alle vinkjes uitzetten?")) return;
+      const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
+      save({ items: next });
+    }
+    function seedAll(){
+      if (!canEdit) return;
+      if (!confirm("Standaardlijst terugzetten? Huidige lijst wordt overschreven.")) return;
+      const seed = {
+        "15:15 Afzuiging aan": false,
+        "15:15 Fietsen naar buiten en Dweilen": false
+      };
+      save({ items: seed, order: Object.keys(seed) });
+    }
+
+    // Events
+    btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
+    elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+    btnReset&& (btnReset.onclick = resetAll);
+    btnSeed && (btnSeed.onclick  = seedAll);
+
+    /* === Slot delen met startpagina === */
+    btnEdit.onclick = () => {
+      localStorage.setItem("editMode","1");
+      canEdit = true;  updateUI(); render();
+      alert("Bewerk-modus aan ✅");
+    };
+    btnView.onclick = () => {
+      localStorage.removeItem("editMode");
+      canEdit = false; updateUI(); render();
+      alert("Alleen afvinken 🔒");
+    };
+    window.addEventListener("storage", (e)=>{
+      if (e.key === "editMode"){
+        canEdit = (localStorage.getItem("editMode") === "1");
+        updateUI(); render();
+      }
+    });
+
+    // Start
+    updateUI();
+  </script>
 </body>
 </html>
