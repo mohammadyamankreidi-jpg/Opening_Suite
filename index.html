@@ -181,8 +181,27 @@ btnView.onclick = () => {
       await save(); render();
     };
 
-    btnEdit.onclick = ()=>{ canEdit=true;  localStorage.setItem("editMode","1"); updateUI(); render(); };
-    btnView.onclick = ()=>{ canEdit=false; localStorage.removeItem("editMode"); updateUI(); render(); };
+    // === Admin code voor bewerk-modus (met wachtwoord) ===
+const ADMIN_CODE = "YamanBS1";  // <-- hier jouw code
+
+btnEdit.onclick = () => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE) {
+    canEdit = true;
+    localStorage.setItem("editMode", "1");
+    updateUI(); render();
+    alert("Bewerk-modus aan ✅");
+  } else {
+    alert("Onjuiste code");
+  }
+};
+
+btnView.onclick = () => {
+  canEdit = false;
+  localStorage.removeItem("editMode");
+  updateUI(); render();
+  alert("Alleen bekijken 🔒");
+};
 
     /* ==== START ==== */
     load();
