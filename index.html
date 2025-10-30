@@ -78,19 +78,42 @@ tools.replaceChildren(btnEdit, btnView);
 let canEdit = false;   // start altijd dicht
 let pages = [];        // [{t:'Titel', h:'bestand.html'}]
 
-/* ==== HELPERS ==== */
-async function save() {
-  await setDoc(doc(db, "lists", HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge: true });
+// === helpers ===
+function toSlug(str){
+  return (str || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")   // accenten weg
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g,"-")                        // spaties → -
+    .replace(/^-+|-+$/g,"");
 }
-
-function normaliseerLink(h) {
+function normaliseerLink(h, titel){
   let v = (h || "").trim();
-  if (!v) return "";
-  // als iemand alleen "prioriteit" typt, maak er prioriteit.html van
-  if (!/\.(html|htm)$/i.test(v)) v = v + ".html";
+  if(!v){
+    // geen link ingevuld? maak ‘m van de titel
+    v = toSlug(titel) + ".html";
+  } else if (!/\.(html|htm)$/i.test(v)){
+    v = v + ".html";
+  }
   return v;
 }
 
+// ... in btnAdd.onclick = async () => { ... }:
+btnAdd.onclick = async () => {
+  if(!canEdit) return;
+  const t = elTitle.value.trim();
+  let   h = elHref.value.trim();
+
+  if(!t) return alert("Geef een naam.");
+  if(pages.some(p => p.t.toLowerCase() === t.toLowerCase()))
+    return alert("Naam bestaat al.");
+
+  h = normaliseerLink(h, t);   // <-- hier de auto-link
+
+  pages.push({ t, h });
+  elTitle.value = ""; elHref.value = ""; elTitle.focus();
+  await save(); render();
+};
 // vul missende links automatisch voor bekende titels, en voorkom lege links
 function repareerData() {
   const map = {
