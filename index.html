@@ -4,16 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Start</title>
-  
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);
-         color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
-                 padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
     .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
     .tools{display:flex;gap:8px;flex-wrap:wrap}
     button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
@@ -21,8 +18,9 @@
     input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
     ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
     li.item{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
-    a.label{flex:1;color:inherit;text-decoration:none}
-    .trash{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23}
+    a.label{flex:1;color:#d8e6ff;text-decoration:none}
+    .nolink{flex:1;opacity:.7}
+    .trash{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer}
     li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
@@ -41,7 +39,7 @@
     <div class="card">
       <div class="add">
         <input id="newTitle" type="text" placeholder="Knopnaam (bv. Prioriteit)" />
-        <input id="newHref"  type="text" placeholder="Link (bv. prioriteit.html)" />
+        <input id="newHref"  type="text" placeholder="Link (bv. prioriteit.html) — mag leeg" />
         <button id="btnAdd">Toevoegen</button>
       </div>
       <ul id="pages"></ul>
@@ -51,158 +49,173 @@
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
- <script type="module">
-  console.log("✅ Startscript geladen");
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    import { firebaseConfig } from "./firebase-config.js?v=15";
 
-  /* ==== IMPORTS ==== */
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-  import { firebaseConfig } from "./firebase-config.js?v=15";
+    // === Firebase
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
 
-  /* ==== FIREBASE ==== */
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+    // === Constantes
+    const HOME_ID    = "home_links";   // Firestore doc: lists/home_links
+    const ADMIN_CODE = "YamanBS1";     // slot-code
 
-  /* ==== CONSTANTS ==== */
-  const HOME_ID = "home_links";          // <-- laat dit matchen met je Firestore document
-  const ADMIN_CODE = "YamanBS1";         // <-- jouw beheerderscode
+    // === UI hooks
+    const elTitle = document.getElementById("newTitle");
+    const elHref  = document.getElementById("newHref");
+    const btnAdd  = document.getElementById("btnAdd");
+    const list    = document.getElementById("pages");
 
-  /* ==== UI ==== */
-  const elTitle = document.getElementById("newTitle");
-  const elHref  = document.getElementById("newHref");
-  const btnAdd  = document.getElementById("btnAdd");
-  const list    = document.getElementById("pages");
+    const tools   = document.querySelector(".tools");
+    const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+    const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen bekijken";
+    tools.replaceChildren(btnEdit, btnView);
 
-  const tools   = document.querySelector(".tools");
-  const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-  const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen bekijken";
-  tools.replaceChildren(btnEdit, btnView);
+    // === State
+    let canEdit = false;          // altijd dicht bij start
+    let pages   = [];             // [{t:'Titel', h:'link.html'|'', ...}]
 
-  /* ==== STATE ==== */
-  // Begin ALTIJD dicht; alleen met code open. (geen auto-remember)
-  let canEdit = false;
-  let pages = [];
-
-  /* ==== HELPERS ==== */
-  async function save() {
-    await setDoc(doc(db,"lists",HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge:true });
-  }
-
-  async function load() {
-    const snap = await getDoc(doc(db,"lists",HOME_ID));
-    if (snap.exists()) {
-      const d = snap.data();
-      pages = Array.isArray(d.pages) ? d.pages : [];
-    } else {
-      // Eerste seed / voorbeeld — pas aan of leeg laten
-      pages = [
-        { t:"Prioriteit",         h:"prioriteit.html" },
-        { t:"Voorraad & Checks",  h:"voorraad_checks.html" },
-        { t:"Schoonmaak klussen", h:"schoonmaak_klussen.html" }
-      ];
-      await save();
+    // === Firestore helpers
+    async function save() {
+      await setDoc(doc(db,"lists",HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge:true });
     }
-    render();
-  }
-
-  function updateUI() {
-    [elTitle, elHref, btnAdd].forEach(el => {
-      if (!el) return;
-      el.disabled = !canEdit;
-      el.style.opacity = canEdit ? 1 : 0.6;
-      el.style.pointerEvents = canEdit ? "auto" : "none";
-    });
-    [...list.querySelectorAll(".trash")].forEach(b => {
-      b.style.display = canEdit ? "inline-flex" : "none";
-    });
-  }
-
-  function render() {
-    list.innerHTML = "";
-    pages.forEach((p, idx) => {
-      const li = document.createElement("li");
-      li.className = "item";
-      li.draggable = canEdit;
-      li.dataset.index = String(idx);
-
-      const a = document.createElement("a");
-      a.href = p.h || "#";
-      a.textContent = p.t || "(zonder naam)";
-      a.className = "label";
-
-      const trash = document.createElement("button");
-      trash.className = "trash";
-      trash.textContent = "🗑️";
-      trash.title = "Verwijderen";
-      trash.style.display = canEdit ? "inline-flex" : "none";
-      trash.onclick = async () => {
-        if (!confirm(`Verwijder "${p.t}"?`)) return;
-        pages = pages.filter(x => x.t !== p.t);
+    async function load() {
+      const snap = await getDoc(doc(db,"lists",HOME_ID));
+      if (snap.exists()) {
+        const d = snap.data();
+        pages = Array.isArray(d.pages) ? d.pages : [];
+      } else {
+        // seed met 3 pagina’s
+        pages = [
+          { t:"Prioriteit",         h:"prioriteit.html" },
+          { t:"Voorraad & Checks",  h:"voorraad_checks.html" },
+          { t:"Schoonmaak klussen", h:"schoonmaak_klussen.html" }
+        ];
         await save();
-        render();
-      };
-
-      li.append(a, trash);
-      list.appendChild(li);
-
-      if (canEdit) {
-        li.addEventListener("dragstart", e => {
-          e.dataTransfer.setData("from", String(idx));
-          li.classList.add("dragging");
-        });
-        li.addEventListener("dragend", () => li.classList.remove("dragging"));
-        li.addEventListener("dragover", e => e.preventDefault());
-        li.addEventListener("drop", async e => {
-          e.preventDefault();
-          const from = Number(e.dataTransfer.getData("from"));
-          const to   = idx;
-          if (Number.isFinite(from) && from !== to) {
-            const next = pages.slice();
-            const [m] = next.splice(from, 1);
-            next.splice(to, 0, m);
-            pages = next;
-            await save();
-            render();
-          }
-        });
       }
-    });
-    updateUI();
-  }
-
-  /* ==== ACTIES ==== */
-  btnAdd.onclick = async () => {
-    if (!canEdit) return;
-    const t = elTitle.value.trim();
-    const h = elHref.value.trim();
-    if (!t || !h) return alert("Vul een naam en link in.");
-    if (pages.some(p => p.t === t)) return alert("Naam bestaat al.");
-    pages = pages.concat({ t, h });
-    await save();
-    elTitle.value = ""; elHref.value = ""; elTitle.focus();
-    render();
-  };
-
-  // Slot knoppen (met code)
-  btnEdit.onclick = () => {
-    const code = prompt("Beheerderscode:");
-    if (code === ADMIN_CODE) {
-      canEdit = true;
-      updateUI(); render();
-      alert("Bewerk-modus aan ✅");
-    } else {
-      alert("Onjuiste code");
+      render();
     }
-  };
-  btnView.onclick = () => {
-    canEdit = false;
-    updateUI(); render();
-    alert("Alleen bekijken 🔒");
-  };
 
-  /* ==== START ==== */
-  try { await load(); updateUI(); }
-  catch (e) { console.error(e); alert("Kon startpagina niet laden. Open de Console voor details."); }
-</script>
+    // === UI enable/disable
+    function updateUI() {
+      [elTitle, elHref, btnAdd].forEach(el=>{
+        if(!el) return;
+        el.disabled = !canEdit;
+        el.style.opacity = canEdit ? 1 : 0.6;
+        el.style.pointerEvents = canEdit ? "auto" : "none";
+      });
+      [...list.querySelectorAll(".trash")].forEach(b=>{
+        b.style.display = canEdit ? "inline-flex" : "none";
+      });
+    }
+
+    // === Render
+    function render(){
+      list.innerHTML = "";
+      pages.forEach((p, idx) => {
+        const li = document.createElement("li");
+        li.className = "item";
+        li.draggable = canEdit;
+        li.dataset.index = String(idx);
+
+        // label: klikbare link als h is gevuld; anders grijze tekst en in bewerk-modus kun je link invullen
+        let labelEl;
+        if (p.h && p.h.trim() !== "") {
+          const a = document.createElement("a");
+          a.href = p.h;
+          a.textContent = p.t || "(zonder naam)";
+          a.className = "label";
+          labelEl = a;
+        } else {
+          const span = document.createElement("span");
+          span.textContent = (p.t || "(zonder naam)") + " (geen link)";
+          span.className = "nolink";
+          if (canEdit) {
+            span.style.cursor = "pointer";
+            span.title = "Klik om link te zetten";
+            span.onclick = async () => {
+              const newH = prompt(`Link voor "${p.t}" (bv. prioriteit.html):`, "");
+              if (newH !== null) {
+                p.h = newH.trim();
+                await save(); render();
+              }
+            };
+          }
+          labelEl = span;
+        }
+
+        const trash = document.createElement("button");
+        trash.className = "trash";
+        trash.textContent = "🗑️";
+        trash.title = "Verwijderen";
+        trash.style.display = canEdit ? "inline-flex" : "none";
+        trash.onclick = async () => {
+          if (!confirm(`Verwijder "${p.t}"?`)) return;
+          pages = pages.filter(x => x.t !== p.t);
+          await save(); render();
+        };
+
+        li.append(labelEl, trash);
+        list.appendChild(li);
+
+        if (canEdit) {
+          li.addEventListener("dragstart", e => {
+            e.dataTransfer.setData("from", String(idx));
+            li.classList.add("dragging");
+          });
+          li.addEventListener("dragend", () => li.classList.remove("dragging"));
+          li.addEventListener("dragover", e => e.preventDefault());
+          li.addEventListener("drop", async e => {
+            e.preventDefault();
+            const from = Number(e.dataTransfer.getData("from"));
+            const to   = idx;
+            if (Number.isFinite(from) && from !== to) {
+              const next = pages.slice();
+              const [m] = next.splice(from, 1);
+              next.splice(to, 0, m);
+              pages = next;
+              await save(); render();
+            }
+          });
+        }
+      });
+      updateUI();
+    }
+
+    // === Acties
+    btnAdd.onclick = async () => {
+      if (!canEdit) return;
+      const t = elTitle.value.trim();
+      const h = elHref.value.trim();   // mag leeg zijn
+      if (!t) return alert("Geef minimaal een naam.");
+      if (pages.some(p => p.t === t)) return alert("Naam bestaat al.");
+      pages.push({ t, h });            // h kan "" blijven
+      elTitle.value = elHref.value = "";
+      await save(); render();
+    };
+
+    // === Slot
+    btnEdit.onclick = () => {
+      const code = prompt("Beheerderscode:");
+      if (code === ADMIN_CODE) {
+        canEdit = true;
+        updateUI(); render();
+        alert("Bewerk-modus aan ✅");
+      } else {
+        alert("Onjuiste code");
+      }
+    };
+    btnView.onclick = () => {
+      canEdit = false;
+      updateUI(); render();
+      alert("Alleen bekijken 🔒");
+    };
+
+    // === Start
+    try { await load(); updateUI(); } 
+    catch(e){ console.error(e); alert("Kon startpagina niet laden. Zie Console."); }
+  </script>
 </body>
 </html>
