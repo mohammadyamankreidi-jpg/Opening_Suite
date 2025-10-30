@@ -56,14 +56,16 @@
     alert("Startpagina geladen");
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+import {
+  getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15"; // LET OP: ./ geen /
     // === init
     const app  = initializeApp(firebaseConfig);
     const db   = getFirestore(app);
     // === ADMIN-CODE / SLOT (geldig op alle pagina's) ===
 // Zet hier je eigen code:
-const ADMIN_CODE = "2749"; // <-- verander naar jouw code
+const ADMIN_CODE = "YamanBS1"; // 
 
 // Onthoud bewerk-modus in localStorage (blijft aan na refresh)
 let canEdit = localStorage.getItem("editMode") === "1";
@@ -107,7 +109,7 @@ updateUI?.();
     const btnView  = document.createElement("button"); btnView.textContent = "🔒 Alleen openen";
     tools.append(btnEdit, btnView);
 
-    let canEdit = false;
+    
     let pages = [];
 
     onAuthStateChanged(auth, u => { canEdit = !!u && !!u.email; updateUI(); render(); });
@@ -127,12 +129,42 @@ updateUI?.();
         ];
         await save();
       }
+function removeItem(title){
+  if (!canEdit) return;
+  const del = document.createElement("button");
+del.className = "trash";
+del.title = "Verwijderen";
+del.textContent = "🗑️";
+del.onclick = () => removeItem(p.t);
+li.appendChild(del);
+  const ok = confirm(`Weet je zeker dat je "${title}" wilt verwijderen?`);
+  if (!ok) return;
+
+  // Startpagina werkt met een 'pages' array: [{t: "Naam", h:"link"}, ...]
+  pages = (pages || []).filter(p => p.t !== title);
+  // Sla nieuwe lijst op en render opnieuw
+  save({ pages }).then(() => render()).catch(err => console.error("Verwijderen mislukt:", err));
+}
+
+      
       render();
     }
     load();
 
     function save(){
       return setDoc(doc(db, "lists", HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge:true });
+      // === Verwijderfunctie met bevestiging ===
+function removeItem(title){
+  if (!canEdit) return;
+  const ok = confirm(`Weet je zeker dat je "${title}" wilt verwijderen?`);
+  if (!ok) return;
+
+  // Startpagina werkt met een lijst van pagina’s (pages)
+  pages = (pages || []).filter(p => p.t !== title);
+  save({ pages })
+    .then(() => render())
+    .catch(err => console.error("Fout bij verwijderen:", err));
+}
     }
 
     function updateUI(){
@@ -168,6 +200,12 @@ updateUI?.();
               const [m] = next.splice(from, 1);
               next.splice(to, 0, m);
               pages = next; render(); save();
+              const del = document.createElement("button");
+del.className = "trash";
+del.title = "Verwijderen";
+del.textContent = "🗑️";
+del.onclick = () => removeItem(p.t);
+li.appendChild(del);
             }
           });
 
