@@ -79,6 +79,27 @@
     /* ==== STATE ==== */
     let canEdit = localStorage.getItem("editMode") === "1";
     let pages = [];
+    // === Admin code voor bewerk-modus ===
+const ADMIN_CODE = "YamanBS1"; // zet hier jouw code
+
+btnEdit.onclick = () => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE) {
+    canEdit = true;
+    localStorage.setItem("editMode","1");
+    updateUI(); render();
+    alert("Bewerk-modus aan ✅");
+  } else {
+    alert("Onjuiste code");
+  }
+};
+
+btnView.onclick = () => {
+  canEdit = false;
+  localStorage.removeItem("editMode");
+  updateUI(); render();
+  alert("Alleen bekijken 🔒");
+};
 
     /* ==== HELPERS ==== */
     async function save(){
