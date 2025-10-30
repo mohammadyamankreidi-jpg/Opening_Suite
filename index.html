@@ -57,11 +57,41 @@
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js?v=15"; // LET OP: ./ geen /
     // === init
     const app  = initializeApp(firebaseConfig);
     const db   = getFirestore(app);
+    // === ADMIN-CODE / SLOT (geldig op alle pagina's) ===
+// Zet hier je eigen code:
+const ADMIN_CODE = "2749"; // <-- verander naar jouw code
+
+// Onthoud bewerk-modus in localStorage (blijft aan na refresh)
+let canEdit = localStorage.getItem("editMode") === "1";
+function editOn()  { canEdit = true;  localStorage.setItem("editMode", "1"); updateUI?.(); render?.(); }
+function editOff() { canEdit = false; localStorage.removeItem("editMode");   updateUI?.(); render?.(); }
+
+// Zorg dat de 2 slot-knoppen bestaan; zo niet, maak ze
+let toolsBar = document.querySelector(".tools");
+if (!toolsBar) {
+  toolsBar = document.createElement("div");
+  toolsBar.className = "tools";
+  (document.body || document.documentElement).appendChild(toolsBar);
+}
+let btnEdit = document.getElementById("btnEdit");
+let btnView = document.getElementById("btnView");
+if (!btnEdit) { btnEdit = document.createElement("button"); btnEdit.id = "btnEdit"; btnEdit.textContent = "🔓 Bewerk-modus"; toolsBar.appendChild(btnEdit); }
+if (!btnView) { btnView = document.createElement("button"); btnView.id = "btnView"; btnView.textContent = "🔒 Alleen bekijken"; toolsBar.appendChild(btnView); }
+
+// Klikhandlers voor slot
+btnEdit.onclick = () => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE) { alert("Bewerk-modus aan ✅"); editOn(); }
+  else { alert("Onjuist wachtwoord"); }
+};
+btnView.onclick = () => { editOff(); alert("Alleen bekijken 🔒"); };
+
+// Bij laden direct UI bijwerken
+updateUI?.();
     const auth = getAuth(app);
 
     const HOME_ID = "home_links"; // /lists/home_links
