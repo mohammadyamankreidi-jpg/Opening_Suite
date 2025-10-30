@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Prioriteit</title>
-   
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
@@ -25,20 +24,9 @@
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
     li.item.dragging { opacity: .6; outline: 1px dashed #6aa0ff; }
-    li.item { display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #262c39; border-radius:10px; }
-li.item .label { flex:1; cursor:pointer; }
-li.item.done .label{
-  text-decoration: line-through;
-  text-decoration-color:#ff3b30;
-  text-decoration-thickness: 3px;
-}
-li.item .trash{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; border:1px solid #444; border-radius:6px;
-  background:#151a23; cursor:pointer; opacity:.85;
-}
-li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
-.tools{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
+    li.item .label { flex:1; cursor:pointer; }
+    li.item.done .label{ text-decoration: line-through; text-decoration-color:#ff3b30; text-decoration-thickness: 3px;}
+    li.item .trash{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.85;}
   </style>
 </head>
 <body>
@@ -46,7 +34,7 @@ li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
     <nav class="nav"><a href="index.html">← Terug</a></nav>
     <header class="panel card">
       <div class="brand"><div class="h">ShiftStart</div><div class="s">Prioriteit</div></div>
-      <div class="tools"><button id="btnSeed">Herstel lijst</button><button id="btnReset">Alles herstellen</button></div>
+      <div class="tools"></div>
     </header>
 
     <div class="card">
@@ -56,51 +44,34 @@ li.item.dragging { opacity:.6; outline:1px dashed #6aa0ff; }
     </div>
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js?v=15"; // LET OP: ./ geen /
+import { firebaseConfig } from "./firebase-config.js?v=15";
 
-// === Init ===
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
-const auth = getAuth(app);
-
-// <<< PAS DIT AAN PER PAGINA >>>
+/* === Init === */
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 const DOC_ID = "shiftstart_prioriteit";
 
-// === UI refs ===
+/* === UI refs === */
 const elList  = document.getElementById("list");
 const elNew   = document.getElementById("newItem");
 const btnAdd  = document.getElementById("btnAdd");
-const btnSeed = document.getElementById("btnSeed");
-const btnReset= document.getElementById("btnReset");
+const tools   = document.querySelector(".tools");
 
-// toolbar (slot-knoppen)
-let tools = document.querySelector(".tools");
-if (!tools) {
-  tools = document.createElement("div");
-  tools.className = "tools";
-  (elList?.parentElement || document.body).insertBefore(tools, elList);
-}
+/* === Slot knoppen (gedeeld met startpagina) === */
 const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
 const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
-tools.append(btnEdit, btnView);
+tools.replaceChildren(btnEdit, btnView);
 
-// === State ===
+/* === State === */
 let dataMap = {};  // { label: boolean }
-let order   = [];  // [label, ...]
-let canEdit = false;
+let order   = [];
+let canEdit = (localStorage.getItem("editMode") === "1");
 
-// Auth: iedereen anoniem (lezen/afvinken), jij met e-mail = bewerken
-onAuthStateChanged(auth, user => {
-  canEdit = !!user && !!user.email;
-  updateUI(); render();
-});
-try { await signInAnonymously(auth); } catch(e){}
-
-// Realtime Firestore
+/* === Firestore sync === */
 onSnapshot(doc(db, "lists", DOC_ID), snap => {
   if (snap.exists()) {
     const d = snap.data();
@@ -108,7 +79,8 @@ onSnapshot(doc(db, "lists", DOC_ID), snap => {
     order = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
     Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
   } else {
-    dataMap = {}; order = [];
+    dataMap = {};
+    order = [];
     save({ items: dataMap, order });
   }
   render();
@@ -118,70 +90,72 @@ function save(payload){
   return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
 }
 
-// === Render ===
-function render(){
-  if (!elList) return;
-  elList.innerHTML = "";
-  const labels = order.length? order.slice() : Object.keys(dataMap);
+/* === UI update === */
+function updateUI(){
+  [btnAdd, elNew].forEach(el=>{
+    if(!el) return;
+    el.disabled = !canEdit;
+    el.style.opacity = canEdit ? 1 : 0.6;
+    el.style.pointerEvents = canEdit ? "auto" : "none";
+  });
+  [...elList.querySelectorAll(".trash")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
+}
 
-  labels.forEach((label, idx) => {
+/* === Render === */
+function render(){
+  elList.innerHTML = "";
+  const labels = order.length ? order : Object.keys(dataMap);
+  labels.forEach((label, idx)=>{
     const li = document.createElement("li");
     li.className = "item" + (dataMap[label] ? " done" : "");
     li.dataset.index = String(idx);
 
-    // checkbox
     const cb = document.createElement("input");
     cb.type = "checkbox"; cb.checked = !!dataMap[label];
-    cb.addEventListener("change", () => toggle(label));
+    cb.onchange = () => toggle(label);
 
-    // tekst
     const span = document.createElement("div");
     span.className = "label";
     span.textContent = label;
-    span.addEventListener("click", () => toggle(label));
+    span.onclick = () => toggle(label);
 
-    // delete-knop alleen in bewerk-modus
-    if (canEdit) {
+    if (canEdit){
       const trash = document.createElement("button");
       trash.className = "trash";
-      trash.title = "Verwijderen";
       trash.textContent = "🗑️";
       trash.onclick = () => removeItem(label);
 
-      // drag
       li.draggable = true;
-      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
-      li.addEventListener("dragover",  e => e.preventDefault());
-      li.addEventListener("drop", e => {
+      li.ondragstart = e => { e.dataTransfer.setData("from", String(idx)); li.classList.add("dragging"); };
+      li.ondragend   = () => li.classList.remove("dragging");
+      li.ondragover  = e => e.preventDefault();
+      li.ondrop      = e => {
         e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+        const from = Number(e.dataTransfer.getData("from"));
+        const to   = idx;
+        if(Number.isFinite(from) && from !== to){
           const next = order.slice();
-          const [moved] = next.splice(from, 1);
-          next.splice(to, 0, moved);
+          const [moved] = next.splice(from,1);
+          next.splice(to,0,moved);
           order = next;
-          render();
           save({ order });
+          render();
         }
-      });
-
+      };
       li.append(cb, span, trash);
     } else {
       li.append(cb, span);
     }
-
     elList.appendChild(li);
   });
+  updateUI();
 }
 
-// === Actions ===
+/* === Actions === */
 function toggle(label){
   const next = { ...dataMap, [label]: !dataMap[label] };
   save({ items: next });
 }
-
 function addItem(t){
   if (!canEdit) return;
   t = (t||"").trim();
@@ -190,7 +164,6 @@ function addItem(t){
   const nextOrder = order.concat(t);
   save({ items: nextMap, order: nextOrder });
 }
-
 function removeItem(label){
   if (!canEdit) return;
   const nextMap = { ...dataMap }; delete nextMap[label];
@@ -198,41 +171,34 @@ function removeItem(label){
   save({ items: nextMap, order: nextOrder });
 }
 
-function resetAll(){
-  if (!canEdit) return;
-  const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
-  save({ items: next });
-}
-function seedAll(){
-  if (!canEdit) return; // zet hier jouw eigen seed voor die pagina
-  const seed = { "15:15 Afzuiging aan": false, "15:15 Fietsen naar buiten en Dweilen": false };
-  save({ items: seed, order: Object.keys(seed) });
-}
-
-// UI events
-btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
-elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
-btnReset&& (btnReset.onclick = resetAll);
-btnSeed && (btnSeed.onclick  = seedAll);
-
-// Slot-knoppen
-btnEdit.onclick = async () => {
-  const email = prompt("Email voor bewerken:");
-  const pwd   = prompt("Wachtwoord:");
-  if (!email || !pwd) return;
-  try { try{ await signOut(auth);}catch(e){}; await signInWithEmailAndPassword(auth, email, pwd); alert("Bewerk-modus aan ✅"); }
-  catch(e){ alert("Inloggen mislukt: " + (e.code || e.message)); }
+/* === Slot gedrag (gedeeld met startpagina) === */
+btnEdit.onclick = () => {
+  localStorage.setItem("editMode", "1");
+  canEdit = true;
+  updateUI(); render();
+  alert("Bewerk-modus aan ✅");
 };
-btnView.onclick = async () => { try{ await signOut(auth);}catch(e){}; await signInAnonymously(auth); alert("Alleen afvinken 🔒"); };
+btnView.onclick = () => {
+  localStorage.removeItem("editMode");
+  canEdit = false;
+  updateUI(); render();
+  alert("Alleen afvinken 🔒");
+};
 
-function updateUI(){
-  [btnAdd, btnSeed, btnReset, elNew].forEach(el=>{
-    if(!el) return;
-    el.disabled = !canEdit;
-    el.style.opacity = canEdit ? 1 : 0.6;
-    el.style.pointerEvents = canEdit ? "auto" : "none";
-  });
-}
+// Luister naar wijzigingen in slot-status vanuit andere tab
+window.addEventListener("storage", (e)=>{
+  if(e.key === "editMode"){
+    canEdit = (localStorage.getItem("editMode") === "1");
+    updateUI(); render();
+  }
+});
+
+/* === Events === */
+btnAdd.onclick = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); };
+elNew.addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+
+/* === Start === */
+updateUI();
 </script>
 </body>
 </html>
