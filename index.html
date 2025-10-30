@@ -45,154 +45,126 @@
         <button id="btnAdd">Toevoegen</button>
       </div>
       <ul id="pages"></ul>
-      <p class="hint">🔒 Zonder inloggen kun je alleen openen. Na inloggen kun je toevoegen, verwijderen en slepen.</p>
+      <p class="hint">🔒 Zonder slot kun je alleen bekijken. In bewerk-modus kun je toevoegen, verwijderen en slepen.</p>
     </div>
 
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
- <script type="module">
-   alert("JS module draait ✅");
-/* ==== IMPORTS ==== */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=15";
+  <script type="module">
+    /* === TEST === */
+    console.log("✅ Script geladen");
 
-/* ==== FIREBASE ==== */
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
-const HOME_ID = "home";
+    /* ==== IMPORTS ==== */
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    import { firebaseConfig } from "./firebase-config.js?v=15";
 
-/* ==== UI HOOKS (maakt wat ontbreekt zelf aan) ==== */
-const addBar   = document.querySelector(".card .add") || document.querySelector(".card"); // jouw invoervak + knop
-let   elTitle  = document.querySelector('input[placeholder^="Knopnaam"]');
-let   elHref   = document.querySelector('input[placeholder^="Link"]');
-let   btnAdd   = document.getElementById("btnAdd") || document.querySelector('.card .add button');
+    /* ==== FIREBASE ==== */
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const HOME_ID = "home_links";  // gebruik dezelfde naam als je eerdere data!
 
-if (!elTitle) { elTitle = document.createElement("input"); elTitle.placeholder = "Knopnaam (bv. Prioriteit)"; elTitle.style.marginRight = "8px"; addBar?.prepend(elTitle); }
-if (!elHref)  { elHref  = document.createElement("input"); elHref.placeholder  = "Link (bv. prioriteit.html)"; addBar?.appendChild(elHref); }
-if (!btnAdd)  { btnAdd  = document.createElement("button"); btnAdd.id="btnAdd"; btnAdd.textContent="Toevoegen"; addBar?.appendChild(btnAdd); }
+    /* ==== UI ==== */
+    const elTitle = document.getElementById("newTitle");
+    const elHref  = document.getElementById("newHref");
+    const btnAdd  = document.getElementById("btnAdd");
+    const list    = document.getElementById("pages");
 
-let list = document.getElementById("list");
-if (!list) { list = document.createElement("ul"); list.id = "list"; list.style.listStyle = "none"; list.style.padding = "0"; list.style.marginTop="10px"; addBar?.parentElement?.appendChild(list); }
+    const tools   = document.querySelector(".tools");
+    const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+    const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen bekijken";
+    tools.replaceChildren(btnEdit, btnView);
 
-/* tools (slot-knoppen) rechtsboven in de header */
-let tools = document.querySelector("header .tools");
-if (!tools) {
-  tools = document.createElement("div");
-  tools.className = "tools";
-  tools.style.display="flex"; tools.style.gap="8px";
-  document.querySelector("header.panel")?.appendChild(tools);
-}
-const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen openen";
-tools.replaceChildren(btnEdit, btnView);
+    /* ==== STATE ==== */
+    let canEdit = localStorage.getItem("editMode") === "1";
+    let pages = [];
 
-/* ==== STATE ==== */
-let canEdit = (localStorage.getItem("editMode") === "1");
-let pages = []; // [{t:'Titel', h:'link.html'}, ...]
-
-/* ==== HELPERS ==== */
-const save = (payload) =>
-  setDoc(doc(db,"lists",HOME_ID), { pages: payload, updatedAt: serverTimestamp() }, { merge:true });
-
-const load = async () => {
-  const snap = await getDoc(doc(db,"lists",HOME_ID));
-  if (snap.exists()) {
-    const d = snap.data();
-    pages = Array.isArray(d.pages) ? d.pages : [];
-  } else {
-    pages = [];
-    await save(pages);
-  }
-};
-
-function updateUI(){
-  [elTitle, elHref, btnAdd].forEach(el=>{
-    if(!el) return;
-    el.disabled = !canEdit;
-    el.style.opacity = canEdit ? 1 : 0.6;
-    el.style.pointerEvents = canEdit ? "auto" : "none";
-  });
-  // toon prullenbakjes (CSS via inline, geen extra <style> nodig)
-  [...list.querySelectorAll(".trash")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
-}
-
-function render(){
-  list.innerHTML = "";
-  pages.forEach((p, idx)=>{
-    const li = document.createElement("li");
-    li.style.display="flex"; li.style.alignItems="center"; li.style.gap="10px";
-    li.style.padding="12px"; li.style.border="1px solid #262c39"; li.style.borderRadius="10px";
-    li.style.background="#0f1320"; li.dataset.index = String(idx);
-
-    const a  = document.createElement("a");
-    a.href = p.h || "#"; a.textContent = p.t || "(zonder naam)";
-    a.className = "label"; a.style.flex = "1"; a.style.color = "#d8e6ff"; a.style.textDecoration="none";
-
-    const trash = document.createElement("button");
-    trash.className="trash";
-    trash.title="Verwijderen"; trash.textContent="🗑️";
-    Object.assign(trash.style, {display: canEdit ? "inline-flex" : "none", alignItems:"center", justifyContent:"center",
-      width:"28px", height:"28px", border:"1px solid #444", borderRadius:"6px", background:"#151a23", cursor:"pointer", opacity:"0.9"});
-    trash.onclick = () => removeItem(p.t);
-
-    if (canEdit) {
-      li.draggable = true;
-      li.addEventListener("dragstart", e => { li.style.opacity=".6"; e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   () => { li.style.opacity="1"; });
-      li.addEventListener("dragover",  e => e.preventDefault());
-      li.addEventListener("drop", e => {
-        e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from!==to) {
-          const next = pages.slice();
-          const [m] = next.splice(from,1);
-          next.splice(to,0,m);
-          pages = next; render(); save(pages);
-        }
-      });
+    /* ==== HELPERS ==== */
+    async function save(){
+      await setDoc(doc(db,"lists",HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge:true });
     }
 
-    li.append(a, trash);
-    list.appendChild(li);
-  });
-  updateUI();
-}
+    async function load(){
+      const snap = await getDoc(doc(db,"lists",HOME_ID));
+      if(snap.exists()){
+        const d = snap.data();
+        pages = Array.isArray(d.pages) ? d.pages : [];
+      } else {
+        pages = [
+          { t:"Prioriteit", h:"prioriteit.html" },
+          { t:"Voorraad & Checks", h:"voorraad_checks.html" },
+          { t:"Schoonmaak klussen", h:"schoonmaak_klussen.html" }
+        ];
+        await save();
+      }
+      render();
+    }
 
-/* ==== ACTIES ==== */
-async function addPage(){
-  const t = (elTitle.value||"").trim();
-  const h = (elHref.value||"").trim();
-  if (!t || !h) return;
-  if (pages.some(p => p.t === t)) { alert("Naam bestaat al."); return; }
-  pages = pages.concat({ t, h });
-  await save(pages);
-  elTitle.value = ""; elHref.value = ""; elTitle.focus();
-  render();
-}
+    function updateUI(){
+      [elTitle, elHref, btnAdd].forEach(el=>{
+        if(!el) return;
+        el.disabled = !canEdit;
+        el.style.opacity = canEdit ? 1 : 0.6;
+      });
+      [...list.querySelectorAll(".trash")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
+    }
 
-async function removeItem(title){
-  if (!canEdit) return;
-  const ok = confirm(`Weet je zeker dat je "${title}" wilt verwijderen?`);
-  if (!ok) return;
-  pages = (pages||[]).filter(p => (p.t !== title));
-  await save(pages);
-  render();
-}
+    function render(){
+      list.innerHTML = "";
+      pages.forEach((p, idx)=>{
+        const li = document.createElement("li");
+        li.className = "item";
+        li.draggable = canEdit;
+        li.dataset.index = idx;
 
-/* ==== EVENTS ==== */
-btnAdd?.addEventListener("click", addPage);
-elTitle?.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addPage(); }});
-elHref ?.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addPage(); }});
+        const a = document.createElement("a");
+        a.href = p.h; a.textContent = p.t; a.className = "label";
 
-btnEdit.onclick = () => { canEdit = true;  localStorage.setItem("editMode","1"); updateUI(); render(); };
-btnView.onclick = () => { canEdit = false; localStorage.removeItem("editMode"); updateUI(); render(); };
+        const trash = document.createElement("button");
+        trash.className = "trash"; trash.textContent = "🗑️";
+        trash.style.display = canEdit ? "inline-flex" : "none";
+        trash.onclick = async () => {
+          if(!confirm(`Verwijder "${p.t}"?`)) return;
+          pages = pages.filter(x => x.t !== p.t);
+          await save(); render();
+        };
 
-/* ==== START ==== */
-try { await load(); render(); updateUI(); }
-catch(e){ console.error(e); alert("Kon startpagina niet laden. Zie Console voor details."); }
-</script>
+        li.append(a, trash);
+        list.appendChild(li);
+
+        if(canEdit){
+          li.addEventListener("dragstart", e => { e.dataTransfer.setData("from", idx); });
+          li.addEventListener("dragover", e => e.preventDefault());
+          li.addEventListener("drop", async e => {
+            e.preventDefault();
+            const from = Number(e.dataTransfer.getData("from"));
+            const to   = idx;
+            const moved = pages.splice(from,1)[0];
+            pages.splice(to,0,moved);
+            await save(); render();
+          });
+        }
+      });
+      updateUI();
+    }
+
+    /* ==== EVENTS ==== */
+    btnAdd.onclick = async ()=>{
+      if(!canEdit) return;
+      const t = elTitle.value.trim();
+      const h = elHref.value.trim();
+      if(!t || !h) return alert("Vul een naam en link in");
+      pages.push({t,h});
+      elTitle.value = elHref.value = "";
+      await save(); render();
+    };
+
+    btnEdit.onclick = ()=>{ canEdit=true;  localStorage.setItem("editMode","1"); updateUI(); render(); };
+    btnView.onclick = ()=>{ canEdit=false; localStorage.removeItem("editMode"); updateUI(); render(); };
+
+    /* ==== START ==== */
+    load();
+  </script>
 </body>
 </html>
