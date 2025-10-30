@@ -51,160 +51,158 @@
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
-  <script type="module">
-    /* === TEST === */
-    console.log("✅ Script geladen");
+ <script type="module">
+  console.log("✅ Startscript geladen");
 
-    /* ==== IMPORTS ==== */
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-    import { firebaseConfig } from "./firebase-config.js?v=15";
+  /* ==== IMPORTS ==== */
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+  import { firebaseConfig } from "./firebase-config.js?v=15";
 
-    /* ==== FIREBASE ==== */
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
-    const HOME_ID = "home_links";  // gebruik dezelfde naam als je eerdere data!
+  /* ==== FIREBASE ==== */
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
 
-    /* ==== UI ==== */
-    const elTitle = document.getElementById("newTitle");
-    const elHref  = document.getElementById("newHref");
-    const btnAdd  = document.getElementById("btnAdd");
-    const list    = document.getElementById("pages");
+  /* ==== CONSTANTS ==== */
+  const HOME_ID = "home_links";          // <-- laat dit matchen met je Firestore document
+  const ADMIN_CODE = "YamanBS1";         // <-- jouw beheerderscode
 
-    const tools   = document.querySelector(".tools");
-    const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-    const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen bekijken";
-    tools.replaceChildren(btnEdit, btnView);
+  /* ==== UI ==== */
+  const elTitle = document.getElementById("newTitle");
+  const elHref  = document.getElementById("newHref");
+  const btnAdd  = document.getElementById("btnAdd");
+  const list    = document.getElementById("pages");
 
-    /* ==== STATE ==== */
-    let canEdit = localStorage.getItem("editMode") === "1";
-    let pages = [];
-    // === Admin code voor bewerk-modus ===
-const ADMIN_CODE = "YamanBS1"; // zet hier jouw code
+  const tools   = document.querySelector(".tools");
+  const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+  const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen bekijken";
+  tools.replaceChildren(btnEdit, btnView);
 
-btnEdit.onclick = () => {
-  const code = prompt("Beheerderscode:");
-  if (code === ADMIN_CODE) {
-    canEdit = true;
-    localStorage.setItem("editMode","1");
-    updateUI(); render();
-    alert("Bewerk-modus aan ✅");
-  } else {
-    alert("Onjuiste code");
+  /* ==== STATE ==== */
+  // Begin ALTIJD dicht; alleen met code open. (geen auto-remember)
+  let canEdit = false;
+  let pages = [];
+
+  /* ==== HELPERS ==== */
+  async function save() {
+    await setDoc(doc(db,"lists",HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge:true });
   }
-};
 
-btnView.onclick = () => {
-  canEdit = false;
-  localStorage.removeItem("editMode");
-  updateUI(); render();
-  alert("Alleen bekijken 🔒");
-};
-
-    /* ==== HELPERS ==== */
-    async function save(){
-      await setDoc(doc(db,"lists",HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge:true });
+  async function load() {
+    const snap = await getDoc(doc(db,"lists",HOME_ID));
+    if (snap.exists()) {
+      const d = snap.data();
+      pages = Array.isArray(d.pages) ? d.pages : [];
+    } else {
+      // Eerste seed / voorbeeld — pas aan of leeg laten
+      pages = [
+        { t:"Prioriteit",         h:"prioriteit.html" },
+        { t:"Voorraad & Checks",  h:"voorraad_checks.html" },
+        { t:"Schoonmaak klussen", h:"schoonmaak_klussen.html" }
+      ];
+      await save();
     }
+    render();
+  }
 
-    async function load(){
-      const snap = await getDoc(doc(db,"lists",HOME_ID));
-      if(snap.exists()){
-        const d = snap.data();
-        pages = Array.isArray(d.pages) ? d.pages : [];
-      } else {
-        pages = [
-          { t:"Prioriteit", h:"prioriteit.html" },
-          { t:"Voorraad & Checks", h:"voorraad_checks.html" },
-          { t:"Schoonmaak klussen", h:"schoonmaak_klussen.html" }
-        ];
+  function updateUI() {
+    [elTitle, elHref, btnAdd].forEach(el => {
+      if (!el) return;
+      el.disabled = !canEdit;
+      el.style.opacity = canEdit ? 1 : 0.6;
+      el.style.pointerEvents = canEdit ? "auto" : "none";
+    });
+    [...list.querySelectorAll(".trash")].forEach(b => {
+      b.style.display = canEdit ? "inline-flex" : "none";
+    });
+  }
+
+  function render() {
+    list.innerHTML = "";
+    pages.forEach((p, idx) => {
+      const li = document.createElement("li");
+      li.className = "item";
+      li.draggable = canEdit;
+      li.dataset.index = String(idx);
+
+      const a = document.createElement("a");
+      a.href = p.h || "#";
+      a.textContent = p.t || "(zonder naam)";
+      a.className = "label";
+
+      const trash = document.createElement("button");
+      trash.className = "trash";
+      trash.textContent = "🗑️";
+      trash.title = "Verwijderen";
+      trash.style.display = canEdit ? "inline-flex" : "none";
+      trash.onclick = async () => {
+        if (!confirm(`Verwijder "${p.t}"?`)) return;
+        pages = pages.filter(x => x.t !== p.t);
         await save();
+        render();
+      };
+
+      li.append(a, trash);
+      list.appendChild(li);
+
+      if (canEdit) {
+        li.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("from", String(idx));
+          li.classList.add("dragging");
+        });
+        li.addEventListener("dragend", () => li.classList.remove("dragging"));
+        li.addEventListener("dragover", e => e.preventDefault());
+        li.addEventListener("drop", async e => {
+          e.preventDefault();
+          const from = Number(e.dataTransfer.getData("from"));
+          const to   = idx;
+          if (Number.isFinite(from) && from !== to) {
+            const next = pages.slice();
+            const [m] = next.splice(from, 1);
+            next.splice(to, 0, m);
+            pages = next;
+            await save();
+            render();
+          }
+        });
       }
-      render();
-    }
-
-    function updateUI(){
-      [elTitle, elHref, btnAdd].forEach(el=>{
-        if(!el) return;
-        el.disabled = !canEdit;
-        el.style.opacity = canEdit ? 1 : 0.6;
-      });
-      [...list.querySelectorAll(".trash")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
-    }
-
-    function render(){
-      list.innerHTML = "";
-      pages.forEach((p, idx)=>{
-        const li = document.createElement("li");
-        li.className = "item";
-        li.draggable = canEdit;
-        li.dataset.index = idx;
-
-        const a = document.createElement("a");
-        a.href = p.h; a.textContent = p.t; a.className = "label";
-
-        const trash = document.createElement("button");
-        trash.className = "trash"; trash.textContent = "🗑️";
-        trash.style.display = canEdit ? "inline-flex" : "none";
-        trash.onclick = async () => {
-          if(!confirm(`Verwijder "${p.t}"?`)) return;
-          pages = pages.filter(x => x.t !== p.t);
-          await save(); render();
-        };
-
-        li.append(a, trash);
-        list.appendChild(li);
-
-        if(canEdit){
-          li.addEventListener("dragstart", e => { e.dataTransfer.setData("from", idx); });
-          li.addEventListener("dragover", e => e.preventDefault());
-          li.addEventListener("drop", async e => {
-            e.preventDefault();
-            const from = Number(e.dataTransfer.getData("from"));
-            const to   = idx;
-            const moved = pages.splice(from,1)[0];
-            pages.splice(to,0,moved);
-            await save(); render();
-          });
-        }
-      });
-      updateUI();
-    }
-
-    /* ==== EVENTS ==== */
-    btnAdd.onclick = async ()=>{
-      if(!canEdit) return;
-      const t = elTitle.value.trim();
-      const h = elHref.value.trim();
-      if(!t || !h) return alert("Vul een naam en link in");
-      pages.push({t,h});
-      elTitle.value = elHref.value = "";
-      await save(); render();
-    };
-
-    // === Admin code voor bewerk-modus (met wachtwoord) ===
-const ADMIN_CODE = "YamanBS1";  // <-- hier jouw code
-
-btnEdit.onclick = () => {
-  const code = prompt("Beheerderscode:");
-  if (code === ADMIN_CODE) {
-    canEdit = true;
-    localStorage.setItem("editMode", "1");
-    updateUI(); render();
-    alert("Bewerk-modus aan ✅");
-  } else {
-    alert("Onjuiste code");
+    });
+    updateUI();
   }
-};
 
-btnView.onclick = () => {
-  canEdit = false;
-  localStorage.removeItem("editMode");
-  updateUI(); render();
-  alert("Alleen bekijken 🔒");
-};
+  /* ==== ACTIES ==== */
+  btnAdd.onclick = async () => {
+    if (!canEdit) return;
+    const t = elTitle.value.trim();
+    const h = elHref.value.trim();
+    if (!t || !h) return alert("Vul een naam en link in.");
+    if (pages.some(p => p.t === t)) return alert("Naam bestaat al.");
+    pages = pages.concat({ t, h });
+    await save();
+    elTitle.value = ""; elHref.value = ""; elTitle.focus();
+    render();
+  };
 
-    /* ==== START ==== */
-    load();
-  </script>
+  // Slot knoppen (met code)
+  btnEdit.onclick = () => {
+    const code = prompt("Beheerderscode:");
+    if (code === ADMIN_CODE) {
+      canEdit = true;
+      updateUI(); render();
+      alert("Bewerk-modus aan ✅");
+    } else {
+      alert("Onjuiste code");
+    }
+  };
+  btnView.onclick = () => {
+    canEdit = false;
+    updateUI(); render();
+    alert("Alleen bekijken 🔒");
+  };
+
+  /* ==== START ==== */
+  try { await load(); updateUI(); }
+  catch (e) { console.error(e); alert("Kon startpagina niet laden. Open de Console voor details."); }
+</script>
 </body>
 </html>
