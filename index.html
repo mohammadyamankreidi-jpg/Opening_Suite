@@ -78,43 +78,26 @@ tools.replaceChildren(btnEdit, btnView);
 let canEdit = false;   // start altijd dicht
 let pages = [];        // [{t:'Titel', h:'bestand.html'}]
 
-// === helpers ===
+/* ==== HELPERS ==== */
 function toSlug(str){
   return (str || "")
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")   // accenten weg
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g,"-")                        // spaties → -
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g,"-")
     .replace(/^-+|-+$/g,"");
 }
 function normaliseerLink(h, titel){
   let v = (h || "").trim();
   if(!v){
-    // geen link ingevuld? maak ‘m van de titel
-    v = toSlug(titel) + ".html";
+    v = toSlug(titel) + ".html";            // auto link maken
   } else if (!/\.(html|htm)$/i.test(v)){
     v = v + ".html";
   }
   return v;
 }
-
-// ... in btnAdd.onclick = async () => { ... }:
-btnAdd.onclick = async () => {
-  if(!canEdit) return;
-  const t = elTitle.value.trim();
-  let   h = elHref.value.trim();
-
-  if(!t) return alert("Geef een naam.");
-  if(pages.some(p => p.t.toLowerCase() === t.toLowerCase()))
-    return alert("Naam bestaat al.");
-
-  h = normaliseerLink(h, t);   // <-- hier de auto-link
-
-  pages.push({ t, h });
-  elTitle.value = ""; elHref.value = ""; elTitle.focus();
-  await save(); render();
-};
-// vul missende links automatisch voor bekende titels, en voorkom lege links
+async function save(){
+  await setDoc(doc(db,"lists",HOME_ID), { pages, updatedAt: serverTimestamp() }, { merge:true });
+}
 function repareerData() {
   const map = {
     "Prioriteit": "prioriteit.html",
@@ -123,20 +106,20 @@ function repareerData() {
   };
   pages = (pages || []).map(p => {
     const t = (p.t || "").trim();
-    let  h = normaliseerLink(p.h || map[t] || "");
+    const h = normaliseerLink(p.h || map[t] || "", t);
     return { t, h };
-  }).filter(p => p.t); // titelloze items weg
+  }).filter(p => p.t);
 }
 
+/* ==== LOAD ==== */
 async function load() {
   const snap = await getDoc(doc(db, "lists", HOME_ID));
   if (snap.exists()) {
     const d = snap.data();
     pages = Array.isArray(d.pages) ? d.pages : [];
     repareerData();
-    await save(); // schrijf gerepareerde data terug
+    await save();
   } else {
-    // eerste seed (met links!)
     pages = [
       { t: "Prioriteit",         h: "prioriteit.html" },
       { t: "Voorraad & Checks",  h: "voorraad_checks.html" },
@@ -147,6 +130,7 @@ async function load() {
   render();
 }
 
+/* ==== UI ==== */
 function updateUI() {
   [elTitle, elHref, btnAdd].forEach(el => {
     if (!el) return;
@@ -158,7 +142,6 @@ function updateUI() {
     b.style.display = canEdit ? "inline-flex" : "none";
   });
 }
-
 function render() {
   list.innerHTML = "";
   pages.forEach((p, idx) => {
@@ -168,7 +151,7 @@ function render() {
     li.dataset.index = String(idx);
 
     const a = document.createElement("a");
-    a.href = p.h;                      // altijd een echte link
+    a.href = p.h;
     a.textContent = p.t;
     a.className = "label";
     a.style.cursor = "pointer";
@@ -217,15 +200,10 @@ btnAdd.onclick = async () => {
   if (!canEdit) return;
   const t = elTitle.value.trim();
   let   h = elHref.value.trim();
-
   if (!t) return alert("Geef een naam.");
-  if (!h) return alert("Geef een link (bijv. prioriteit.html).");
-
-  h = normaliseerLink(h);
-
   if (pages.some(p => p.t.toLowerCase() === t.toLowerCase()))
     return alert("Naam bestaat al.");
-
+  h = normaliseerLink(h, t);     // <-- maakt link als je leeg laat
   pages.push({ t, h });
   elTitle.value = ""; elHref.value = ""; elTitle.focus();
   await save(); render();
