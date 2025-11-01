@@ -127,6 +127,11 @@ async function load() {
     ];
     await save();
   }
+  // Voeg "Prioriteit" toe als die ontbreekt (met correcte link)
+if (!pages.some(p => p.t === "Prioriteit")) {
+  pages.push({ t: "Prioriteit", h: "prioriteit.html" });
+  await setDoc(doc(db,"lists","home_links"), { pages, updatedAt: serverTimestamp() }, { merge:true });
+}
   render();
 }
 
