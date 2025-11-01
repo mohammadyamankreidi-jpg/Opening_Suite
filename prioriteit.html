@@ -177,6 +177,24 @@ btnEdit.onclick = () => {
   canEdit = true;
   updateUI(); render();
   alert("Bewerk-modus aan ✅");
+  async function ensureDefaultPages() {
+  const must = [
+    { t: "Prioriteit",         h: "prioriteit.html" },
+    { t: "Voorraad & Checks",  h: "voorraad_checks.html" },
+    { t: "Schoonmaak klussen", h: "schoonmaak_klussen.html" }
+  ];
+  let changed = false;
+  must.forEach(m => {
+    if (!pages.some(p => p.t === m.t)) { pages.push(m); changed = true; }
+  });
+  if (changed) await save();
+}
+
+// ...onderaan waar je start:
+await load();
+await ensureDefaultPages();
+render();
+updateUI();
 };
 btnView.onclick = () => {
   localStorage.removeItem("editMode");
