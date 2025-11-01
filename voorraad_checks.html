@@ -131,14 +131,18 @@
         span.textContent = label;
         span.addEventListener("click", () => toggle(label));
 
-        if (canEdit) {
-          // delete met bevestiging
-          const trash = document.createElement("button");
-          trash.className = "trash"; trash.title = "Verwijderen"; trash.textContent = "🗑️";
-          trash.onclick = () => {
-            if (!confirm(`Verwijder "${label}"?`)) return;
-            removeItem(label);
-          };
+      if (canEdit) {
+  const trash = document.createElement("button");
+  trash.className = "trash";
+  trash.title = "Verwijderen";
+  trash.textContent = "🗑️";
+  trash.draggable = false; // voorkomt slepen van de knop zelf
+  trash.addEventListener("click", (e) => {
+    e.stopPropagation(); // voorkomt dat de klik ook drag/drop triggert
+    const ok = confirm(`"${label}" verwijderen?`);
+    if (!ok) return;
+    removeItem(label);
+  });
 
           // drag & drop volgorde
           li.draggable = true;
