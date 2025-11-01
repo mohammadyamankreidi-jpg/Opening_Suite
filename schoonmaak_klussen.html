@@ -51,190 +51,211 @@
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-    import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-    import { firebaseConfig } from "./firebase-config.js?v=15";
+ <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js?v=15";
 
-    /* === Init === */
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
-    const DOC_ID = "schoonmaak_klussen";
+/* === Firebase === */
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 
-    /* === UI refs === */
-    const elList  = document.getElementById("list");
-    const elNew   = document.getElementById("newItem");
-    const btnAdd  = document.getElementById("btnAdd");
-    const tools   = document.querySelector(".tools");
+/* === INSTELLING PER PAGINA ===
+   Zet DOC_ID per bestand goed:
+   - schoonmaak_klussen.html  -> "schoonmaak_klussen"
+   - voorraad_checks.html     -> "voorraad_checks"
+*/
+const DOC_ID = document.title.includes("Schoonmaak") ? "schoonmaak_klussen" : "voorraad_checks";
 
-    /* === Slot knoppen (géén auth; gedeeld via localStorage) === */
-    const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-    const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
-    tools.replaceChildren(btnEdit, btnView);
+/* === Zelfde slot als startpagina === */
+const ADMIN_CODE = "YamanBS1";           // <- zelfde code als index
+let   canEdit    = localStorage.getItem("editMode") === "1";
 
-    /* === State === */
-    let dataMap = {};        // { label: boolean }
-    let order   = [];        // volgorde labels
-    let canEdit = (localStorage.getItem("editMode") === "1");
+/* === UI refs === */
+const elList  = document.getElementById("list");
+const elNew   = document.getElementById("newItem");
+const btnAdd  = document.getElementById("btnAdd");
+const btnSeed = document.getElementById("btnSeed");
+const btnReset= document.getElementById("btnReset");
 
-    /* === Firestore realtime === */
-    onSnapshot(doc(db, "lists", DOC_ID), snap => {
-      if (snap.exists()) {
-        const d = snap.data();
-        dataMap = d.items || {};
-        order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
-        Object.keys(dataMap).forEach(k => { if(!order.includes(k)) order.push(k); });
-      } else {
-        dataMap = {}; order = [];
-        save({ items: dataMap, order });
-      }
-      render();
-    });
+/* Slot-knoppen in header (zoals op index) */
+let tools = document.querySelector(".tools");
+if (!tools) {
+  tools = document.createElement("div");
+  tools.className = "tools";
+  (elList?.parentElement || document.body).insertBefore(tools, elList);
+}
+const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
+const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
+tools.append(btnEdit, btnView);
 
-    function save(payload){
-      return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
-    }
+/* === State === */
+let dataMap = {};  // { label: boolean }
+let order   = [];  // [label, ...] volgorde van items
 
-    /* === UI helpers === */
-    function updateUI(){
-      [btnAdd, elNew].forEach(el=>{
-        if(!el) return;
-        el.disabled = !canEdit;
-        el.style.opacity = canEdit ? 1 : 0.6;
-        el.style.pointerEvents = canEdit ? "auto" : "none";
+/* === Firestore realtime === */
+onSnapshot(doc(db, "lists", DOC_ID), snap => {
+  if (snap.exists()) {
+    const d = snap.data();
+    dataMap = d.items || {};
+    order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
+    // voeg eventuele ontbrekende keys alsnog achteraan toe
+    Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
+  } else {
+    dataMap = {}; order = [];
+    save({ items: dataMap, order });
+  }
+  render();
+});
+
+/* === Helpers === */
+function save(payload){
+  return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
+}
+
+function updateUI(){
+  [btnAdd, btnSeed, btnReset, elNew].forEach(el=>{
+    if(!el) return;
+    el.disabled = !canEdit;
+    el.style.opacity = canEdit ? 1 : 0.6;
+    el.style.pointerEvents = canEdit ? "auto" : "none";
+  });
+  // toon/verberg prullenbakjes
+  [...elList.querySelectorAll(".trash")].forEach(b=>{
+    b.style.display = canEdit ? "inline-flex" : "none";
+  });
+}
+
+/* === Render === */
+function render(){
+  if (!elList) return;
+  elList.innerHTML = "";
+  const labels = order.length ? order.slice() : Object.keys(dataMap);
+
+  labels.forEach((label, idx) => {
+    const li = document.createElement("li");
+    li.className = "item" + (dataMap[label] ? " done" : "");
+    li.dataset.index = String(idx);
+
+    // checkbox + label
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!dataMap[label];
+    cb.addEventListener("change", () => toggle(label));
+
+    const span = document.createElement("div");
+    span.className = "label";
+    span.textContent = label;
+    span.addEventListener("click", () => toggle(label));
+
+    // delete met bevestiging (alleen in bewerk-modus)
+    const trash = document.createElement("button");
+    trash.className = "trash";
+    trash.title = "Verwijderen";
+    trash.textContent = "🗑️";
+    trash.style.display = canEdit ? "inline-flex" : "none";
+    trash.onclick = () => {
+      if (!canEdit) return;
+      if (!confirm(`Verwijder "${label}"?`)) return;
+      removeItem(label);
+    };
+
+    // drag (alleen in bewerk-modus)
+    if (canEdit) {
+      li.draggable = true;
+      li.addEventListener("dragstart", e => {
+        li.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", String(idx));
       });
-      [...elList.querySelectorAll(".trash")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
+      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+      li.addEventListener("dragover",  e => e.preventDefault());
+      li.addEventListener("drop", e => {
+        e.preventDefault();
+        const from = Number(e.dataTransfer.getData("text/plain"));
+        const to   = Number(li.dataset.index);
+        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+          const next = order.slice();
+          const [moved] = next.splice(from, 1);
+          next.splice(to, 0, moved);
+          order = next;
+          render();
+          save({ order });
+        }
+      });
     }
 
-    /* === Render === */
-    function render(){
-      if (!elList) return;
-      elList.innerHTML = "";
-      const labels = order.length ? order.slice() : Object.keys(dataMap);
-
-      labels.forEach((label, idx) => {
-        const li = document.createElement("li");
-        li.className = "item" + (dataMap[label] ? " done" : "");
-        li.dataset.index = String(idx);
-
-        const cb = document.createElement("input");
-        cb.type = "checkbox"; cb.checked = !!dataMap[label];
-        cb.addEventListener("change", () => toggle(label));
-
-        const span = document.createElement("div");
-        span.className = "label";
-        span.textContent = label;
-        span.addEventListener("click", () => toggle(label));
-
-        if (canEdit) {
-  const trash = document.createElement("button");
-  trash.className = "trash";
-  trash.title = "Verwijderen";
-  trash.textContent = "🗑️";
-  trash.draggable = false; // voorkomt slepen van de knop zelf
-  trash.addEventListener("click", (e) => {
-    e.stopPropagation(); // voorkomt dat de klik ook drag/drop triggert
-    const ok = confirm(`"${label}" verwijderen?`);
-    if (!ok) return;
-    removeItem(label);
+    li.append(cb, span, trash);
+    elList.appendChild(li);
   });
 
-          // drag & drop
-          li.draggable = true;
-          li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-          li.addEventListener("dragend",   () => li.classList.remove("dragging"));
-          li.addEventListener("dragover",  e => e.preventDefault());
-          li.addEventListener("drop", e => {
-            e.preventDefault();
-            const from = Number(e.dataTransfer.getData("text/plain"));
-            const to   = Number(li.dataset.index);
-            if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
-              const next = order.slice();
-              const [moved] = next.splice(from, 1);
-              next.splice(to, 0, moved);
-              order = next; render(); save({ order });
-            }
-          });
+  updateUI();
+}
 
-          li.append(cb, span, trash);
-        } else {
-          li.append(cb, span);
-        }
+/* === Actions === */
+function toggle(label){
+  const next = { ...dataMap, [label]: !dataMap[label] };
+  save({ items: next });
+}
 
-        elList.appendChild(li);
-      });
+function addItem(t){
+  if (!canEdit) return;
+  t = (t||"").trim();
+  if (!t || (t in dataMap)) return;
+  const nextMap = { ...dataMap, [t]: false };
+  const nextOrder = order.concat(t);
+  save({ items: nextMap, order: nextOrder });
+}
 
-      updateUI();
-    }
+function removeItem(label){
+  if (!canEdit) return;
+  const nextMap = { ...dataMap }; delete nextMap[label];
+  const nextOrder = order.filter(x => x !== label);
+  save({ items: nextMap, order: nextOrder });
+}
 
-    /* === Actions === */
-    function toggle(label){
-      const next = { ...dataMap, [label]: !dataMap[label] };
-      save({ items: next });
-    }
-    function addItem(t){
-      if (!canEdit) return;
-      t = (t||"").trim();
-      if (!t || (t in dataMap)) return;
-      const nextMap = { ...dataMap, [t]: false };
-      const nextOrder = order.concat(t);
-      save({ items: nextMap, order: nextOrder });
-    }
-    function removeItem(label){
-      if (!canEdit) return;
-      const nextMap = { ...dataMap }; delete nextMap[label];
-      const nextOrder = order.filter(x => x !== label);
-      save({ items: nextMap, order: nextOrder });
-    }
+function resetAll(){
+  if (!canEdit) return;
+  const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
+  save({ items: next });
+}
+function seedAll(){
+  if (!canEdit) return;
+  // Zet hier jouw eigen standaardlijst per pagina
+  const seed = {
+    "15:15 Afzuiging aan": false,
+    "15:15 Fietsen naar buiten en Dweilen": false
+  };
+  save({ items: seed, order: Object.keys(seed) });
+}
 
-    // Seed & reset (alleen in bewerk-modus)
-    function resetAll(){
-      if (!canEdit) return;
-      if (!confirm("Alle vinkjes uitzetten?")) return;
-      const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
-      save({ items: next });
-    }
-    function seedAll(){
-      if (!canEdit) return;
-      if (!confirm("Standaardlijst terugzetten? Huidige lijst wordt overschreven.")) return;
-      const seed = {
-        "15:15 Afzuiging aan": false,
-        "15:15 Fietsen naar buiten en Dweilen": false
-      };
-      save({ items: seed, order: Object.keys(seed) });
-    }
+/* === UI events === */
+btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
+elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+btnReset&& (btnReset.onclick = resetAll);
+btnSeed && (btnSeed.onclick  = seedAll);
 
-    // Knoppen
-    btnAdd && (btnAdd.onclick = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
-    elNew  && elNew.addEventListener("keydown", e => { if (e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+/* === Slot-knoppen (zelfde als index) === */
+btnEdit.onclick = () => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE) {
+    canEdit = true;
+    localStorage.setItem("editMode","1");
+    updateUI(); render();
+    alert("Bewerk-modus aan ✅");
+  } else {
+    alert("Onjuiste code");
+  }
+};
+btnView.onclick = () => {
+  canEdit = false;
+  localStorage.removeItem("editMode");
+  updateUI(); render();
+  alert("Alleen afvinken 🔒");
+};
 
-    // Maak de bestaande Herstel/Reset knoppen functioneel
-    const btnSeed = document.getElementById("btnSeed");
-    const btnReset= document.getElementById("btnReset");
-    btnSeed && (btnSeed.onclick = seedAll);
-    btnReset&& (btnReset.onclick = resetAll);
+// Zorg dat subpagina’s de stand volgen van de startpagina
+if (localStorage.getItem("editMode") === "1") { canEdit = true; }
 
-    /* === Slot delen met startpagina === */
-    btnEdit.onclick = () => {
-      localStorage.setItem("editMode","1");
-      canEdit = true;  updateUI(); render();
-      alert("Bewerk-modus aan ✅");
-    };
-    btnView.onclick = () => {
-      localStorage.removeItem("editMode");
-      canEdit = false; updateUI(); render();
-      alert("Alleen afvinken 🔒");
-    };
-    // luister naar veranderingen vanuit andere tab/pagina
-    window.addEventListener("storage", (e)=>{
-      if (e.key === "editMode"){
-        canEdit = (localStorage.getItem("editMode") === "1");
-        updateUI(); render();
-      }
-    });
-
-    // Start
-    updateUI();
-  </script>
+/* Klaar */
+</script>
 </body>
 </html>
