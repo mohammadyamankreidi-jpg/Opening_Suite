@@ -63,25 +63,18 @@ import { firebaseConfig } from "./firebase-config.js?v=15";
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-/* === INSTELLING PER PAGINA ===
-   Zet DOC_ID per bestand goed:
-   - schoonmaak_klussen.html  -> "schoonmaak_klussen"
-   - voorraad_checks.html     -> "voorraad_checks"
-*/
-const DOC_ID = document.title.includes("Schoonmaak") ? "schoonmaak_klussen" : "voorraad_checks";
-
-/* === Zelfde slot als startpagina === */
-const ADMIN_CODE = "YamanBS1";           // <- zelfde code als index
-let   canEdit    = localStorage.getItem("editMode") === "1";
+/* === Per pagina === */
+const DOC_ID     = "voorraad_checks";
+const ADMIN_CODE = "YamanBS1";
 
 /* === UI refs === */
 const elList  = document.getElementById("list");
 const elNew   = document.getElementById("newItem");
 const btnAdd  = document.getElementById("btnAdd");
-const btnSeed = document.getElementById("btnSeed");
-const btnReset= document.getElementById("btnReset");
+let   btnSeed = document.getElementById("btnSeed");
+let   btnReset= document.getElementById("btnReset");
 
-/* Slot-knoppen in header (zoals op index) */
+/* Buttons (slot) */
 let tools = document.querySelector(".tools");
 if (!tools) {
   tools = document.createElement("div");
@@ -92,9 +85,14 @@ const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Be
 const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
 tools.append(btnEdit, btnView);
 
+/* Zorg dat herstelknoppen bestaan */
+if (!btnSeed) { btnSeed = document.createElement("button"); btnSeed.id="btnSeed"; btnSeed.textContent="Herstel lijst"; tools.prepend(btnSeed); }
+if (!btnReset){ btnReset= document.createElement("button"); btnReset.id="btnReset"; btnReset.textContent="Alles herstellen"; tools.prepend(btnReset); }
+
 /* === State === */
-let dataMap = {};  // { label: boolean }
-let order   = [];  // [label, ...] volgorde van items
+let canEdit = (localStorage.getItem("editMode") === "1");
+let dataMap = {};  
+let order   = [];
 
 /* === Firestore realtime === */
 onSnapshot(doc(db, "lists", DOC_ID), snap => {
@@ -102,7 +100,6 @@ onSnapshot(doc(db, "lists", DOC_ID), snap => {
     const d = snap.data();
     dataMap = d.items || {};
     order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
-    // voeg eventuele ontbrekende keys alsnog achteraan toe
     Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
   } else {
     dataMap = {}; order = [];
@@ -115,7 +112,6 @@ onSnapshot(doc(db, "lists", DOC_ID), snap => {
 function save(payload){
   return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
 }
-
 function updateUI(){
   [btnAdd, btnSeed, btnReset, elNew].forEach(el=>{
     if(!el) return;
@@ -123,7 +119,6 @@ function updateUI(){
     el.style.opacity = canEdit ? 1 : 0.6;
     el.style.pointerEvents = canEdit ? "auto" : "none";
   });
-  // toon/verberg prullenbakjes
   [...elList.querySelectorAll(".trash")].forEach(b=>{
     b.style.display = canEdit ? "inline-flex" : "none";
   });
@@ -140,29 +135,27 @@ function render(){
     li.className = "item" + (dataMap[label] ? " done" : "");
     li.dataset.index = String(idx);
 
-    // checkbox + label
     const cb = document.createElement("input");
     cb.type = "checkbox"; cb.checked = !!dataMap[label];
-    cb.addEventListener("change", () => toggle(label));
+    cb.addEventListener("change", (e) => { e.stopPropagation(); toggle(label); });
 
     const span = document.createElement("div");
     span.className = "label";
     span.textContent = label;
-    span.addEventListener("click", () => toggle(label));
+    span.addEventListener("click", (e) => { e.stopPropagation(); toggle(label); });
 
-    // delete met bevestiging (alleen in bewerk-modus)
     const trash = document.createElement("button");
     trash.className = "trash";
     trash.title = "Verwijderen";
     trash.textContent = "🗑️";
     trash.style.display = canEdit ? "inline-flex" : "none";
-    trash.onclick = () => {
+    trash.addEventListener("click", (e) => {
+      e.stopPropagation();
       if (!canEdit) return;
       if (!confirm(`Verwijder "${label}"?`)) return;
       removeItem(label);
-    };
+    });
 
-    // drag (alleen in bewerk-modus)
     if (canEdit) {
       li.draggable = true;
       li.addEventListener("dragstart", e => {
@@ -198,7 +191,6 @@ function toggle(label){
   const next = { ...dataMap, [label]: !dataMap[label] };
   save({ items: next });
 }
-
 function addItem(t){
   if (!canEdit) return;
   t = (t||"").trim();
@@ -207,14 +199,12 @@ function addItem(t){
   const nextOrder = order.concat(t);
   save({ items: nextMap, order: nextOrder });
 }
-
 function removeItem(label){
   if (!canEdit) return;
   const nextMap = { ...dataMap }; delete nextMap[label];
   const nextOrder = order.filter(x => x !== label);
   save({ items: nextMap, order: nextOrder });
 }
-
 function resetAll(){
   if (!canEdit) return;
   const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
@@ -222,7 +212,6 @@ function resetAll(){
 }
 function seedAll(){
   if (!canEdit) return;
-  // Zet hier jouw eigen standaardlijst per pagina
   const seed = {
     "15:15 Afzuiging aan": false,
     "15:15 Fietsen naar buiten en Dweilen": false
@@ -230,13 +219,13 @@ function seedAll(){
   save({ items: seed, order: Object.keys(seed) });
 }
 
-/* === UI events === */
+/* === Events === */
 btnAdd  && (btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); });
 elNew   && elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
 btnReset&& (btnReset.onclick = resetAll);
 btnSeed && (btnSeed.onclick  = seedAll);
 
-/* === Slot-knoppen (zelfde als index) === */
+/* === Slot === */
 btnEdit.onclick = () => {
   const code = prompt("Beheerderscode:");
   if (code === ADMIN_CODE) {
@@ -254,11 +243,6 @@ btnView.onclick = () => {
   updateUI(); render();
   alert("Alleen afvinken 🔒");
 };
-
-// Zorg dat subpagina’s de stand volgen van de startpagina
-if (localStorage.getItem("editMode") === "1") { canEdit = true; }
-
-/* Klaar */
 </script>
 </body>
 </html>
