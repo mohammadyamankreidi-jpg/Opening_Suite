@@ -57,52 +57,58 @@ import { firebaseConfig } from "./firebase-config.js?v=15";
 /* ==== FIREBASE ==== */
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-const HOME_ID = "home";
 
-/* ==== UI HOOKS ==== */
-const addBar   = document.querySelector(".card .add") || document.querySelector(".card");
-let elTitle  = document.querySelector('input[placeholder^="Knopnaam"]');
-let elHref   = document.querySelector('input[placeholder^="Link"]');
-let btnAdd   = document.getElementById("btnAdd") || document.querySelector('.card .add button');
+/* ==== CONSTANTS ==== */
+const HOME_ID    = "home_links";         // jouw bestaande document
+const ADMIN_CODE = "YamanBS1";
 
-if (!elTitle) { elTitle = document.createElement("input"); elTitle.placeholder = "Knopnaam (bv. Prioriteit)"; elTitle.style.marginRight = "8px"; addBar?.prepend(elTitle); }
-if (!elHref)  { elHref  = document.createElement("input"); elHref.placeholder  = "Link (bv. prioriteit.html)"; addBar?.appendChild(elHref); }
-if (!btnAdd)  { btnAdd  = document.createElement("button"); btnAdd.id="btnAdd"; btnAdd.textContent="Toevoegen"; addBar?.appendChild(btnAdd); }
+/* ==== UI ==== */
+const elTitle = document.getElementById("newTitle");
+const elHref  = document.getElementById("newHref");
+const btnAdd  = document.getElementById("btnAdd");
+const list    = document.getElementById("pages");
 
-let list = document.getElementById("list");
-if (!list) { list = document.createElement("ul"); list.id = "list"; list.style.listStyle = "none"; list.style.padding = "0"; list.style.marginTop="10px"; addBar?.parentElement?.appendChild(list); }
-
-/* ==== Slot-knoppen rechtsboven ==== */
+/* Slotknoppen rechtsboven */
 let tools = document.querySelector("header .tools");
 if (!tools) {
   tools = document.createElement("div");
   tools.className = "tools";
-  tools.style.display="flex"; tools.style.gap="8px";
   document.querySelector("header.panel")?.appendChild(tools);
 }
 const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen openen";
+const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
 tools.replaceChildren(btnEdit, btnView);
 
 /* ==== STATE ==== */
 let canEdit = (localStorage.getItem("editMode") === "1");
-let pages = []; // [{t:'Titel', h:'link.html'}, ...]
-const ADMIN_CODE = "YamanBS1";
+let pages = []; // [{ t:'Titel', h:'link.html' }]
 
 /* ==== HELPERS ==== */
 const save = (payload) =>
   setDoc(doc(db,"lists",HOME_ID), { pages: payload, updatedAt: serverTimestamp() }, { merge:true });
 
-const load = async () => {
+async function load(){
   const snap = await getDoc(doc(db,"lists",HOME_ID));
-  if (snap.exists()) {
+  if (snap.exists()){
     const d = snap.data();
     pages = Array.isArray(d.pages) ? d.pages : [];
   } else {
-    pages = [];
+    // eerste seed
+    pages = [
+      { t:"Prioriteit",         h:"prioriteit.html" },
+      { t:"Voorraad & Checks",  h:"voorraad_checks.html" },
+      { t:"Schoonmaak klussen", h:"schoonmaak_klussen.html" }
+    ];
     await save(pages);
   }
-};
+  render();
+}
+
+function toSlug(str){
+  return (str||"")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+}
 
 function updateUI(){
   [elTitle, elHref, btnAdd].forEach(el=>{
@@ -111,57 +117,64 @@ function updateUI(){
     el.style.opacity = canEdit ? 1 : 0.6;
     el.style.pointerEvents = canEdit ? "auto" : "none";
   });
-  [...list.querySelectorAll(".trash,.edit")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
+  [...list.querySelectorAll(".trash,.edit")].forEach(b=>{
+    b.style.display = canEdit ? "inline-flex" : "none";
+  });
 }
 
 function render(){
   list.innerHTML = "";
-  pages.forEach((p, idx)=>{
+  (pages||[]).forEach((p, idx)=>{
     const li = document.createElement("li");
-    li.style.display="flex"; li.style.alignItems="center"; li.style.gap="10px";
-    li.style.padding="12px"; li.style.border="1px solid #262c39"; li.style.borderRadius="10px";
-    li.style.background="#0f1320"; li.dataset.index = String(idx);
+    li.className = "item";
+    li.draggable = canEdit;
+    li.dataset.index = String(idx);
 
     const a  = document.createElement("a");
-    a.href = p.h || "#"; a.textContent = p.t || "(zonder naam)";
-    a.className = "label"; a.style.flex = "1"; a.style.color = "#d8e6ff"; a.style.textDecoration="none";
+    a.href = (p.h && p.h.trim()) ? p.h : "#";
+    a.textContent = p.t || "(zonder naam)";
+    a.className = "label";
+    a.style.color = "#d8e6ff";
+    a.style.textDecoration = "none";
+    a.style.flex = "1";
 
-    // ✏️ pen
+    // ✏️ naam wijzigen
     const edit = document.createElement("button");
-    edit.className="edit";
-    edit.title="Naam wijzigen"; edit.textContent="✏️";
-    edit.addEventListener("click", e=>{
+    edit.className = "edit";
+    edit.title = "Naam wijzigen";
+    edit.textContent = "✏️";
+    edit.style.display = canEdit ? "inline-flex" : "none";
+    edit.onclick = (e)=>{
       e.stopPropagation();
       const nieuw = prompt("Nieuwe naam:", p.t);
-      if (!nieuw || nieuw === p.t) return;
+      if (!nieuw || nieuw.trim() === p.t) return;
       const next = pages.slice();
-      next[idx].t = nieuw.trim();
+      next[idx] = { ...next[idx], t: nieuw.trim() };
       pages = next; render(); save(pages);
-    });
-    edit.addEventListener("mousedown", e=>e.stopPropagation());
+    };
 
-    // 🗑️ prullenbak
+    // 🗑️ verwijderen met confirm
     const trash = document.createElement("button");
-    trash.className="trash";
-    trash.title="Verwijderen"; trash.textContent="🗑️";
-    trash.addEventListener("click", e=>{
+    trash.className = "trash";
+    trash.title = "Verwijderen";
+    trash.textContent = "🗑️";
+    trash.style.display = canEdit ? "inline-flex" : "none";
+    trash.onclick = (e)=>{
       e.stopPropagation();
-      if (!confirm(`Verwijder "${p.t}"?`)) return;
-      pages = pages.filter(x => x.t !== p.t);
+      if(!confirm(`Verwijder "${p.t}"?`)) return;
+      pages = pages.filter((_,i)=>i!==idx);
       render(); save(pages);
-    });
-    trash.addEventListener("mousedown", e=>e.stopPropagation());
+    };
 
-    if (canEdit) {
-      li.draggable = true;
-      li.addEventListener("dragstart", e => { li.style.opacity=".6"; e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   () => { li.style.opacity="1"; });
+    if (canEdit){
+      li.addEventListener("dragstart", e => { e.dataTransfer.setData("from", String(idx)); li.classList.add("dragging"); });
+      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
       li.addEventListener("dragover",  e => e.preventDefault());
       li.addEventListener("drop", e => {
         e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from!==to) {
+        const from = Number(e.dataTransfer.getData("from"));
+        const to   = idx;
+        if (Number.isFinite(from) && from !== to){
           const next = pages.slice();
           const [m] = next.splice(from,1);
           next.splice(to,0,m);
@@ -180,9 +193,14 @@ function render(){
 /* ==== ACTIES ==== */
 async function addPage(){
   const t = (elTitle.value||"").trim();
-  const h = (elHref.value||"").trim();
-  if (!t) return; // mag zonder link
-  if (pages.some(p => p.t === t)) { alert("Naam bestaat al."); return; }
+  let   h = (elHref.value||"").trim();
+  if (!t) return alert("Geef een naam.");
+  if (pages.some(p => p.t.toLowerCase() === t.toLowerCase())) return alert("Naam bestaat al.");
+
+  // link automatisch maken als leeg
+  if (!h) h = toSlug(t) + ".html";
+  else if (!/\.(html|htm)$/i.test(h)) h = h + ".html";
+
   pages = pages.concat({ t, h });
   await save(pages);
   elTitle.value = ""; elHref.value = ""; elTitle.focus();
@@ -193,18 +211,25 @@ async function addPage(){
 btnEdit.onclick = () => {
   const code = prompt("Beheerderscode:");
   if (code === ADMIN_CODE) {
-    canEdit = true;  localStorage.setItem("editMode","1"); updateUI(); render();
+    canEdit = true; localStorage.setItem("editMode","1");
+    updateUI(); render();
     alert("Bewerk-modus aan ✅");
   } else {
     alert("Onjuiste code");
   }
 };
 btnView.onclick = () => {
-  canEdit = false; localStorage.removeItem("editMode"); updateUI(); render();
-  alert("Alleen openen 🔒");
+  canEdit = false; localStorage.removeItem("editMode");
+  updateUI(); render();
+  alert("Alleen afvinken 🔒");
 };
+
+// sync slot tussen tabs/pagina's
 window.addEventListener("storage", e=>{
-  if(e.key==="editMode"){ canEdit = (localStorage.getItem("editMode")==="1"); updateUI(); render(); }
+  if (e.key === "editMode"){
+    canEdit = (localStorage.getItem("editMode")==="1");
+    updateUI(); render();
+  }
 });
 
 /* ==== EVENTS ==== */
