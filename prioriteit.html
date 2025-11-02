@@ -50,21 +50,20 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/fireba
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15";
 
-/* === Init === */
+/* === Firebase === */
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-const DOC_ID = "shiftstart_prioriteit";
+
+/* === Pagina === */
+const DOC_ID     = "shiftstart_prioriteit";
+const ADMIN_CODE = "YamanBS1";
 
 /* === UI refs === */
 const elList  = document.getElementById("list");
 const elNew   = document.getElementById("newItem");
 const btnAdd  = document.getElementById("btnAdd");
-const tools   = document.querySelector(".tools");
-  /* === Gedeeld slot via localStorage === */
-const ADMIN_CODE = "YamanBS1";  
-let canEdit = localStorage.getItem("editMode") === "1"; 
 
-// zorg dat er 2 knoppen in .tools staan
+// tools/slotbar garanderen
 let toolsBar = document.querySelector(".tools");
 if (!toolsBar) {
   toolsBar = document.createElement("div");
@@ -74,58 +73,86 @@ if (!toolsBar) {
 let btnEdit = document.getElementById("btnEdit");
 let btnView = document.getElementById("btnView");
 if (!btnEdit) { btnEdit = document.createElement("button"); btnEdit.id="btnEdit"; btnEdit.textContent="🔓 Bewerk-modus"; toolsBar.appendChild(btnEdit); }
-if (!btnView) { btnView = document.createElement("button"); btnView.id="btnView"; btnView.textContent="🔒 Alleen bekijken"; toolsBar.appendChild(btnView); }
+if (!btnView) { btnView = document.createElement("button"); btnView.id="btnView"; btnView.textContent="🔒 Alleen afvinken"; toolsBar.appendChild(btnView); }
 
+/* === Gedeeld slot === */
+let canEdit = localStorage.getItem("editMode") === "1";
 btnEdit.onclick = () => {
   const code = prompt("Beheerderscode:");
-  if (code === ADMIN_CODE) {
-    canEdit = true;
-    localStorage.setItem("editMode","1");
-    updateUI?.(); render?.();
-    alert("Bewerk-modus aan ✅");
-  } else {
-    alert("Onjuiste code");
-  }
+  if (code === ADMIN_CODE) { canEdit = true; localStorage.setItem("editMode","1"); updateUI(); render(); alert("Bewerk-modus aan ✅"); }
+  else { alert("Onjuiste code"); }
 };
-btnView.onclick = () => {
-  canEdit = false;
-  localStorage.removeItem("editMode");
-  updateUI?.(); render?.();
-  alert("Alleen bekijken 🔒");
-};
-
-updateUI?.(); render?.();
-
-/* === Slot knoppen (gedeeld met startpagina) === */
-const btnEdit = document.createElement("button"); btnEdit.textContent = "🔓 Bewerk-modus";
-const btnView = document.createElement("button"); btnView.textContent = "🔒 Alleen afvinken";
-tools.replaceChildren(btnEdit, btnView);
+btnView.onclick = () => { canEdit = false; localStorage.removeItem("editMode"); updateUI(); render(); alert("Alleen afvinken 🔒"); };
+window.addEventListener("storage", e=>{ if(e.key==="editMode"){ canEdit = localStorage.getItem("editMode")==="1"; updateUI(); render(); }});
 
 /* === State === */
-let dataMap = {};  // { label: boolean }
+let dataMap = {};
 let order   = [];
-let canEdit = (localStorage.getItem("editMode") === "1");
 
-/* === Firestore sync === */
-onSnapshot(doc(db, "lists", DOC_ID), snap => {
+/* === Seed (jouw lijst) === */
+function seedPrioriteit(){
+  // Normale dagen
+  const normaal = [
+    "15:15 Afzuiging aan",
+    "15:15 Fietsen buiten en Dweilen",
+    "15:20 PC aan",
+    "15:20 brood/ bacon uithalen (check aantal onderaan de pagina)",
+    "15:25 Bin aan inclusief verwarming aan de achterkant",
+    "15:30 Grill aan",
+    "15:40 broodtoaster aan",
+    "15:50 Friteuse 1/3 aan",
+    "15:50 Kassatellen",
+    "15:55 Tv’s aanzetten",
+    "16:00 Friteuse 2/4 aan",
+    "16:00 Wraps Toaster aan op 50 graden",
+    "16:00 Bord omdraaien naar geopend!"
+  ];
+
+  // Weekend-sectie (alle punten, met aangepaste tijden waar aangegeven)
+  const weekend = [
+    "— Tijden voor Weekend —",
+    "15:15 Afzuiging aan",
+    "15:15 Fietsen buiten en Dweilen",
+    "15:20 PC aan",
+    "15:20 brood/ bacon uithalen (check aantal onderaan de pagina)",
+    "15:25 Bin aan inclusief verwarming aan de achterkant",
+    "15:30 Grill aan",                 // weekend 15:30
+    "15:30 broodtoaster aan",          // weekend 15:30
+    "15:35 Friteuse 1/3 aan",          // weekend 15:35
+    "15:50 Kassatellen",
+    "15:55 Tv’s aanzetten",
+    "16:00 Friteuse 2/4 aan",
+    "16:00 Wraps Toaster aan op 50 graden",
+    "16:00 Bord omdraaien naar geopend!"
+  ];
+
+  const items = {};
+  [...normaal, ...weekend].forEach(t => { items[t] = false; });
+  const ord = Object.keys(items);
+  return { items, order: ord };
+}
+
+/* === Firestore live === */
+onSnapshot(doc(db, "lists", DOC_ID), async snap => {
   if (snap.exists()) {
     const d = snap.data();
     dataMap = d.items || {};
-    order = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
+    order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
     Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
   } else {
-    dataMap = {};
-    order = [];
-    save({ items: dataMap, order });
+    const seed = seedPrioriteit();
+    dataMap = seed.items; order = seed.order;
+    await save({ items: dataMap, order });
   }
   render();
 });
 
+/* === Opslaan === */
 function save(payload){
   return setDoc(doc(db, "lists", DOC_ID), { ...payload, updatedAt: serverTimestamp() }, { merge:true });
 }
 
-/* === UI update === */
+/* === UI === */
 function updateUI(){
   [btnAdd, elNew].forEach(el=>{
     if(!el) return;
@@ -133,61 +160,93 @@ function updateUI(){
     el.style.opacity = canEdit ? 1 : 0.6;
     el.style.pointerEvents = canEdit ? "auto" : "none";
   });
-  [...elList.querySelectorAll(".trash")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
+  [...elList.querySelectorAll(".trash,.edit")].forEach(b=> b.style.display = canEdit ? "inline-flex" : "none");
 }
 
 /* === Render === */
 function render(){
   elList.innerHTML = "";
-  const labels = order.length ? order : Object.keys(dataMap);
-  labels.forEach((label, idx)=>{
+  const labels = order.length ? order.slice() : Object.keys(dataMap);
+
+  labels.forEach((label, idx) => {
     const li = document.createElement("li");
     li.className = "item" + (dataMap[label] ? " done" : "");
     li.dataset.index = String(idx);
 
     const cb = document.createElement("input");
     cb.type = "checkbox"; cb.checked = !!dataMap[label];
-    cb.onchange = () => toggle(label);
+    cb.addEventListener("change", () => toggle(label));
 
     const span = document.createElement("div");
     span.className = "label";
     span.textContent = label;
-    span.onclick = () => toggle(label);
+    span.addEventListener("click", () => toggle(label));
 
-    if (canEdit){
+    if (canEdit && !label.startsWith("—")) {
+      // ✏️
+      const edit = document.createElement("button");
+      edit.className = "edit"; edit.title = "Naam wijzigen"; edit.textContent = "✏️";
+      edit.addEventListener("click", e=>{ e.stopPropagation(); renameItem(label); });
+      edit.addEventListener("mousedown", e=>e.stopPropagation());
+
+      // 🗑️
       const trash = document.createElement("button");
-      trash.className = "trash";
-      trash.textContent = "🗑️";
-      trash.onclick = () => removeItem(label);
+      trash.className = "trash"; trash.title = "Verwijderen"; trash.textContent = "🗑️";
+      trash.addEventListener("click", e=>{ e.stopPropagation(); if (confirm(`Verwijder "${label}"?`)) removeItem(label); });
+      trash.addEventListener("mousedown", e=>e.stopPropagation());
 
+      // drag
       li.draggable = true;
-      li.ondragstart = e => { e.dataTransfer.setData("from", String(idx)); li.classList.add("dragging"); };
-      li.ondragend   = () => li.classList.remove("dragging");
-      li.ondragover  = e => e.preventDefault();
-      li.ondrop      = e => {
+      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+      li.addEventListener("dragover",  e => e.preventDefault());
+      li.addEventListener("drop", e => {
         e.preventDefault();
-        const from = Number(e.dataTransfer.getData("from"));
-        const to   = idx;
-        if(Number.isFinite(from) && from !== to){
+        const from = Number(e.dataTransfer.getData("text/plain"));
+        const to   = Number(li.dataset.index);
+        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
           const next = order.slice();
-          const [moved] = next.splice(from,1);
-          next.splice(to,0,moved);
-          order = next;
-          save({ order });
-          render();
+          const [moved] = next.splice(from, 1);
+          next.splice(to, 0, moved);
+          order = next; render(); save({ order });
         }
-      };
-      li.append(cb, span, trash);
+      });
+
+      li.append(cb, span, edit, trash);
     } else {
       li.append(cb, span);
     }
     elList.appendChild(li);
   });
+
+  // Notitie onderaan (eenmalig zichtbaar element)
+  let note = document.getElementById("prio-note");
+  if (!note) {
+    note = document.createElement("div");
+    note.id = "prio-note";
+    note.style.marginTop = "10px";
+    note.style.fontSize = "14px";
+    note.style.opacity = "0.9";
+    note.innerHTML = `
+      <strong>Aantal brood:</strong><br>
+      5/6 zakken 12CM<br>
+      1/2 zak 10 CM<br>
+      1/2 zak DD<br><br>
+      <strong>Weekend:</strong><br>
+      6/7 zakken 12 CM<br>
+      1/2 zak 10 CM<br>
+      1/2 zakken DD<br><br>
+      Bacon: altijd 1 op voorraad in de koelkast houden, en één voor in de bak.
+    `;
+    elList.parentElement.appendChild(note);
+  }
+
   updateUI();
 }
 
 /* === Actions === */
 function toggle(label){
+  if (label.startsWith("—")) return; // scheiding niet togglen
   const next = { ...dataMap, [label]: !dataMap[label] };
   save({ items: next });
 }
@@ -199,58 +258,26 @@ function addItem(t){
   const nextOrder = order.concat(t);
   save({ items: nextMap, order: nextOrder });
 }
+function renameItem(oldLabel){
+  const nieuw = prompt("Nieuwe naam:", oldLabel);
+  if (!nieuw || nieuw === oldLabel) return;
+  if (dataMap[nieuw]) { alert("Bestaat al."); return; }
+  const nextMap = { ...dataMap };
+  nextMap[nieuw] = nextMap[oldLabel];
+  delete nextMap[oldLabel];
+  const nextOrder = order.map(x => x === oldLabel ? nieuw : x);
+  save({ items: nextMap, order: nextOrder });
+}
 function removeItem(label){
-  if (!canEdit) return;
   const nextMap = { ...dataMap }; delete nextMap[label];
   const nextOrder = order.filter(x => x !== label);
   save({ items: nextMap, order: nextOrder });
 }
 
-/* === Slot gedrag (gedeeld met startpagina) === */
-btnEdit.onclick = () => {
-  localStorage.setItem("editMode", "1");
-  canEdit = true;
-  updateUI(); render();
-  alert("Bewerk-modus aan ✅");
-  async function ensureDefaultPages() {
-  const must = [
-    { t: "Prioriteit",         h: "prioriteit.html" },
-    { t: "Voorraad & Checks",  h: "voorraad_checks.html" },
-    { t: "Schoonmaak klussen", h: "schoonmaak_klussen.html" }
-  ];
-  let changed = false;
-  must.forEach(m => {
-    if (!pages.some(p => p.t === m.t)) { pages.push(m); changed = true; }
-  });
-  if (changed) await save();
-}
+/* === Input events === */
+btnAdd?.addEventListener("click", ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); });
+elNew ?.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
 
-// ...onderaan waar je start:
-await load();
-await ensureDefaultPages();
-render();
-updateUI();
-};
-btnView.onclick = () => {
-  localStorage.removeItem("editMode");
-  canEdit = false;
-  updateUI(); render();
-  alert("Alleen afvinken 🔒");
-};
-
-// Luister naar wijzigingen in slot-status vanuit andere tab
-window.addEventListener("storage", (e)=>{
-  if(e.key === "editMode"){
-    canEdit = (localStorage.getItem("editMode") === "1");
-    updateUI(); render();
-  }
-});
-
-/* === Events === */
-btnAdd.onclick = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); };
-elNew.addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
-
-/* === Start === */
 updateUI();
 </script>
 </body>
