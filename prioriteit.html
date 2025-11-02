@@ -49,17 +49,17 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/fireba
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15";
 
-/* ==== Firebase ==== */
+/* ===== Firebase ===== */
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 const DOC_ID = "shiftstart_prioriteit";
 
-/* ==== UI ==== */
+/* ===== UI ===== */
 const elList  = document.getElementById("list");
 const elNew   = document.getElementById("newItem");
 const btnAdd  = document.getElementById("btnAdd");
 
-/* Toolbar + slot (gedeeld via localStorage) */
+/* ===== Toolbar + slot (gedeeld) ===== */
 const ADMIN_CODE = "YamanBS1";
 let tools = document.querySelector(".tools");
 if (!tools) { tools = document.createElement("div"); tools.className = "tools"; document.querySelector("header.panel").appendChild(tools); }
@@ -72,18 +72,17 @@ tools.replaceChildren(btnEdit, btnView, btnReset, btnSeed);
 let canEdit = localStorage.getItem("editMode") === "1";
 btnEdit.onclick = () => {
   const code = prompt("Beheerderscode:");
-  if (code === ADMIN_CODE) {
-    canEdit = true; localStorage.setItem("editMode","1"); updateUI(); render(); alert("Bewerk-modus aan ✅");
-  } else { alert("Onjuiste code"); }
+  if (code === ADMIN_CODE) { canEdit = true; localStorage.setItem("editMode","1"); updateUI(); render(); alert("Bewerk-modus aan ✅"); }
+  else alert("Onjuiste code");
 };
 btnView.onclick = () => { canEdit = false; localStorage.removeItem("editMode"); updateUI(); render(); alert("Alleen afvinken 🔒"); };
 window.addEventListener("storage", e => { if (e.key === "editMode"){ canEdit = localStorage.getItem("editMode")==="1"; updateUI(); render(); }});
 
-/* ==== Data ==== */
-let items = {};   // { label: boolean }
-let order = [];   // [ label, … ]
+/* ===== Data ===== */
+let items = {};
+let order = [];
 
-/* Zaadlijst (alleen taken + weekendkop en scheidslijn; GEEN brood/bacon hier) */
+/* Zaadlijst (alleen taken + WEEKEND kop/strepen; géén brood/bacon hier) */
 function getSeed(){
   const it = {
     "15:15 Afzuiging aan": false,
@@ -125,24 +124,32 @@ function getSeed(){
   return { items: it, order: ord };
 }
 
-/* Firestore realtime */
+/* Realtime sync */
 onSnapshot(doc(db,"lists",DOC_ID), snap=>{
   if (snap.exists()){
     const d = snap.data();
     items = d.items || {};
     order = Array.isArray(d.order) ? d.order.filter(k => k in items) : Object.keys(items);
-    Object.keys(items).forEach(k => { if(!order.includes(k)) order.push(k); });
+    Object.keys(items).forEach(k => { if (!order.includes(k)) order.push(k); });
   } else {
     const seed = getSeed();
     items = seed.items; order = seed.order;
-    save(seed);
+    // overschrijf volledig (zeker schoon)
+    setDoc(doc(db,"lists",DOC_ID), { ...seed, updatedAt: serverTimestamp() });
   }
   render();
 });
 
-function save(payload){ return setDoc(doc(db,"lists",DOC_ID), { ...(payload||{}), updatedAt: serverTimestamp() }, { merge:true }); }
+/* ===== Helpers ===== */
+function btn(txt, title, onClick){
+  const b = document.createElement("button");
+  b.textContent = txt; b.title = title;
+  b.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95;margin-left:6px;";
+  b.onclick = (e)=>{ e.stopPropagation(); onClick(e); }; // voorkomt togglen/drag
+  return b;
+}
 
-/* ==== Render lijst + vaste notities ==== */
+/* ===== Render ===== */
 function render(){
   // lijst
   elList.innerHTML = "";
@@ -163,52 +170,66 @@ function render(){
       elList.appendChild(li); return;
     }
 
-    // normale taak
     const cb = document.createElement("input");
     cb.type = "checkbox"; cb.checked = !!items[key];
-    cb.onchange = () => toggle(key);
+    cb.onchange = ()=> toggle(key);
 
-    const span = document.createElement("div");
-    span.className = "label";
-    span.textContent = key;
-    span.onclick = () => toggle(key);
+    const label = document.createElement("div");
+    label.className = "label"; label.textContent = key;
+    label.onclick = ()=> toggle(key);
 
     if (canEdit){
-      const del = smallBtn("🗑️","Verwijderen", () => removeItem(key));
-      // (optioneel) potlood kun je zo toevoegen:
-      // const edit = smallBtn("✏️","Naam", () => renameItem(key));
-      li.append(cb, span, del);
+      const edit = btn("✏️","Naam aanpassen", ()=> renameItem(key));
+      const del  = btn("🗑️","Verwijderen", ()=> removeItem(key));
+      // drag
+      li.draggable = true;
+      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+      li.addEventListener("dragover",  e => e.preventDefault());
+      li.addEventListener("drop", e => {
+        e.preventDefault();
+        const from = Number(e.dataTransfer.getData("text/plain"));
+        const to   = idx;
+        if (Number.isFinite(from) && from !== to) {
+          const next = order.slice();
+          const [moved] = next.splice(from,1);
+          next.splice(to,0,moved);
+          order = next;
+          save({ order });
+          render();
+        }
+      });
+      li.append(cb, label, edit, del);
     } else {
-      li.append(cb, span);
+      li.append(cb, label);
     }
     elList.appendChild(li);
   });
 
-  // vaste notitie-onderkant (GEEN checkbox, nooit onderdeel van Firestore-lijst)
-  const noteWrap = document.createElement("div");
-  noteWrap.style.marginTop = "14px";
-  noteWrap.innerHTML = `
+  // vaste notities (één keer, onder de kaart)
+  const oldNotes = document.getElementById("notes");
+  if (oldNotes) oldNotes.remove();
+  const notes = document.createElement("div");
+  notes.id = "notes";
+  notes.style.marginTop = "14px";
+  notes.innerHTML = `
     <div style="font-weight:700;margin-bottom:6px;">Aantal brood:</div>
     <div>5/6 zakken 12CM<br>1/2 zak 10 CM<br>1/2 zak DD</div>
     <div style="font-weight:700;margin:12px 0 6px;">Weekend:</div>
     <div>6/7 zakken 12 CM<br>1/2 zak 10 CM<br>1/2 zakken DD</div>
     <div style="font-style:italic;opacity:.9;margin-top:12px;">
       Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak.
-    </div>
-  `;
-  elList.parentElement.appendChild(noteWrap);
+    </div>`;
+  // kaart = ouder van de ul
+  elList.parentElement.appendChild(notes);
 
   updateUI();
 }
 
-function smallBtn(txt,title,fn){
-  const b = document.createElement("button");
-  b.textContent = txt; b.title = title;
-  b.style.cssText="width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;";
-  b.onclick = fn; return b;
-}
+/* ===== Opslaan ===== */
+function save(payload){ return setDoc(doc(db,"lists",DOC_ID), { ...(payload||{}), updatedAt: serverTimestamp() }, { merge:true }); }
 
-/* ==== Actions ==== */
+/* ===== Actions ===== */
 function toggle(k){ const next = { ...items, [k]: !items[k] }; save({ items: next }); }
 function removeItem(k){
   if (!canEdit) return;
@@ -217,7 +238,6 @@ function removeItem(k){
   const nextOrder = order.filter(x => x !== k);
   save({ items: nextMap, order: nextOrder });
 }
-// (optioneel) hernoemen
 function renameItem(oldK){
   if (!canEdit) return;
   const s = prompt("Nieuwe naam:", oldK);
@@ -229,31 +249,38 @@ function renameItem(oldK){
   save({ items: next, order: nextOrder });
 }
 
-/* ==== UI state ==== */
+/* ===== UI state ===== */
 function updateUI(){
   [elNew, btnAdd].forEach(el=>{
-    if(!el) return;
+    if (!el) return;
     el.disabled = !canEdit;
     el.style.opacity = canEdit ? 1 : 0.6;
     el.style.pointerEvents = canEdit ? "auto" : "none";
   });
-  btnReset.disabled = false; btnReset.style.opacity = 1;              // iedereen mag alle vinkjes leegmaken
-  btnSeed.disabled  = !canEdit; btnSeed.style.opacity = canEdit?1:.5; // herstel-lijst alleen in bewerk-modus
+  // Iedereen mag alle vinkjes leegmaken
+  btnReset.disabled = false; btnReset.style.opacity = 1;
+  // Herstel lijst alleen met slot open (en volledig overschrijven)
+  btnSeed.disabled = !canEdit; btnSeed.style.opacity = canEdit?1:.5;
 }
 
-/* ==== Extra knoppen ==== */
+/* ===== Extra knoppen ===== */
 btnAdd.onclick = () => {
   if (!canEdit) return;
   const t = (elNew.value||"").trim();
   if (!t) return;
-  if (t in items) { alert("Bestaat al."); return; }
+  if (t in items) return alert("Bestaat al.");
   const next = { ...items, [t]: false };
   save({ items: next, order: order.concat(t) });
   elNew.value = ""; elNew.focus();
 };
 elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); btnAdd.onclick(); }});
 btnReset.onclick = () => { const next = Object.fromEntries(Object.keys(items).map(k => [k,false])); save({ items: next }); };
-btnSeed.onclick  = () => { if(!canEdit) return; if(!confirm("Herstel naar beginlijst?")) return; const s = getSeed(); save(s); };
+btnSeed.onclick  = async () => {
+  if (!canEdit) return;
+  if (!confirm("Herstel naar begin-lijst? (overschrijft huidige taken)")) return;
+  const s = getSeed();
+  await setDoc(doc(db,"lists",DOC_ID), { ...s, updatedAt: serverTimestamp() }); // GEEN merge → echt schoon
+};
 </script>
 </body>
 </html>
