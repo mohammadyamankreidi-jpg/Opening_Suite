@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShiftStart – Eigen invoer</title>
+
+  <style>
+    :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
+    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+    .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
+    .tools{display:flex;gap:8px;flex-wrap:wrap}
+    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
+    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
+    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
+    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    li.item{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
+    li.item .label{flex:1;cursor:pointer}
+    li.item.done .label{ text-decoration:line-through; text-decoration-color:#ff3b30; text-decoration-thickness:3px; }
+    .trash{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.85}
+    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
+    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
+    footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav"><a href="index.html">← Terug</a></nav>
+
+    <header class="panel card">
+      <div class="brand">
+        <div class="h">ShiftStart</div>
+        <div class="s">Eigen invoer (voor iedereen)</div>
+      </div>
+      <div class="tools">
+        <button id="btnSeed"  title="Zet standaardlijst terug">Herstel lijst</button>
+        <button id="btnReset" title="Zet alle vinkjes uit">Alles herstellen</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="add">
+        <input id="newItem" type="text" placeholder="Nieuw item / notitie toevoegen..." />
+        <button id="btnAdd">Toevoegen</button>
+      </div>
+      <ul id="list"></ul>
+      <p class="hint">Iedereen kan hier toevoegen, afvinken, slepen en verwijderen. Alles wordt realtime opgeslagen.</p>
+    </div>
+
+    <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
+    import { firebaseConfig } from "./firebase-config.js?v=15";
+
+    // === Init ===
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Iedereen mag bewerken op deze pagina (anonieme login, geen slot)
+    try { await signInAnonymously(auth); } catch(e){ console.warn(e); }
+
+    // Unieke collectie/doc voor deze pagina
+    const DOC_ID = "eigen_invoer";
+
+    // UI refs
+    const elList  = document.getElementById("list");
+    const elNew   = document.getElementById("newItem");
+    const btnAdd  = document.getElementById("btnAdd");
+    const btnSeed = document.getElementById("btnSeed");
+    const btnReset= document.getElementById("btnReset");
+
+    // State
+    let dataMap = {}; // { label: boolean }
+    let order   = []; // [label, ...]
+
+    // Realtime Firestore
+    onSnapshot(doc(db, "lists", DOC_ID), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        dataMap = d.items || {};
+        order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : [];
+        // vang "losse" keys op die nog niet in order staan
+        Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
+      } else {
+        dataMap = {}; order = [];
+        // eerste seed
+        seedAll(true);
+      }
+      render();
+    });
+
+    function save(payload){
+      return setDoc(doc(db, "lists", DOC_ID),
+        { ...payload, updatedAt: serverTimestamp() },
+        { merge:true }
+      );
+    }
+
+    // Render
+    function render(){
+      elList.innerHTML = "";
+      const labels = order.length ? order.slice() : Object.keys(dataMap);
+
+      labels.forEach((label, idx) => {
+        const li = document.createElement("li");
+        li.className = "item" + (dataMap[label] ? " done" : "");
+        li.dataset.index = String(idx);
+
+        // checkbox
+        const cb = document.createElement("input");
+        cb.type = "checkbox"; cb.checked = !!dataMap[label];
+        cb.addEventListener("change", () => toggle(label));
+
+        // tekst
+        const span = document.createElement("div");
+        span.className = "label";
+        span.textContent = label;
+        span.addEventListener("click", () => toggle(label));
+
+        // verwijderen (altijd toegestaan)
+        const trash = document.createElement("button");
+        trash.className = "trash"; trash.title = "Verwijderen"; trash.textContent = "🗑️";
+        trash.onclick = () => {
+          if (!confirm(`Verwijder "${label}"?`)) return;
+          removeItem(label);
+        };
+
+        // drag
+        li.draggable = true;
+        li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+        li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+        li.addEventListener("dragover",  e => e.preventDefault());
+        li.addEventListener("drop", e => {
+          e.preventDefault();
+          const from = Number(e.dataTransfer.getData("text/plain"));
+          const to   = Number(li.dataset.index);
+          if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+            const next = order.slice();
+            const [moved] = next.splice(from, 1);
+            next.splice(to, 0, moved);
+            order = next;
+            render();
+            save({ order });
+          }
+        });
+
+        li.append(cb, span, trash);
+        elList.appendChild(li);
+      });
+    }
+
+    // Actions
+    function toggle(label){
+      const next = { ...dataMap, [label]: !dataMap[label] };
+      save({ items: next });
+    }
+
+    function addItem(t){
+      t = (t||"").trim();
+      if (!t || (t in dataMap)) return;
+      const nextMap = { ...dataMap, [t]: false };
+      const nextOrder = order.concat(t);
+      save({ items: nextMap, order: nextOrder });
+    }
+
+    function removeItem(label){
+      const nextMap = { ...dataMap }; delete nextMap[label];
+      const nextOrder = order.filter(x => x !== label);
+      save({ items: nextMap, order: nextOrder });
+    }
+
+    function resetAll(){
+      const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
+      save({ items: next });
+    }
+
+    function seedAll(initial=false){
+      const seed = {
+        "Welkom! Dit is je eigen notitie-/takenlijst.": false,
+        "Iedereen kan hier items toevoegen en slepen.": false,
+        "Klik op 🗑️ om te verwijderen (met bevestiging).": false
+      };
+      save({ items: seed, order: Object.keys(seed) });
+      if (!initial) render();
+    }
+
+    // UI events
+    btnAdd.onclick  = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); };
+    elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+    btnReset.onclick = resetAll;
+    btnSeed.onclick  = () => seedAll(false);
+  </script>
+</body>
+</html>
