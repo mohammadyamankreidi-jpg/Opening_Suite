@@ -360,7 +360,7 @@ btnReset.onclick = () => {
   save({ items: next });
 };
 
-btnSeed.onclick = async () => {
+btnSeed.onclick = async () => { 
   if (!canEdit) return;
   if (!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
   const seed = getSeed();
