@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="nl">
-<head> 
-  <meta charset="UTF-8" /> 
+<head>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Prioriteit</title>
   <style>
@@ -20,16 +20,11 @@
     li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
     li.item.done{opacity:.6;text-decoration:line-through}
     .label{flex:1;cursor:pointer}
-    .btn-ico{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
+    .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
     li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
-    /* Notitieblok onderaan */
-    .notes.card{margin-top:12px}
-    .notes h3{margin:0 0 8px 0;font-size:16px}
-    .notes .section{margin:10px 0;padding:10px;border:1px dashed #2a2f3a;border-radius:10px;background:#0f1320}
-    .notes .em{font-weight:700}
   </style>
 </head>
 <body>
@@ -41,23 +36,16 @@
     </header>
 
     <div class="card">
-      <div class="add">
-        <input id="newItem" type="text" placeholder="Nieuw item toevoegen..." />
-        <button id="btnAdd">Toevoegen</button>
-      </div>
+      <div class="add"><input id="newItem" type="text" placeholder="Nieuw item toevoegen..." /><button id="btnAdd">Toevoegen</button></div>
       <ul id="list"></ul>
       <p class="hint">Klik op de tekst of het vinkje om af te strepen. Synchroniseert voor iedereen.</p>
     </div>
-
-    <!-- Notities staan in een los blok onder de checklist -->
-    <div class="card notes" id="notesBlock"></div>
-
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15";
 
 /* ===== Firebase ===== */
@@ -69,10 +57,9 @@ const DOC_ID     = "shiftstart_prioriteit";
 const ADMIN_CODE = "YamanBS1";
 
 /* ===== UI ===== */
-const elList   = document.getElementById("list");
-const elNew    = document.getElementById("newItem");
-const btnAdd   = document.getElementById("btnAdd");
-const notesEl  = document.getElementById("notesBlock");
+const elList  = document.getElementById("list");
+const elNew   = document.getElementById("newItem");
+const btnAdd  = document.getElementById("btnAdd");
 
 let toolsBar = document.querySelector(".tools");
 if (!toolsBar) {
@@ -86,7 +73,7 @@ const btnReset = document.createElement("button"); btnReset.textContent = "Alles
 const btnSeed  = document.createElement("button"); btnSeed.textContent  = "Herstel lijst";
 toolsBar.replaceChildren(btnEdit, btnView, btnReset, btnSeed);
 
-/* ===== Slot (gedeeld via localStorage) ===== */
+/* ===== Slot (gedeeld) ===== */
 let canEdit = (localStorage.getItem("editMode") === "1");
 btnEdit.onclick = () => {
   const code = prompt("Beheerderscode:");
@@ -103,11 +90,26 @@ window.addEventListener("storage", e => {
   if (e.key === "editMode") { canEdit = (localStorage.getItem("editMode") === "1"); updateUI(); render(); }
 });
 
-/* ===== Seed (items + notes apart) ===== */
-function getSeed(){
+/* ===== Speciale sleuteltypes =====
+   __DIV__x  = horizontale lijn
+   __H__x    = sectietitel
+   __N__x    = notitie (onderaan)
+*/
+const isDiv  = s => s.startsWith("__DIV__");
+const isHead = s => s.startsWith("__H__");
+const isNote = s => s.startsWith("__N__");
+function viewText(key) {
+  if (isDiv(key))  return "—";
+  if (isHead(key)) return key.replace("__H__","");
+  if (isNote(key)) return key.replace("__N__","");
+  return key;
+}
+
+/* ===== Seed ===== */
+function getSeed() {
   const items = {
     // Normale dagen
-    "15:15 Afzuiging aan": false, 
+    "15:15 Afzuiging aan": false,
     "15:15 Fietsen buiten en Dweilen": false,
     "15:20 PC aan": false,
     "15:20 brood/ bacon uithalen (check aantal onderaan de pagina)": false,
@@ -122,25 +124,42 @@ function getSeed(){
     "16:00 Wraps Toaster aan op 50 graden": false,
     "16:00 Bord omdraaien naar geopend!": false,
 
-    // WEEKEND – zelfde vaste items die jij wilde noemen
-    "15:15 Afzuiging aan": false,
-    "15:15 Fietsen buiten en Dweilen": false,
-    "15:20 PC aan": false,
-    "15:20 brood/ bacon uithalen": false,
-    "15:20 Grill aan": false,
-    "15:25 Dresstafel klaarmaken": false,
-    "15:25 Bin aan inclusief verwarming aan de achterkant": false,
-    "15:30 Broodtoaster aan": false,
-    "15:35 Friteuse 1/3 aan": false,
-    "15:50 Kassatellen": false,
-    "15:55 Tv’s aanzetten": false,
-    "16:00 Friteuse 2/4 aan": false,
-    "16:00 Wraps Toaster aan op 50 graden": false,
-    "16:00 Bord omdraaien naar geopend!": false
+    "__DIV__1": false,
+    "__H__WEEKEND": false,
+
+    // WEEKEND (exact zoals jij wil)
+    "15:15 Afzuiging aan (weekend)": false,
+    "15:15 Fietsen buiten en Dweilen (weekend)": false,
+    "15:20 PC aan (weekend)": false,
+    "15:20 brood/ bacon uithalen (weekend)": false,
+    "15:20 Grill aan (weekend)": false,
+    "15:25 Dresstafel klaarmaken (weekend)": false,
+    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)": false,
+    "15:30 Broodtoaster aan (weekend)": false,
+    "15:35 Friteuse 1/3 aan (weekend)": false,
+    "15:50 Kassatellen (weekend)": false,
+    "15:55 Tv’s aanzetten (weekend)": false,
+    "16:00 Friteuse 2/4 aan (weekend)": false,
+    "16:00 Wraps Toaster aan op 50 (weekend)": false,
+    "16:00 Bord omdraaien naar geopend! (weekend)": false,
+
+    "__DIV__2": false,
+    "__H__Aantal brood": false,
+    "__N__5/6 zakken 12CM": false,
+    "__N__1/2 zak 10 CM": false,
+    "__N__1/2 zak DD": false,
+
+    "__H__Weekend (brood)": false,
+    "__N__6/7 zakken 12CM": false,
+    "__N__1/2 zak 10 CM": false,
+    "__N__1/2 zakken DD": false,
+
+    "__DIV__3": false,
+    "__N__Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak.": false,
   };
 
-  // Normaal eerst, daarna weekend in de tijd-volgorde
   const order = [
+    // normaal
     "15:15 Afzuiging aan",
     "15:15 Fietsen buiten en Dweilen",
     "15:20 PC aan",
@@ -156,220 +175,194 @@ function getSeed(){
     "16:00 Wraps Toaster aan op 50 graden",
     "16:00 Bord omdraaien naar geopend!",
 
-    // weekend
-    "15:15 Afzuiging aan",
-    "15:15 Fietsen buiten en Dweilen",
-    "15:20 PC aan",
-    "15:20 brood/ bacon uithalen",
-    "15:20 Grill aan",
-    "15:25 Dresstafel klaarmaken",
-    "15:25 Bin aan inclusief verwarming aan de achterkant",
-    "15:30 Broodtoaster aan",
-    "15:35 Friteuse 1/3 aan",
-    "15:50 Kassatellen",
-    "15:55 Tv’s aanzetten",
-    "16:00 Friteuse 2/4 aan",
-    "16:00 Wraps Toaster aan op 50",
-    "16:00 Bord omdraaien naar geopend!"
+    "__DIV__1",
+    "__H__WEEKEND",
+
+    // weekend exact volgorde
+    "15:15 Afzuiging aan (weekend)",
+    "15:15 Fietsen buiten en Dweilen (weekend)",
+    "15:20 PC aan (weekend)",
+    "15:20 brood/ bacon uithalen (weekend)",
+    "15:20 Grill aan (weekend)",
+    "15:25 Dresstafel klaarmaken (weekend)",
+    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)",
+    "15:30 Broodtoaster aan (weekend)",
+    "15:35 Friteuse 1/3 aan (weekend)",
+    "15:50 Kassatellen (weekend)",
+    "15:55 Tv’s aanzetten (weekend)",
+    "16:00 Friteuse 2/4 aan (weekend)",
+    "16:00 Wraps Toaster aan op 50 (weekend)",
+    "16:00 Bord omdraaien naar geopend! (weekend)",
+
+    "__DIV__2",
+    "__H__Aantal brood",
+    "__N__5/6 zakken 12CM",
+    "__N__1/2 zak 10 CM",
+    "__N__1/2 zak DD",
+    "__H__Weekend (brood)",
+    "__N__6/7 zakken 12CM",
+    "__N__1/2 zak 10 CM",
+    "__N__1/2 zakken DD",
+
+    "__DIV__3",
+    "__N__Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak.",
   ];
 
-  const notesHtml = `
-    <h3>Notities</h3>
-    <div class="section">
-      <div class="em">Aantal brood (doordeweeks)</div>
-      <div>5/6 zakken 12CM</div>
-      <div>1/2 zak 10 CM</div>
-      <div>1/2 zak DD</div>
-    </div>
-    <div class="section">
-      <div class="em">Weekend</div>
-      <div>6/7 zakken 12 CM</div>
-      <div>1/2 zak 10 CM</div>
-      <div>1/2 zakken DD</div>
-    </div>
-    <div class="section">
-      <div class="em">Bacon</div>
-      <div>Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak.</div>
-    </div>
-  `;
-
-  return { items, order, notesHtml };
+  return { items, order };
 }
 
-/* ===== State (live uit Firestore) ===== */
-let items = {};
-let order = [];
-let notesHtml = "";
-
-/* ===== Realtime sync ===== */
+/* ===== State + realtime ===== */
+let dataMap = {};
+let order   = [];
 onSnapshot(doc(db, "lists", DOC_ID), snap => {
   if (snap.exists()) {
     const d = snap.data();
-    items = d.items || {};
-    order = Array.isArray(d.order) ? d.order.filter(k => k in items) : Object.keys(items);
-    Object.keys(items).forEach(k => { if (!order.includes(k)) order.push(k); });
-    notesHtml = d.notesHtml || "";
+    dataMap = d.items || {};
+    order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : Object.keys(dataMap);
+    Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
   } else {
     const seed = getSeed();
-    items = seed.items; order = seed.order; notesHtml = seed.notesHtml;
-    save({ items, order, notesHtml });
+    dataMap = seed.items; order = seed.order;
+    save({ items: dataMap, order });
   }
   render();
 });
 
 /* ===== Persist ===== */
 function save(payload) {
-  return setDoc(doc(db, "lists", DOC_ID),
-    { ...(payload||{}), updatedAt: serverTimestamp() },
-    { merge:true }
-  );
+  return setDoc(doc(db, "lists", DOC_ID), { ...(payload||{}), updatedAt: serverTimestamp() }, { merge:true });
 }
 
-/* ===== Helpers ===== */
-function icoBtn(txt, title, onClick){
+/* ===== Helpers UI ===== */
+function makeBtn(txt, title, fn){
   const b = document.createElement("button");
-  b.type = "button";
-  b.className = "btn-ico";
-  b.textContent = txt;
-  b.title = title;
-  b.addEventListener("click", (e)=>{ e.preventDefault(); e.stopPropagation(); onClick(); }, {capture:true});
+  b.className = "btn"; b.textContent = txt; b.title = title; b.type="button";
+  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); fn(e); },{capture:true});
   return b;
 }
 
 /* ===== Render ===== */
-function render(){
-  // lijst
+function render() {
   elList.innerHTML = "";
-  const labels = order.length ? order.slice() : Object.keys(items);
+  const labels = order.length ? order.slice() : Object.keys(dataMap);
 
   labels.forEach((key, idx) => {
     const li = document.createElement("li");
-    li.className = "item" + (items[key] ? " done" : "");
+    const label = viewText(key);
+    li.className = "item" + (dataMap[key] ? " done" : "");
     li.dataset.index = String(idx);
 
+    if (isDiv(key) || isHead(key) || isNote(key)) {
+      const span = document.createElement("div");
+      span.className = "label";
+
+      if (isDiv(key)) {
+        span.style.width = "100%";
+        span.style.height = "1px";
+        span.style.background = "#2a2f3a";
+      } else {
+        span.textContent = label;
+        if (isHead(key)) { span.style.fontWeight = "800"; span.style.opacity="0.95"; }
+        if (isNote(key)) { span.style.fontStyle = "italic"; span.style.opacity="0.9"; }
+      }
+
+      if (canEdit && !isDiv(key)) {
+        const edit = makeBtn("✏️","Naam aanpassen",()=>renameItem(key));
+        const del  = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(key));
+        li.append(span, edit, del);
+      } else {
+        li.append(span);
+      }
+      elList.appendChild(li);
+      return;
+    }
+
     const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = !!items[key];
-    cb.onchange = () => toggle(key);
+    cb.type="checkbox"; cb.checked=!!dataMap[key]; cb.onchange = ()=>toggle(key);
 
     const span = document.createElement("div");
-    span.className = "label";
-    span.textContent = key;
-    span.onclick = () => toggle(key);
+    span.className="label"; span.textContent = label; span.onclick = ()=>toggle(key);
 
-    if (canEdit) {
-      const edit = icoBtn("✏️","Naam aanpassen", () => renameItem(key));
-      const del  = icoBtn("🗑️","Verwijderen",   () => removeItemConfirm(key));
+    if (canEdit){
+      const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(key));
+      const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(key));
 
       li.draggable = true;
-      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
-      li.addEventListener("dragover",  e => e.preventDefault());
-      li.addEventListener("drop", e => {
+      li.addEventListener("dragstart", e=>{ li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+      li.addEventListener("dragend",   ()=>li.classList.remove("dragging"));
+      li.addEventListener("dragover",  e=>e.preventDefault());
+      li.addEventListener("drop", e=>{
         e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
-          const next = order.slice();
-          const [m] = next.splice(from,1);
-          next.splice(to,0,m);
-          order = next;
-          render();
-          save({ order });
+        const from=Number(e.dataTransfer.getData("text/plain"));
+        const to=Number(li.dataset.index);
+        if(Number.isFinite(from)&&Number.isFinite(to)&&from!==to){
+          const next=order.slice(); const [m]=next.splice(from,1); next.splice(to,0,m);
+          order=next; save({order}); render();
         }
       });
 
-      li.append(cb, span, edit, del);
+      li.append(cb, span, pen, del);
     } else {
       li.append(cb, span);
     }
-
     elList.appendChild(li);
   });
 
-  // notities (los van de items)
-  notesEl.innerHTML = notesHtml || "";
   updateUI();
 }
 
 /* ===== Actions ===== */
+function toggle(key){ const next={...dataMap,[key]:!dataMap[key]}; save({items:next}); }
+function addItem(text){
+  if(!canEdit) return;
+  const t=(text||"").trim(); if(!t) return; if(t in dataMap) return alert("Bestaat al.");
+  const next={...dataMap,[t]:false}; const nextOrder=order.concat(t);
+  dataMap=next; order=nextOrder; render(); save({items:next,order:nextOrder});
+}
+function removeItemConfirm(key){
+  if(!canEdit) return;
+  if(!confirm(`Verwijder "${viewText(key)}"?`)) return;
+  if(!(key in dataMap)) return;
+  const next={...dataMap}; delete next[key];
+  const nextOrder=order.filter(k=>k!==key);
+  dataMap=next; order=nextOrder; render(); save({items:next,order:nextOrder});
+}
+function renameItem(oldKey){
+  if(!canEdit) return;
+  if(!(oldKey in dataMap)) return;
+  const current=viewText(oldKey);
+  const s=prompt("Nieuwe naam:", current); if(s===null) return;
+  const newText=(s||"").trim(); if(!newText || newText===current) return;
+
+  let newKey=newText;
+  if (isDiv(oldKey)) return;
+  if (isHead(oldKey)) newKey="__H__"+newText;
+  if (isNote(oldKey)) newKey="__N__"+newText;
+  if (!(isHead(oldKey)||isNote(oldKey))) newKey=newText;
+
+  if(newKey in dataMap){ alert("Bestaat al."); return; }
+  const next={...dataMap,[newKey]:!!dataMap[oldKey]}; delete next[oldKey];
+  const nextOrder=order.map(k=>k===oldKey?newKey:k);
+  dataMap=next; order=nextOrder; render(); save({items:next,order:nextOrder});
+}
+
+/* ===== UI state ===== */
 function updateUI(){
   [elNew, btnAdd].forEach(el=>{
-    if (!el) return;
-    el.disabled = !canEdit;
-    el.style.opacity = canEdit ? 1 : 0.6;
-    el.style.pointerEvents = canEdit ? "auto" : "none";
+    if(!el) return;
+    el.disabled=!canEdit; el.style.opacity=canEdit?1:.6; el.style.pointerEvents=canEdit?"auto":"none";
   });
-
-  // Altijd mogen alle vinkjes uit:
-  btnReset.disabled = false; btnReset.style.opacity = 1;
-
-  // Seed alleen in bewerk-modus:
-  btnSeed.disabled = !canEdit; btnSeed.style.opacity = canEdit ? 1 : 0.5;
-}
-
-function toggle(key){
-  const next = { ...items, [key]: !items[key] };
-  save({ items: next });
-}
-
-function addItem(text){
-  if (!canEdit) return;
-  const t = (text || "").trim();
-  if (!t) return;
-  if (t in items) return alert("Bestaat al.");
-  const nextMap = { ...items, [t]: false };
-  const nextOrder = order.concat(t);
-  items = nextMap; order = nextOrder;
-  render();
-  save({ items: nextMap, order: nextOrder });
-}
-
-function removeItemConfirm(key){
-  if (!canEdit) return;
-  if (!confirm(`Verwijder "${key}"?`)) return;
-  if (!(key in items)) return;
-  const next = { ...items }; delete next[key];
-  const nextOrder = order.filter(k => k !== key);
-  items = next; order = nextOrder;
-  render();
-  save({ items: next, order: nextOrder });
-}
-
-function renameItem(oldKey){
-  if (!canEdit) return;
-  if (!(oldKey in items)) return;
-  const s = prompt("Nieuwe naam:", oldKey);
-  if (s === null) return;
-  const n = (s || "").trim();
-  if (!n || n === oldKey) return;
-  if (n in items) { alert("Bestaat al."); return; }
-  const next = { ...items, [n]: !!items[oldKey] };
-  delete next[oldKey];
-  const nextOrder = order.map(k => (k === oldKey ? n : k));
-  items = next; order = nextOrder;
-  render();
-  save({ items: next, order: nextOrder });
+  btnReset.disabled=false; btnReset.style.opacity=1;
+  btnSeed.disabled=!canEdit; btnSeed.style.opacity=canEdit?1:.5;
 }
 
 /* ===== Events ===== */
-btnAdd.onclick = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); };
+btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
+elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
 
-btnReset.onclick = () => {
-  const next = Object.fromEntries(Object.keys(items).map(k => [k,false]));
-  save({ items: next });
-};
+btnReset.onclick = ()=>{ const next=Object.fromEntries(Object.keys(dataMap).map(k=>[k,false])); save({items:next}); };
+btnSeed.onclick  = ()=>{ if(!canEdit) return; if(!confirm("Herstel naar begin-lijst?")) return; const s=getSeed(); save({items:s.items,order:s.order}); };
 
-btnSeed.onclick = async () => { 
-  if (!canEdit) return;
-  if (!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  const seed = getSeed();
-  items = seed.items; order = seed.order; notesHtml = seed.notesHtml;
-  render();
-  await save({ items, order, notesHtml });
-};
-
-// Start
 updateUI();
 </script>
 </body>
