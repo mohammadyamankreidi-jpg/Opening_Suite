@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Prioriteit</title>
+
+  <!-- voorkom onschuldige 404 favicon melding -->
+  <link rel="icon" href="data:,">
+
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
@@ -30,14 +34,6 @@
     .notes{margin-top:14px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
     .notes .h{font-weight:800;margin-bottom:6px}
     .notes .row{opacity:.9}
-    /* Fix voor knoppen in draggable <li> (mobiel + desktop) */
-.btn{
-  pointer-events: auto;
-  touch-action: manipulation;           /* betere tap op mobiel */
-  -webkit-tap-highlight-color: transparent;
-  -webkit-user-select: none;
-  user-select: none;
-}
   </style>
 </head>
 <body>
@@ -61,6 +57,7 @@
       <div id="wk-head" class="wk-head" style="display:none">WEEKEND</div>
       <ul id="list-weekend"></ul>
 
+      <!-- vaste notities onderaan (geen Firestore, dus nooit duplicaten) -->
       <div class="notes">
         <div class="h">Aantal brood</div>
         <div class="row">5/6 zakken 12CM</div>
@@ -144,7 +141,7 @@ function getSeed(){
     "16:00 Wraps Toaster aan op 50 graden": false,
     "16:00 Bord omdraaien naar geopend!": false,
 
-    // WEEKEND (exact zoals je vroeg)
+    // WEEKEND — exact zoals jij gaf
     "15:15 Afzuiging aan (weekend)": false,
     "15:15 Fietsen buiten en Dweilen (weekend)": false,
     "15:20 PC aan (weekend)": false,
@@ -162,7 +159,6 @@ function getSeed(){
   };
 
   const order = [
-    // volgorde: eerst normale dag, dan weekend
     "15:15 Afzuiging aan",
     "15:15 Fietsen buiten en Dweilen",
     "15:20 PC aan",
@@ -177,7 +173,6 @@ function getSeed(){
     "16:00 Friteuse 2/4 aan",
     "16:00 Wraps Toaster aan op 50 graden",
     "16:00 Bord omdraaien naar geopend!",
-
     // weekend
     "15:15 Afzuiging aan (weekend)",
     "15:15 Fietsen buiten en Dweilen (weekend)",
@@ -215,60 +210,40 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
 /* ===== Persist ===== */
 function save(p){ return setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt:serverTimestamp() }, { merge:true }); }
 
-/* ===== Helpers ===== */
+/* ===== Buttons helper (kill bubbling) ===== */
 function makeBtn(txt, title, onClick){
   const b = document.createElement("button");
   b.className = "btn";
   b.type = "button";
   b.title = title;
   b.textContent = txt;
-  b.draggable = false;
-
-  // alle event-bubbling stoppen
-  const stopAll = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
-  };
-
-  b.addEventListener("pointerdown", stopAll, {capture:true});
-  b.addEventListener("touchstart", stopAll, {capture:true, passive:false});
-  b.addEventListener("mousedown", stopAll, {capture:true});
-
   b.addEventListener("click", (e) => {
-    stopAll(e);
-    console.log("🗑️ Button click gedetecteerd:", title, txt);  // 👈 debuglog
-    try {
-      onClick();
-    } catch (err) {
-      console.error("❌ Fout in knop-handler:", err);
-    }
+    e.preventDefault(); e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+    onClick();
   }, {capture:true});
-
   return b;
 }
 
 /* ===== Render ===== */
 function render(){
   ulDay.innerHTML=""; ulWeekend.innerHTML="";
-  // split index: eerste weekend-item
   const isWeekend = k => k.includes("(weekend)");
   const firstW = order.findIndex(isWeekend);
-
   const dayKeys = (firstW === -1) ? order.slice() : order.slice(0, firstW);
   const wkKeys  = (firstW === -1) ? [] : order.slice(firstW);
 
-  // toon titel/strepen alleen als er weekend-items zijn
   const hasWeekend = wkKeys.some(k=>k in dataMap);
   wkDivider.style.display = hasWeekend ? "" : "none";
   wkHead.style.display    = hasWeekend ? "" : "none";
 
   const renderList = (keys, ul) => {
-    keys.forEach((key, idx)=>{
+    keys.forEach((key)=>{
       if (!(key in dataMap)) return;
+      const idx = order.indexOf(key);
       const li=document.createElement("li");
       li.className="item"+(dataMap[key]?" done":"");
-      li.dataset.index=String(order.indexOf(key));
+      li.dataset.index=String(idx);
 
       const cb=document.createElement("input");
       cb.type="checkbox"; cb.checked=!!dataMap[key];
@@ -276,19 +251,16 @@ function render(){
 
       const span=document.createElement("div");
       span.className="label"; span.textContent=key;
-     if (!canEdit) {
-  span.onclick = () => toggle(key);
-}
+      if (!canEdit) span.onclick = () => toggle(key);
 
       if (canEdit){
         const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(key));
         const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(key));
 
-        // drag (alleen in bewerk-modus)
         li.draggable = true;
         li.addEventListener("dragstart", e=>{
           li.classList.add("dragging");
-          e.dataTransfer.setData("text/plain", String(order.indexOf(key)));
+          e.dataTransfer.setData("text/plain", String(idx));
         });
         li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
         li.addEventListener("dragover", e=> e.preventDefault());
@@ -336,39 +308,19 @@ function addItem(t){
 
 function removeItemConfirm(key){
   if(!canEdit) return;
-
-  // extra check
-  if(!(key in dataMap)){
-    alert("Item niet gevonden: " + key);
-    return;
-  }
-
+  if(!(key in dataMap)) { alert("Item niet gevonden: " + key); return; }
   if(!confirm(`Weet je zeker dat je "${key}" wilt verwijderen?`)) return;
 
-  console.log("🗑️ Verwijderen gestart:", key);
+  // lokaal updaten
+  const nextMap = { ...dataMap }; delete nextMap[key];
+  const nextOrd = order.filter(k=>k!==key);
+  dataMap = nextMap; order = nextOrd;
 
-  // verwijder uit lokaal geheugen
-  const nextMap = { ...dataMap };
-  delete nextMap[key];
-
-  const nextOrd = order.filter(k => k !== key);
-  dataMap = nextMap;
-  order = nextOrd;
-
-  // visueel direct bijwerken
+  // direct scherm bijwerken
   render();
 
-  // veilig naar Firestore schrijven
-  save({
-    items: nextMap,
-    order: nextOrd,
-    updatedAt: new Date().toISOString()
-  }).then(()=>{
-    console.log("✅ Firestore update geslaagd voor:", key);
-  }).catch(err=>{
-    console.error("❌ Firestore fout bij verwijderen:", err);
-    alert("Er ging iets mis bij opslaan (zie console).");
-  });
+  // en dan Firestore forceren
+  save({ items: nextMap, order: nextOrd, updatedAt: serverTimestamp() });
 }
 
 function renameItem(oldKey){
@@ -410,7 +362,7 @@ btnSeed.onclick = ()=>{
   if(!canEdit) return;
   if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
   const s = getSeed();
-  save({ items: s.items, order: s.order }); // overwrite (geen dubbele notities mogelijk)
+  save({ items: s.items, order: s.order }); // volledige set overschrijven
 };
 </script>
 </body>
