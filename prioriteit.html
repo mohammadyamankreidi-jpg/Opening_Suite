@@ -336,12 +336,39 @@ function addItem(t){
 
 function removeItemConfirm(key){
   if(!canEdit) return;
-  if(!(key in dataMap)) return;
-  if(!confirm(`Verwijder "${key}"?`)) return;
-  const nextMap = { ...dataMap }; delete nextMap[key];
-  const nextOrd = order.filter(k=>k!==key);
-  dataMap = nextMap; order = nextOrd;
-  render(); save({ items: nextMap, order: nextOrd });
+
+  // extra check
+  if(!(key in dataMap)){
+    alert("Item niet gevonden: " + key);
+    return;
+  }
+
+  if(!confirm(`Weet je zeker dat je "${key}" wilt verwijderen?`)) return;
+
+  console.log("🗑️ Verwijderen gestart:", key);
+
+  // verwijder uit lokaal geheugen
+  const nextMap = { ...dataMap };
+  delete nextMap[key];
+
+  const nextOrd = order.filter(k => k !== key);
+  dataMap = nextMap;
+  order = nextOrd;
+
+  // visueel direct bijwerken
+  render();
+
+  // veilig naar Firestore schrijven
+  save({
+    items: nextMap,
+    order: nextOrd,
+    updatedAt: new Date().toISOString()
+  }).then(()=>{
+    console.log("✅ Firestore update geslaagd voor:", key);
+  }).catch(err=>{
+    console.error("❌ Firestore fout bij verwijderen:", err);
+    alert("Er ging iets mis bij opslaan (zie console).");
+  });
 }
 
 function renameItem(oldKey){
