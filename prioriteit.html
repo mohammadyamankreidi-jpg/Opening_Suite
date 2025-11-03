@@ -208,10 +208,26 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
 function save(p){ return setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt:serverTimestamp() }, { merge:true }); }
 
 /* ===== Helpers ===== */
-function makeBtn(txt,title,fn){
-  const b=document.createElement("button");
-  b.className="btn"; b.type="button"; b.textContent=txt; b.title=title;
-  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); fn(); },{capture:true});
+// VERVANG je huidige makeBtn door deze:
+function makeBtn(txt, title, onClick){
+  const b = document.createElement("button");
+  b.className = "btn";
+  b.type = "button";            // belangrijk: geen form submit
+  b.title = title;
+  b.textContent = txt;
+
+  b.addEventListener("click", (e) => {
+    // kill ALL bubbling & default, vóór jouw handler:
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === "function") {
+      e.stopImmediatePropagation();
+    }
+    onClick();                  // nu veilig uitvoeren
+  });
+
+  // failsafe: block pointer events reaching parent
+  b.style.pointerEvents = "auto";
   return b;
 }
 
@@ -243,7 +259,9 @@ function render(){
 
       const span=document.createElement("div");
       span.className="label"; span.textContent=key;
-      span.onclick = ()=> toggle(key);
+     if (!canEdit) {
+  span.onclick = () => toggle(key);
+}
 
       if (canEdit){
         const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(key));
