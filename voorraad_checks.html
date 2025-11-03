@@ -216,7 +216,7 @@ function removeItemConfirm(k){
 function renameItem(oldK){
   if(!canEdit) return;
   if(!(oldK in items)) return;
-  const s = prompt("Nieuwe naam:", oldK);
+  const s = prompt("Nieuwe naam:", oldK);  
   if (s === null) return;
   const n = (s||"").trim();
   if (!n || n === oldK) return;
