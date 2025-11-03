@@ -216,35 +216,33 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
 function save(p){ return setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt:serverTimestamp() }, { merge:true }); }
 
 /* ===== Helpers ===== */
-// --- VERVANG je makeBtn door deze ---
 function makeBtn(txt, title, onClick){
   const b = document.createElement("button");
   b.className = "btn";
-  b.type = "button";          // important: geen form submit
+  b.type = "button";
   b.title = title;
   b.textContent = txt;
-
-  // cruciaal: knop zelf mag NIET draggable zijn
   b.draggable = false;
 
-  // stop ALLES wat bubbling/drag kan triggeren
+  // alle event-bubbling stoppen
   const stopAll = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === "function") {
-      e.stopImmediatePropagation();
-    }
+    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
   };
 
-  // voorkom dat drag-start van <li> het wint op mobiel
   b.addEventListener("pointerdown", stopAll, {capture:true});
   b.addEventListener("touchstart", stopAll, {capture:true, passive:false});
   b.addEventListener("mousedown", stopAll, {capture:true});
 
-  // echte click-handler (ook in capture, zodat we vóór <li> listeners zitten)
   b.addEventListener("click", (e) => {
     stopAll(e);
-    try { onClick(); } catch(err){ console.error(err); }
+    console.log("🗑️ Button click gedetecteerd:", title, txt);  // 👈 debuglog
+    try {
+      onClick();
+    } catch (err) {
+      console.error("❌ Fout in knop-handler:", err);
+    }
   }, {capture:true});
 
   return b;
