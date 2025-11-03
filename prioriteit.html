@@ -207,9 +207,18 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
   render();
 });
 
-/* ===== Persist ===== */
-function save(p){ return setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt:serverTimestamp() }, { merge:true }); }
-
+// ===== Persist =====
+async function save(p){
+  try {
+    console.log("[SAVE] payload:", p);
+    await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
+    console.log("[SAVE] OK");
+  } catch (e) {
+    console.error("[SAVE] ERROR:", e);
+    alert("Opslaan mislukt: " + (e.message || e));
+    throw e;
+  }
+}
 /* ===== Buttons helper (kill bubbling) ===== */
 function makeBtn(txt, title, onClick){
   const b = document.createElement("button");
@@ -306,21 +315,22 @@ function addItem(t){
   render(); save({ items: nextMap, order: nextOrd });
 }
 
-function removeItemConfirm(key){
+async function removeItemConfirm(key){
   if(!canEdit) return;
   if(!(key in dataMap)) { alert("Item niet gevonden: " + key); return; }
   if(!confirm(`Weet je zeker dat je "${key}" wilt verwijderen?`)) return;
 
-  // lokaal updaten
-  const nextMap = { ...dataMap }; delete nextMap[key];
+  // 1) Lokaal updaten
+  const nextMap = { ...dataMap }; 
+  delete nextMap[key];
   const nextOrd = order.filter(k=>k!==key);
-  dataMap = nextMap; order = nextOrd;
 
-  // direct scherm bijwerken
-  render();
+  dataMap = nextMap; 
+  order   = nextOrd;
+  render(); // direct UI bijwerken
 
-  // en dan Firestore forceren
-  save({ items: nextMap, order: nextOrd, updatedAt: serverTimestamp() });
+  // 2) Server-opslaan en wachten
+  await save({ items: nextMap, order: nextOrd });
 }
 
 function renameItem(oldKey){
