@@ -30,6 +30,14 @@
     .notes{margin-top:14px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
     .notes .h{font-weight:800;margin-bottom:6px}
     .notes .row{opacity:.9}
+    /* Fix voor knoppen in draggable <li> (mobiel + desktop) */
+.btn{
+  pointer-events: auto;
+  touch-action: manipulation;           /* betere tap op mobiel */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
   </style>
 </head>
 <body>
@@ -208,26 +216,37 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
 function save(p){ return setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt:serverTimestamp() }, { merge:true }); }
 
 /* ===== Helpers ===== */
-// VERVANG je huidige makeBtn door deze:
+// --- VERVANG je makeBtn door deze ---
 function makeBtn(txt, title, onClick){
   const b = document.createElement("button");
   b.className = "btn";
-  b.type = "button";            // belangrijk: geen form submit
+  b.type = "button";          // important: geen form submit
   b.title = title;
   b.textContent = txt;
 
-  b.addEventListener("click", (e) => {
-    // kill ALL bubbling & default, vóór jouw handler:
+  // cruciaal: knop zelf mag NIET draggable zijn
+  b.draggable = false;
+
+  // stop ALLES wat bubbling/drag kan triggeren
+  const stopAll = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (typeof e.stopImmediatePropagation === "function") {
       e.stopImmediatePropagation();
     }
-    onClick();                  // nu veilig uitvoeren
-  });
+  };
 
-  // failsafe: block pointer events reaching parent
-  b.style.pointerEvents = "auto";
+  // voorkom dat drag-start van <li> het wint op mobiel
+  b.addEventListener("pointerdown", stopAll, {capture:true});
+  b.addEventListener("touchstart", stopAll, {capture:true, passive:false});
+  b.addEventListener("mousedown", stopAll, {capture:true});
+
+  // echte click-handler (ook in capture, zodat we vóór <li> listeners zitten)
+  b.addEventListener("click", (e) => {
+    stopAll(e);
+    try { onClick(); } catch(err){ console.error(err); }
+  }, {capture:true});
+
   return b;
 }
 
