@@ -36,7 +36,10 @@
     </header>
 
     <div class="card">
-      <div class="add"><input id="newItem" type="text" placeholder="Nieuw item toevoegen..." /><button id="btnAdd">Toevoegen</button></div>
+      <div class="add">
+        <input id="newItem" type="text" placeholder="Nieuw item toevoegen..." />
+        <button id="btnAdd">Toevoegen</button>
+      </div>
       <ul id="list"></ul>
       <p class="hint">Klik op de tekst of het vinkje om af te strepen. Synchroniseert voor iedereen.</p>
     </div>
@@ -48,34 +51,58 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/fireba
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15";
 
+/* Firebase */
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+
+/* Config */
 const DOC_ID     = "shiftstart_prioriteit";
 const ADMIN_CODE = "YamanBS1";
 
-/* Tools / Slot */
-let tools = document.querySelector(".tools");
-const bEdit  = document.createElement("button"); bEdit.textContent  = "🔓 Bewerk-modus";
-const bView  = document.createElement("button"); bView.textContent  = "🔒 Alleen afvinken";
-const bReset = document.createElement("button"); bReset.textContent = "Alles herstellen";
-const bSeed  = document.createElement("button"); bSeed.textContent  = "Herstel lijst";
-tools.replaceChildren(bEdit,bView,bReset,bSeed);
+/* UI refs */
+const elList  = document.getElementById("list");
+const elNew   = document.getElementById("newItem");
+const btnAdd  = document.getElementById("btnAdd");
 
-let canEdit = (localStorage.getItem("editMode")==="1");
-bEdit.onclick = ()=>{ const c=prompt("Beheerderscode:"); if(c===ADMIN_CODE){ localStorage.setItem("editMode","1"); canEdit=true; updateUI(); render(); alert("Bewerk-modus aan ✅"); } else alert("Onjuiste code"); };
-bView.onclick = ()=>{ localStorage.removeItem("editMode"); canEdit=false; updateUI(); render(); alert("Alleen afvinken 🔒"); };
-window.addEventListener("storage", e=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
+/* Tools (slot + reset/seed) */
+let toolsBar = document.querySelector(".tools");
+if (!toolsBar) {
+  toolsBar = document.createElement("div");
+  toolsBar.className = "tools";
+  (document.querySelector("header.panel") || document.body).appendChild(toolsBar);
+}
+const btnEdit  = document.createElement("button"); btnEdit.textContent  = "🔓 Bewerk-modus";
+const btnView  = document.createElement("button"); btnView.textContent  = "🔒 Alleen afvinken";
+const btnReset = document.createElement("button"); btnReset.textContent = "Alles herstellen";
+const btnSeed  = document.createElement("button"); btnSeed.textContent  = "Herstel lijst";
+toolsBar.replaceChildren(btnEdit, btnView, btnReset, btnSeed);
 
-/* Speciale keys (secties & notities) */
+/* Gedeeld slot */
+let canEdit = (localStorage.getItem("editMode") === "1");
+btnEdit.onclick = () => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE) {
+    canEdit = true; localStorage.setItem("editMode","1");
+    updateUI(); render(); alert("Bewerk-modus aan ✅");
+  } else alert("Onjuiste code");
+};
+btnView.onclick = () => {
+  canEdit = false; localStorage.removeItem("editMode");
+  updateUI(); render(); alert("Alleen afvinken 🔒");
+};
+window.addEventListener("storage", e => {
+  if (e.key === "editMode") { canEdit = (localStorage.getItem("editMode") === "1"); updateUI(); render(); }
+});
+
+/* Speciale sleutels (kop/strepen/notities) */
 const isDiv  = s => s.startsWith("__DIV__");
 const isHead = s => s.startsWith("__H__");
 const isNote = s => s.startsWith("__N__");
-const showText = k => isDiv(k) ? "—" : isHead(k) ? k.replace("__H__","") : isNote(k) ? k.replace("__N__","") : k;
+const showText = key => (isHead(key) ? key.slice(5) : isNote(key) ? key.slice(5) : isDiv(key) ? "—" : key);
 
-/* Seed */
-function getSeed(){
+/* Seed exact zoals je vroeg */
+function getSeed() {
   const items = {
-    // Normaal
     "15:15 Afzuiging aan": false,
     "15:15 Fietsen buiten en Dweilen": false,
     "15:20 PC aan": false,
@@ -94,22 +121,25 @@ function getSeed(){
     "__DIV__1": false,
     "__H__WEEKEND": false,
 
-    // Weekend – incl. vroege taken
-    "15:15 Afzuiging aan": false,
-    "15:15 Fietsen buiten en Dweilen": false,
-    "15:20 PC aan":false,
-    "15:20 brood/ bacon uithalen": false,
-    "15:20 Grill aan": false,
-    "15:25 Dresstafel klaarmaken": false,
-    "15:25 Bin aan inclusief verwarming aan de achterkant": false,
+    // Weekend: inclusief begin-items met zelfde tijden
+    "15:15 Afzuiging aan (weekend)": false,
+    "15:15 Fietsen buiten en Dweilen (weekend)": false,
+    "15:20 PC aan (weekend)": false,
+    "15:20 brood/ bacon uithalen (weekend)": false,
+    "15:25 Dresstafel klaarmaken (weekend)": false,
+    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)": false,
 
-    "15:30 Broodtoaster aan": false,
-    "15:35 Friteuse 1/3 aan": false,
-    "15:50 Kassatellen": false,
-    "15:55 Tv’s aanzetten": false,
-    "16:00 Friteuse 2/4 aan": false,
-    "16:00 Wraps Toaster aan op 50 graden": false,
-    "16:00 Bord omdraaien naar geopend!": false,
+    // tijden die afwijken in weekend:
+    "15:20 Grill aan (weekend)": false,
+    "15:30 Broodtoaster aan (weekend)": false,
+    "15:35 Friteuse 1/3 aan (weekend)": false,
+
+    // rest gelijk in weekend:
+    "15:50 Kassatellen (weekend)": false,
+    "15:55 Tv’s aanzetten (weekend)": false,
+    "16:00 Friteuse 2/4 aan (weekend)": false,
+    "16:00 Wraps Toaster aan op 50 graden (weekend)": false,
+    "16:00 Bord omdraaien naar geopend! (weekend)": false,
 
     "__DIV__2": false,
     "__H__Aantal brood": false,
@@ -123,86 +153,116 @@ function getSeed(){
     "__N__1/2 zakken DD": false,
 
     "__DIV__3": false,
-    "__N__Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak.": false
+    "__N__Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak.": false,
   };
 
   const order = [
-    "15:15 Afzuiging aan","15:15 Fietsen buiten en Dweilen","15:20 PC aan",
+    "15:15 Afzuiging aan",
+    "15:15 Fietsen buiten en Dweilen",
+    "15:20 PC aan",
     "15:20 brood/ bacon uithalen (check aantal onderaan de pagina)",
-    "15:25 Dresstafel klaarmaken","15:25 Bin aan inclusief verwarming aan de achterkant",
-    "15:30 Grill aan","15:40 Broodtoaster aan","15:50 Friteuse 1/3 aan","15:50 Kassatellen",
-    "15:55 Tv’s aanzetten","16:00 Friteuse 2/4 aan","16:00 Wraps Toaster aan op 50 graden",
+    "15:25 Dresstafel klaarmaken",
+    "15:25 Bin aan inclusief verwarming aan de achterkant",
+    "15:30 Grill aan",
+    "15:40 Broodtoaster aan",
+    "15:50 Friteuse 1/3 aan",
+    "15:50 Kassatellen",
+    "15:55 Tv’s aanzetten",
+    "16:00 Friteuse 2/4 aan",
+    "16:00 Wraps Toaster aan op 50 graden",
     "16:00 Bord omdraaien naar geopend!",
 
-    "__DIV__1","__H__WEEKEND",
+    "__DIV__1",
+    "__H__WEEKEND",
 
-    "15:15 Afzuiging aan (weekend)","15:15 Fietsen buiten en Dweilen (weekend)","15:20 PC aan (weekend)",
-    "15:20 brood/ bacon uithalen (weekend)","15:25 Dresstafel klaarmaken (weekend)","15:25 Bin aan inclusief verwarming aan de achterkant (weekend)",
-    "15:20 Grill aan (weekend)","15:30 Broodtoaster aan (weekend)","15:35 Friteuse 1/3 aan (weekend)","15:50 Kassatellen (weekend)",
-    "15:55 Tv’s aanzetten (weekend)","16:00 Friteuse 2/4 aan (weekend)","16:00 Wraps Toaster aan op 50 graden (weekend)","16:00 Bord omdraaien naar geopend! (weekend)",
+    "15:15 Afzuiging aan (weekend)",
+    "15:15 Fietsen buiten en Dweilen (weekend)",
+    "15:20 PC aan (weekend)",
+    "15:20 brood/ bacon uithalen (weekend)",
+    "15:25 Dresstafel klaarmaken (weekend)",
+    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)",
 
-    "__DIV__2","__H__Aantal brood","__N__5/6 zakken 12CM","__N__1/2 zak 10 CM","__N__1/2 zak DD",
-    "__H__Weekend (brood)","__N__6/7 zakken 12CM","__N__1/2 zak 10 CM","__N__1/2 zakken DD",
-    "__DIV__3","__N__Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak."
+    "15:20 Grill aan (weekend)",
+    "15:30 Broodtoaster aan (weekend)",
+    "15:35 Friteuse 1/3 aan (weekend)",
+
+    "15:50 Kassatellen (weekend)",
+    "15:55 Tv’s aanzetten (weekend)",
+    "16:00 Friteuse 2/4 aan (weekend)",
+    "16:00 Wraps Toaster aan op 50 graden (weekend)",
+    "16:00 Bord omdraaien naar geopend! (weekend)",
+
+    "__DIV__2",
+    "__H__Aantal brood",
+    "__N__5/6 zakken 12CM",
+    "__N__1/2 zak 10 CM",
+    "__N__1/2 zak DD",
+    "__H__Weekend (brood)",
+    "__N__6/7 zakken 12CM",
+    "__N__1/2 zak 10 CM",
+    "__N__1/2 zakken DD",
+
+    "__DIV__3",
+    "__N__Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak.",
   ];
+
   return { items, order };
 }
 
-/* State + realtime */
-const elList  = document.getElementById("list");
-const elNew   = document.getElementById("newItem");
-const btnAdd  = document.getElementById("btnAdd");
+/* State */
+let dataMap = {};
+let order   = [];
 
-let items = {};
-let order = [];
-
-onSnapshot(doc(db,"lists",DOC_ID), snap=>{
-  if (snap.exists()){
+/* Realtime sync */
+onSnapshot(doc(db, "lists", DOC_ID), snap => {
+  if (snap.exists()) {
     const d = snap.data();
-    items = d.items || {};
-    order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
-    Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
+    dataMap = d.items || {};
+    order   = Array.isArray(d.order) ? d.order.filter(k => k in dataMap) : Object.keys(dataMap);
+    Object.keys(dataMap).forEach(k => { if (!order.includes(k)) order.push(k); });
   } else {
-    const seed = getSeed();
-    items = seed.items; order = seed.order;
-    save({ items, order });
+    // niets forceren: gebruiker zet zelf seed via knop
+    dataMap = {}; order = [];
   }
   render();
 });
 
-/* helpers */
-function save(payload){
-  return setDoc(doc(db,"lists",DOC_ID), { ...(payload||{}), updatedAt: serverTimestamp() }, { merge:true });
-}
-function btn(txt,title,onClick){
-  const b=document.createElement("button");
-  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
-  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); onClick(e); },{capture:true});
+/* Persist helper */
+function save(p){ return setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true }); }
+
+/* Button helper met stopPropagation */
+function iconBtn(txt, title, onClick){
+  const b = document.createElement("button");
+  b.className = "btn"; b.textContent = txt; b.title = title;
+  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); onClick(e); }, {capture:true});
   return b;
 }
 
-/* render */
+/* Render */
 function render(){
-  elList.innerHTML="";
-  const labels = order.length ? order.slice() : Object.keys(items);
+  elList.innerHTML = "";
+  const keys = order.length ? order.slice() : Object.keys(dataMap);
 
-  labels.forEach((key, idx)=>{
+  keys.forEach((key, idx) => {
     const li = document.createElement("li");
-    li.className = "item" + (items[key] ? " done" : "");
+    li.className = "item" + (dataMap[key] ? " done" : "");
     li.dataset.index = String(idx);
 
-    // secties / notities: geen checkbox
-    if (isDiv(key) || isHead(key) || isNote(key)){
+    // speciale regels (kop/strepen/notities) – geen checkbox
+    if (isDiv(key) || isHead(key) || isNote(key)) {
       const span = document.createElement("div");
-      span.className="label"; span.textContent = showText(key);
+      span.className = "label";
+      if (isDiv(key)) {
+        span.style.width="100%"; span.style.height="1px"; span.style.background="#2a2f3a"; span.textContent="";
+      } else {
+        span.textContent = showText(key);
+        if (isHead(key)) { span.style.fontWeight="800"; }
+        if (isNote(key)) { span.style.fontStyle="italic"; span.style.opacity="0.9"; }
+      }
 
-      if (isDiv(key)){ span.style.height="1px"; span.style.background="#2a2f3a"; span.textContent=""; }
-      if (isHead(key)){ span.style.fontWeight="800"; }
-      if (isNote(key)){ span.style.fontStyle="italic"; span.style.opacity=".9"; }
-
-      if (canEdit && !isDiv(key)){
-        const pen = btn("✏️","Naam aanpassen", ()=>renameItem(key));
-        const del = btn("🗑️","Verwijderen", ()=>confirmDel(key));
+      if (canEdit && !isDiv(key)) {
+        const pen = iconBtn("✏️","Naam aanpassen", ()=>renameItem(key));
+        const del = iconBtn("🗑️","Verwijderen", ()=>confirmDel(key));
         li.append(span, pen, del);
       } else {
         li.append(span);
@@ -211,84 +271,121 @@ function render(){
       return;
     }
 
-    const cb = document.createElement("input"); cb.type="checkbox"; cb.checked=!!items[key];
-    cb.onchange = ()=>toggle(key);
+    // normale (afvinkbare) regel
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!dataMap[key];
+    cb.onchange = () => toggle(key);
 
-    const span = document.createElement("div"); span.className="label"; span.textContent = showText(key);
-    span.onclick = ()=>toggle(key);
+    const label = document.createElement("div");
+    label.className = "label"; label.textContent = key;
+    label.onclick = () => toggle(key);
 
-    if (canEdit){
-      const pen = btn("✏️","Naam aanpassen", ()=>renameItem(key));
-      const del = btn("🗑️","Verwijderen", ()=>confirmDel(key));
+    if (canEdit) {
+      const pen = iconBtn("✏️","Naam aanpassen", ()=>renameItem(key));
+      const del = iconBtn("🗑️","Verwijderen", ()=>confirmDel(key));
 
+      // drag
       li.draggable = true;
-      li.addEventListener("dragstart", e=>{ li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend", ()=>li.classList.remove("dragging"));
-      li.addEventListener("dragover", e=>e.preventDefault());
-      li.addEventListener("drop", e=>{
+      li.addEventListener("dragstart", e => { li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
+      li.addEventListener("dragend",   () => li.classList.remove("dragging"));
+      li.addEventListener("dragover",  e => e.preventDefault());
+      li.addEventListener("drop", e => {
         e.preventDefault();
         const from = Number(e.dataTransfer.getData("text/plain"));
         const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from!==to){
-          const next = order.slice(); const [m]=next.splice(from,1); next.splice(to,0,m);
+        if (Number.isFinite(from) && Number.isFinite(to) && from !== to) {
+          const next = order.slice();
+          const [moved] = next.splice(from,1);
+          next.splice(to,0,moved);
           order = next; save({ order }); render();
         }
       });
 
-      li.append(cb, span, pen, del);
+      li.append(cb, label, pen, del);
     } else {
-      li.append(cb, span);
+      li.append(cb, label);
     }
+
     elList.appendChild(li);
   });
 
   updateUI();
 }
 
-/* actions */
+/* Actions */
 function updateUI(){
-  [elNew, btnAdd].forEach(el=>{
-    if(!el) return;
-    el.disabled = !canEdit;
-    el.style.opacity = canEdit ? 1 : .6;
-    el.style.pointerEvents = canEdit ? "auto" : "none";
-  });
-  // Reset (alle vinkjes uit) mag altijd:
-  bReset.disabled = false; bReset.style.opacity = 1;
-  // Seed (harde beginlijst) alleen in bewerk-modus:
-  bSeed.disabled = !canEdit; bSeed.style.opacity = canEdit ? 1 : .5;
+  // toevoegen alleen in bewerk-modus
+  [elNew, btnAdd].forEach(el=>{ if(!el) return; el.disabled = !canEdit; el.style.opacity = canEdit?1:0.6; el.style.pointerEvents = canEdit?"auto":"none"; });
+  // “Alles herstellen” mag altijd
+  btnReset.disabled = false; btnReset.style.opacity = 1;
+  // “Herstel lijst” alleen in bewerk-modus
+  btnSeed.disabled = !canEdit; btnSeed.style.opacity = canEdit ? 1 : 0.5;
 }
-function toggle(key){ const next={...items,[key]:!items[key]}; save({ items: next }); }
+
+function toggle(k){
+  const next = { ...dataMap, [k]: !dataMap[k] };
+  save({ items: next });
+}
+
 function addItem(txt){
-  if(!canEdit) return;
-  const t=(txt||"").trim(); if(!t) return; if (t in items) return alert("Bestaat al.");
-  const next={...items,[t]:false}; const nextOrder = order.concat(t);
-  items=next; order=nextOrder; render(); save({ items: next, order: nextOrder });
-}
-function confirmDel(key){ if(!canEdit) return; if(!confirm(`Verwijder "${showText(key)}"?`)) return; removeItem(key); }
-function removeItem(key){
-  const next = {...items}; if(!(key in next)) return; delete next[key];
-  const nextOrder = order.filter(k=>k!==key);
-  items = next; order = nextOrder; render(); save({ items: next, order: nextOrder });
-}
-function renameItem(oldKey){
-  const s=prompt("Nieuwe naam:", showText(oldKey)); if(s===null) return;
-  const newText=s.trim(); if(!newText) return;
-  let newKey=newText; if(isHead(oldKey)) newKey="__H__"+newText; if(isNote(oldKey)) newKey="__N__"+newText; if(isDiv(oldKey)) return;
-  if(newKey in items) { alert("Die naam bestaat al."); return; }
-  const next={...items,[newKey]:!!items[oldKey]}; delete next[oldKey];
-  const nextOrder = order.map(k=>k===oldKey?newKey:k);
-  items=next; order=nextOrder; render(); save({ items: next, order: nextOrder });
+  if (!canEdit) return;
+  const t = (txt||"").trim(); if(!t) return;
+  if (t in dataMap){ alert("Bestaat al."); return; }
+  const nextMap = { ...dataMap, [t]: false };
+  const nextOrd = order.concat(t);
+  save({ items: nextMap, order: nextOrd });
 }
 
-/* events */
-const btnAdd = document.getElementById("btnAdd");
-btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
-elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+function confirmDel(k){
+  if (!canEdit) return;
+  if (!confirm(`Verwijder "${showText(k)}"?`)) return;
+  removeItem(k);
+}
 
-bReset.onclick = ()=>{ const next = Object.fromEntries(Object.keys(items).map(k=>[k,false])); save({ items: next }); };
-bSeed.onclick  = ()=>{ if(!canEdit) return; if(!confirm("Herstel naar begin-lijst?")) return; const s=getSeed(); save({ items: s.items, order: s.order }); };
+function removeItem(k){
+  const nextMap = { ...dataMap }; delete nextMap[k];
+  const nextOrd = order.filter(x => x !== k);
+  save({ items: nextMap, order: nextOrd });
+}
 
+function renameItem(oldK){
+  if (!canEdit) return;
+  const current = showText(oldK);
+  const s = prompt("Nieuwe naam:", current);
+  if (s === null) return;
+  const n = s.trim(); if (!n || n === current) return;
+
+  let newK = n;
+  if (isHead(oldK)) newK = "__H__" + n;
+  else if (isNote(oldK)) newK = "__N__" + n;
+  else if (isDiv(oldK)) return; // lijn niet hernoemen
+
+  if (newK in dataMap){ alert("Die naam bestaat al."); return; }
+
+  const nextMap = { ...dataMap };
+  nextMap[newK] = !!nextMap[oldK];
+  delete nextMap[oldK];
+  const nextOrd = order.map(x => (x === oldK ? newK : x));
+  save({ items: nextMap, order: nextOrd });
+}
+
+/* Events */
+btnAdd.onclick = () => { addItem(elNew.value); elNew.value=""; elNew.focus(); };
+elNew.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+
+btnReset.onclick = () => {
+  const next = Object.fromEntries(Object.keys(dataMap).map(k => [k,false]));
+  save({ items: next });
+};
+
+btnSeed.onclick = () => {
+  if (!canEdit) return;
+  if (!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
+  const { items, order } = getSeed();
+  save({ items, order });
+};
+
+/* init UI */
 updateUI();
 </script>
 </body>
