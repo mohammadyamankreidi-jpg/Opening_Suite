@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Prioriteit</title>
-  <link rel="icon" href="data:,"><!-- voorkomt 404 favicon -->
+  <link rel="icon" href="data:,">
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
@@ -197,14 +197,14 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
     order=Array.isArray(d.order)? d.order.filter(k=>k in dataMap) : Object.keys(dataMap);
     Object.keys(dataMap).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    hardSeed();
+    awaitHardSeed();
   }
   render();
 });
 
 /* ===== Persist helpers ===== */
 async function save(p){ await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true }); }
-async function hardSeed(){
+async function awaitHardSeed(){
   const s=getSeed();
   dataMap=s.items; order=s.order;
   await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
@@ -223,36 +223,6 @@ function makeBtn(txt, title, onClick){
     onClick();
   }, {capture:true});
   return b;
-}
-
-/* ===== Rename helpers (samenvoegen & (weekend) strippen) ===== */
-function stripWeekendTag(s){
-  return (s || "").replace(/\s*\(weekend\)\s*$/i, "").trim();
-}
-async function renameTo(oldKey, newKey){
-  if (!canEdit || !(oldKey in dataMap)) return;
-  newKey = (newKey || "").trim();
-  if (!newKey || newKey === oldKey) return;
-
-  const exists = (newKey in dataMap);
-  let nextItems = { ...dataMap };
-  let nextOrder = order.slice();
-
-  if (exists){
-    const merged = !!nextItems[oldKey] || !!nextItems[newKey];
-    nextItems[newKey] = merged;
-    delete nextItems[oldKey];
-    nextOrder = nextOrder.filter(k => k !== oldKey);
-  } else {
-    nextItems[newKey] = !!nextItems[oldKey];
-    delete nextItems[oldKey];
-    nextOrder = nextOrder.map(k => k === oldKey ? newKey : k);
-  }
-
-  dataMap = nextItems;
-  order   = nextOrder;
-  render();
-  await setDoc(doc(db,"lists",DOC_ID), { items: nextItems, order: nextOrder, updatedAt: serverTimestamp() }, { merge:true });
 }
 
 /* ===== Render ===== */
@@ -286,9 +256,6 @@ function render(){
       if (canEdit){
         const pen  = makeBtn("✏️","Naam aanpassen",()=>renameItem(key));
         const del  = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(key));
-        const untag = /\(weekend\)\s*$/i.test(key)
-          ? makeBtn("🏷️−","‘(weekend)’ weghalen", async ()=>{ await renameTo(key, stripWeekendTag(key)); })
-          : null;
 
         // drag
         li.draggable = true;
@@ -311,8 +278,7 @@ function render(){
           }
         });
 
-        if (untag) li.append(cb, span, pen, untag, del);
-        else       li.append(cb, span, pen, del);
+        li.append(cb, span, pen, del);
       } else {
         li.append(cb, span);
       }
@@ -359,11 +325,38 @@ async function removeItemConfirm(key){
 }
 async function renameItem(oldKey){
   if (!canEdit || !(oldKey in dataMap)) return;
-  const s = prompt("Nieuwe naam:", stripWeekendTag(oldKey) || oldKey);
+  const s = prompt("Nieuwe naam:", oldKey.replace(/\s*\(weekend\)\s*$/i,'').trim());
   if (s === null) return;
   const newName = (s || "").trim();
   if (!newName) return;
-  await renameTo(oldKey, newName);
+
+  // als nieuwe naam al bestaat → samenvoegen (OR van vinkjes)
+  const exists = (newName in dataMap);
+  const newValue = exists ? (!!dataMap[oldKey] || !!dataMap[newName]) : !!dataMap[oldKey];
+
+  // lokale state
+  let nextItems = { ...dataMap };
+  delete nextItems[oldKey];
+  nextItems[newName] = newValue;
+  let nextOrder = order
+    .filter(k => k !== oldKey)
+    .map(k => k === oldKey ? newName : k);
+  if (exists) {
+    // laat volgorde van bestaande key staan
+    nextOrder = order.filter(k => k !== oldKey);
+  }
+
+  dataMap = nextItems;
+  order   = nextOrder;
+  render();
+
+  // Firestore: atomaire delete oude key + set nieuwe key + order
+  await updateDoc(doc(db,"lists",DOC_ID), {
+    [`items.${oldKey}`]: deleteField(),
+    [`items.${newName}`]: newValue,
+    order: nextOrder,
+    updatedAt: serverTimestamp()
+  });
 }
 
 /* ===== UI state ===== */
@@ -374,8 +367,8 @@ function updateUI(){
     el.style.opacity = canEdit ? 1 : .6;
     el.style.pointerEvents = canEdit ? "auto" : "none";
   });
-  btnReset.disabled = false; btnReset.style.opacity = 1;          // iedereen mag alle vinkjes uit
-  btnSeed.disabled  = !canEdit; btnSeed.style.opacity = canEdit ? 1 : .5; // seed alleen in bewerk-modus
+  btnReset.disabled = false; btnReset.style.opacity = 1;
+  btnSeed.disabled  = !canEdit; btnSeed.style.opacity = canEdit ? 1 : .5;
 }
 
 /* ===== Events ===== */
@@ -390,7 +383,7 @@ btnReset.onclick = ()=>{
 btnSeed.onclick = async ()=>{
   if(!canEdit) return;
   if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  await hardSeed();
+  await awaitHardSeed();
 };
 </script>
 </body>
