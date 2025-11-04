@@ -50,7 +50,7 @@
 
       <!-- lijsten -->
       <ul id="list-day"></ul>
-<div id="wk-head" class="wk-head" style="display:none">WEEKEND</div>
+      <div id="wk-divider" class="divider" style="display:none"></div>
       <div id="wk-head" class="wk-head" style="display:none">WEEKEND</div>
       <ul id="list-weekend"></ul>
 
@@ -137,23 +137,24 @@ function getSeed(){
     "16:00 Wraps Toaster aan op 50 graden": false,
     "16:00 Bord omdraaien naar geopend!": false,
     // Weekend
-    "15:15 Afzuiging aan": false,
-    "15:15 Fietsen buiten en Dweilen": false,
-    "15:20 PC aan": false,
-    "15:20 brood/ bacon uithalen": false,
-    "15:20 Grill aan": false,
-    "15:25 Dresstafel klaarmaken": false,
-    "15:25 Bin aan inclusief verwarming aan de achterkant": false,
-    "15:30 Broodtoaster aan": false,
-    "15:35 Friteuse 1/3 aan": false,
-    "15:50 Kassatellen": false,
-    "15:55 Tv’s aanzetten": false,
-    "16:00 Friteuse 2/4 aan": false,
-    "16:00 Wraps Toaster aan op 50 graden": false,
-    "16:00 Bord omdraaien naar geopend!": false
+    "15:15 Afzuiging aan (weekend)": false,
+    "15:15 Fietsen buiten en Dweilen (weekend)": false,
+    "15:20 PC aan (weekend)": false,
+    "15:20 brood/ bacon uithalen (weekend)": false,
+    "15:20 Grill aan (weekend)": false,
+    "15:25 Dresstafel klaarmaken (weekend)": false,
+    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)": false,
+    "15:30 Broodtoaster aan (weekend)": false,
+    "15:35 Friteuse 1/3 aan (weekend)": false,
+    "15:50 Kassatellen (weekend)": false,
+    "15:55 Tv’s aanzetten (weekend)": false,
+    "16:00 Friteuse 2/4 aan (weekend)": false,
+    "16:00 Wraps Toaster aan op 50 (weekend)": false,
+    "16:00 Bord omdraaien naar geopend! (weekend)": false,
   };
 
   const order = [
+    // dag eerst
     "15:15 Afzuiging aan",
     "15:15 Fietsen buiten en Dweilen",
     "15:20 PC aan",
@@ -168,21 +169,21 @@ function getSeed(){
     "16:00 Friteuse 2/4 aan",
     "16:00 Wraps Toaster aan op 50 graden",
     "16:00 Bord omdraaien naar geopend!",
-    // Weekend
-    "15:15 Afzuiging aan",
-    "15:15 Fietsen buiten en Dweilen",
-    "15:20 PC aan",
-    "15:20 brood/ bacon uithalen",
-    "15:20 Grill aan",
-    "15:25 Dresstafel klaarmaken",
-    "15:25 Bin aan inclusief verwarming aan de achterkant",
-    "15:30 Broodtoaster aan",
-    "15:35 Friteuse 1/3 aan",
-    "15:50 Kassatellen",
-    "15:55 Tv’s aanzetten",
-    "16:00 Friteuse 2/4 aan",
-    "16:00 Wraps Toaster aan op 50",
-    "16:00 Bord omdraaien naar geopend!",
+    // dan weekend
+    "15:15 Afzuiging aan (weekend)",
+    "15:15 Fietsen buiten en Dweilen (weekend)",
+    "15:20 PC aan (weekend)",
+    "15:20 brood/ bacon uithalen (weekend)",
+    "15:20 Grill aan (weekend)",
+    "15:25 Dresstafel klaarmaken (weekend)",
+    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)",
+    "15:30 Broodtoaster aan (weekend)",
+    "15:35 Friteuse 1/3 aan (weekend)",
+    "15:50 Kassatellen (weekend)",
+    "15:55 Tv’s aanzetten (weekend)",
+    "16:00 Friteuse 2/4 aan (weekend)",
+    "16:00 Wraps Toaster aan op 50 (weekend)",
+    "16:00 Bord omdraaien naar geopend! (weekend)",
   ];
   return { items, order };
 }
@@ -197,18 +198,15 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
     order=Array.isArray(d.order)? d.order.filter(k=>k in dataMap) : Object.keys(dataMap);
     Object.keys(dataMap).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    awaitHardSeed();
+    const s=getSeed();
+    dataMap=s.items; order=s.order;
+    setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
   }
   render();
 });
 
 /* ===== Persist helpers ===== */
 async function save(p){ await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true }); }
-async function awaitHardSeed(){
-  const s=getSeed();
-  dataMap=s.items; order=s.order;
-  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
-}
 
 /* ===== Buttons helper ===== */
 function makeBtn(txt, title, onClick){
@@ -228,8 +226,8 @@ function makeBtn(txt, title, onClick){
 /* ===== Render ===== */
 function render(){
   ulDay.innerHTML=""; ulWeekend.innerHTML="";
-  const isWeekend = k => k.includes("(weekend)");
-  const firstW = order.findIndex(isWeekend);
+  const isWeekendKey = k => /\(weekend\)\s*$/i.test(k);
+  const firstW = order.findIndex(isWeekendKey);
   const dayKeys = (firstW === -1) ? order.slice() : order.slice(0, firstW);
   const wkKeys  = (firstW === -1) ? [] : order.slice(firstW);
 
@@ -249,8 +247,10 @@ function render(){
       cb.type="checkbox"; cb.checked=!!dataMap[key];
       cb.onchange = ()=> toggle(key);
 
+      // toon label ZONDER “(weekend)”
+      const displayText = key.replace(/\s*\(weekend\)\s*$/i,'').trim();
       const span=document.createElement("div");
-      span.className="label"; span.textContent=key;
+      span.className="label"; span.textContent=displayText;
       if (!canEdit) span.onclick = () => toggle(key);
 
       if (canEdit){
@@ -297,6 +297,7 @@ function toggle(key){
   dataMap = next;
   save({ items: next });
 }
+
 function addItem(t){
   if(!canEdit) return;
   const x=(t||"").trim(); if(!x) return;
@@ -306,6 +307,7 @@ function addItem(t){
   dataMap = nextMap; order = nextOrd;
   render(); save({ items: nextMap, order: nextOrd });
 }
+
 async function removeItemConfirm(key){
   if(!canEdit) return;
   if(!(key in dataMap)) return;
@@ -323,38 +325,40 @@ async function removeItemConfirm(key){
     updatedAt: serverTimestamp()
   });
 }
+
 async function renameItem(oldKey){
   if (!canEdit || !(oldKey in dataMap)) return;
-  const s = prompt("Nieuwe naam:", oldKey.replace(/\s*\(weekend\)\s*$/i,'').trim());
+
+  const base = oldKey.replace(/\s*\(weekend\)\s*$/i,'').trim(); // prompt zonder tag
+  const s = prompt("Nieuwe naam:", base);
   if (s === null) return;
-  const newName = (s || "").trim();
-  if (!newName) return;
+  const newBase = (s || "").trim();
+  if (!newBase) return;
 
-  // als nieuwe naam al bestaat → samenvoegen (OR van vinkjes)
-  const exists = (newName in dataMap);
-  const newValue = exists ? (!!dataMap[oldKey] || !!dataMap[newName]) : !!dataMap[oldKey];
+  const isWeekend = /\(weekend\)\s*$/i.test(oldKey);
+  const newKey = isWeekend ? `${newBase} (weekend)` : newBase;
 
-  // lokale state
-  let nextItems = { ...dataMap };
-  delete nextItems[oldKey];
-  nextItems[newName] = newValue;
-  let nextOrder = order
-    .filter(k => k !== oldKey)
-    .map(k => k === oldKey ? newName : k);
-  if (exists) {
-    // laat volgorde van bestaande key staan
-    nextOrder = order.filter(k => k !== oldKey);
+  if (newKey in dataMap && newKey !== oldKey){
+    alert("Die naam bestaat al.");
+    return;
   }
 
-  dataMap = nextItems;
-  order   = nextOrder;
+  // lokale state
+  const value   = !!dataMap[oldKey];
+  const nextMap = { ...dataMap };
+  delete nextMap[oldKey];
+  nextMap[newKey] = value;
+
+  const nextOrd = order.map(k => k === oldKey ? newKey : k);
+
+  dataMap = nextMap; order = nextOrd;
   render();
 
-  // Firestore: atomaire delete oude key + set nieuwe key + order
+  // Firestore atomair: delete oude + set nieuwe + order
   await updateDoc(doc(db,"lists",DOC_ID), {
     [`items.${oldKey}`]: deleteField(),
-    [`items.${newName}`]: newValue,
-    order: nextOrder,
+    [`items.${newKey}`]: value,
+    order: nextOrd,
     updatedAt: serverTimestamp()
   });
 }
@@ -367,8 +371,8 @@ function updateUI(){
     el.style.opacity = canEdit ? 1 : .6;
     el.style.pointerEvents = canEdit ? "auto" : "none";
   });
-  btnReset.disabled = false; btnReset.style.opacity = 1;
-  btnSeed.disabled  = !canEdit; btnSeed.style.opacity = canEdit ? 1 : .5;
+  btnReset.disabled = false; btnReset.style.opacity = 1;       // iedereen mag alle vinkjes uit
+  btnSeed.disabled  = !canEdit;  btnSeed.style.opacity = canEdit ? 1 : .5; // seed alleen met slot open
 }
 
 /* ===== Events ===== */
@@ -383,7 +387,10 @@ btnReset.onclick = ()=>{
 btnSeed.onclick = async ()=>{
   if(!canEdit) return;
   if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  await awaitHardSeed();
+  const s = getSeed();
+  dataMap = s.items; order = s.order;
+  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+  render();
 };
 </script>
 </body>
