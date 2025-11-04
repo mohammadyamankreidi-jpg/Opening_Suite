@@ -31,14 +31,26 @@
   font-weight: 800;
   opacity: .95;
   margin: 0 0 8px;
-  color: #eef2f8; /* wit zoals de rest van de tekst */
+  color: #eef2f8; /* wit */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .wk-head {
   font-weight: 800;
   opacity: .95;
-  margin: -2px 0 8px;
+  margin: 16px 0 8px;
   color: #eef2f8; /* wit */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* subtiele scheidingslijn tussen doordeweeks en weekend */
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.15);
+  margin: 16px 0;
+  border-radius: 1px;
 }
     .notes{margin-top:14px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
     .notes .h{font-weight:800;margin-bottom:6px}
@@ -60,11 +72,12 @@
         <button id="btnAdd">Toevoegen</button>
       </div>
 
-     <!-- lijsten -->
-<div id="day-head" class="day-head">LET OP: DOORDEWEEKS</div>
+   <!-- lijsten -->
+<div id="day-head" class="day-head">LET OP! DOORDEWEEKS</div>
 <ul id="list-day"></ul>
 
 <div id="wk-divider" class="divider" style="display:none"></div>
+
 <div id="wk-head" class="wk-head" style="display:none">TIJDEN VOOR WEEKEND</div>
 <ul id="list-weekend"></ul>
       <!-- vaste notities onderaan (niet in Firestore) -->
