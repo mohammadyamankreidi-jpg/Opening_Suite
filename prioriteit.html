@@ -4,8 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Prioriteit</title>
-  <!-- voorkom 404 op favicon -->
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="data:,"><!-- voorkomt 404 favicon -->
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
@@ -29,7 +28,6 @@
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
     .divider{height:1px;background:#2a2f3a;margin:12px 0}
     .wk-head{font-weight:800;opacity:.95;margin:-2px 0 8px}
-    /* vaste notitiesblok onderaan */
     .notes{margin-top:14px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
     .notes .h{font-weight:800;margin-bottom:6px}
     .notes .row{opacity:.9}
@@ -50,13 +48,13 @@
         <button id="btnAdd">Toevoegen</button>
       </div>
 
-      <!-- twee secties -->
+      <!-- lijsten -->
       <ul id="list-day"></ul>
       <div id="wk-divider" class="divider" style="display:none"></div>
       <div id="wk-head" class="wk-head" style="display:none">WEEKEND</div>
       <ul id="list-weekend"></ul>
 
-      <!-- vaste notities, NIET in Firestore -->
+      <!-- vaste notities onderaan (niet in Firestore) -->
       <div class="notes">
         <div class="h">Aantal brood</div>
         <div class="row">5/6 zakken 12CM</div>
@@ -79,21 +77,18 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import {
-  getFirestore, doc, onSnapshot, setDoc, serverTimestamp,
-  updateDoc, deleteField
-} from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15";
 
-/* === Firebase === */
+/* ===== Firebase ===== */
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-/* === Config === */
+/* ===== Config ===== */
 const DOC_ID     = "shiftstart_prioriteit";
 const ADMIN_CODE = "YamanBS1";
 
-/* === UI refs === */
+/* ===== UI refs ===== */
 const ulDay     = document.getElementById("list-day");
 const ulWeekend = document.getElementById("list-weekend");
 const wkDivider = document.getElementById("wk-divider");
@@ -101,9 +96,13 @@ const wkHead    = document.getElementById("wk-head");
 const elNew     = document.getElementById("newItem");
 const btnAdd    = document.getElementById("btnAdd");
 
-/* === Toolbar / slot === */
+/* ===== Toolbar / slot ===== */
 let toolsBar = document.querySelector(".tools");
-if (!toolsBar) { toolsBar = document.createElement("div"); toolsBar.className = "tools"; (document.querySelector("header.panel") || document.body).appendChild(toolsBar); }
+if (!toolsBar) {
+  toolsBar = document.createElement("div");
+  toolsBar.className = "tools";
+  (document.querySelector("header.panel") || document.body).appendChild(toolsBar);
+}
 const btnEdit  = document.createElement("button"); btnEdit.textContent  = "🔓 Bewerk-modus"; btnEdit.type="button";
 const btnView  = document.createElement("button"); btnView.textContent  = "🔒 Alleen afvinken"; btnView.type="button";
 const btnReset = document.createElement("button"); btnReset.textContent = "Alles herstellen"; btnReset.type="button";
@@ -119,10 +118,10 @@ btnEdit.onclick = () => {
 btnView.onclick = () => { canEdit = false; localStorage.removeItem("editMode"); updateUI(); render(); alert("Alleen afvinken 🔒"); };
 window.addEventListener("storage", (e)=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
 
-/* === Seed === */
+/* ===== Seed (dag + weekend) ===== */
 function getSeed(){
   const items = {
-    // Normale dagen
+    // ——— Normale dagen
     "15:15 Afzuiging aan": false,
     "15:15 Fietsen buiten en Dweilen": false,
     "15:20 PC aan": false,
@@ -138,7 +137,7 @@ function getSeed(){
     "16:00 Wraps Toaster aan op 50 graden": false,
     "16:00 Bord omdraaien naar geopend!": false,
 
-    // WEEKEND — exact zoals jij vroeg
+    // ——— WEEKEND (exact jouw lijst + volgorde)
     "15:15 Afzuiging aan (weekend)": false,
     "15:15 Fietsen buiten en Dweilen (weekend)": false,
     "15:20 PC aan (weekend)": false,
@@ -156,7 +155,7 @@ function getSeed(){
   };
 
   const order = [
-    // eerst normale dag
+    // dag
     "15:15 Afzuiging aan",
     "15:15 Fietsen buiten en Dweilen",
     "15:20 PC aan",
@@ -171,7 +170,7 @@ function getSeed(){
     "16:00 Friteuse 2/4 aan",
     "16:00 Wraps Toaster aan op 50 graden",
     "16:00 Bord omdraaien naar geopend!",
-    // daarna weekend
+    // weekend
     "15:15 Afzuiging aan (weekend)",
     "15:15 Fietsen buiten en Dweilen (weekend)",
     "15:20 PC aan (weekend)",
@@ -190,7 +189,7 @@ function getSeed(){
   return { items, order };
 }
 
-/* === State + realtime === */
+/* ===== State + realtime ===== */
 let dataMap = {};
 let order   = [];
 onSnapshot(doc(db,"lists",DOC_ID), snap=>{
@@ -200,16 +199,23 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
     order=Array.isArray(d.order)? d.order.filter(k=>k in dataMap) : Object.keys(dataMap);
     Object.keys(dataMap).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    const s=getSeed(); dataMap=s.items; order=s.order; save({items:dataMap, order});
+    const s=getSeed();
+    dataMap=s.items; order=s.order;
+    // Eerste keer: schrijf document volledig (geen merge) zodat het schoon is
+    hardSeed();
   }
   render();
 });
 
-/* === Persist helpers === */
-async function save(p){
-  await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
+/* ===== Persist helpers ===== */
+async function save(p){ await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true }); }
+async function hardSeed(){
+  const s=getSeed();
+  // Overschrijf het hele document (merge:false) → oude rommel verdwijnt
+  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
 }
 
+/* ===== Buttons helper (bubbels killen) ===== */
 function makeBtn(txt, title, onClick){
   const b = document.createElement("button");
   b.className = "btn";
@@ -224,7 +230,7 @@ function makeBtn(txt, title, onClick){
   return b;
 }
 
-/* === Render === */
+/* ===== Render ===== */
 function render(){
   ulDay.innerHTML=""; ulWeekend.innerHTML="";
   const isWeekend = k => k.includes("(weekend)");
@@ -289,12 +295,12 @@ function render(){
   updateUI();
 }
 
-/* === Actions === */
+/* ===== Actions ===== */
 function toggle(key){
   const next = { ...dataMap, [key]: !dataMap[key] };
+  dataMap = next;
   save({ items: next });
 }
-
 function addItem(t){
   if(!canEdit) return;
   const x=(t||"").trim(); if(!x) return;
@@ -304,54 +310,50 @@ function addItem(t){
   dataMap = nextMap; order = nextOrd;
   render(); save({ items: nextMap, order: nextOrd });
 }
-
 async function removeItemConfirm(key){
   if(!canEdit) return;
   if(!(key in dataMap)) return;
-  if(!confirm(`Weet je zeker dat je "${key}" wilt verwijderen?`)) return;
+  if(!confirm(`Verwijder "${key}"?`)) return;
 
-  // lokaal
-  const nextOrd = order.filter(k => k !== key);
-  delete dataMap[key];
-  order = nextOrd;
+  // 1) lokaal
+  const nextMap = { ...dataMap }; 
+  delete nextMap[key];
+  const nextOrd = order.filter(k=>k!==key);
+  dataMap = nextMap; order = nextOrd;
   render();
 
-  // Firestore: nested key echt verwijderen
-  const ref = doc(db,"lists",DOC_ID);
-  await updateDoc(ref, {
+  // 2) remote — verwijder veld echt uit Firestore
+  await updateDoc(doc(db,"lists",DOC_ID), {
     [`items.${key}`]: deleteField(),
-    order: nextOrd
+    order: nextOrd,
+    updatedAt: serverTimestamp()
   });
 }
-
-async function renameItem(oldKey){
+function renameItem(oldKey){
   if(!canEdit) return;
   if(!(oldKey in dataMap)) return;
   const s = prompt("Nieuwe naam:", oldKey);
   if(s===null) return;
-  const newKey = (s||"").trim();
-  if(!newKey || newKey === oldKey) return;
-  if(newKey in dataMap){ alert("Bestaat al."); return; }
+  const n = (s||"").trim();
+  if(!n || n===oldKey) return;
+  if(n in dataMap){ alert("Bestaat al."); return; }
 
-  const wasChecked = !!dataMap[oldKey];
-
-  // lokaal
-  delete dataMap[oldKey];
-  dataMap[newKey] = wasChecked;
-  const nextOrd = order.map(k => k === oldKey ? newKey : k);
-  order = nextOrd;
+  const nextMap = { ...dataMap, [n]: !!dataMap[oldKey] };
+  delete nextMap[oldKey];
+  const nextOrd = order.map(k=>k===oldKey?n:k);
+  dataMap = nextMap; order = nextOrd;
   render();
 
-  // Firestore: oud verwijderen + nieuw zetten
-  const ref = doc(db,"lists",DOC_ID);
-  await updateDoc(ref, {
+  // opslaan als ‘rename’ (delete + set)
+  updateDoc(doc(db,"lists",DOC_ID), {
     [`items.${oldKey}`]: deleteField(),
-    [`items.${newKey}`]: wasChecked,
-    order: nextOrd
+    [`items.${n}`]: !!dataMap[n],
+    order: nextOrd,
+    updatedAt: serverTimestamp()
   });
 }
 
-/* === UI state === */
+/* ===== UI state ===== */
 function updateUI(){
   [elNew, btnAdd].forEach(el=>{
     if(!el) return;
@@ -359,23 +361,23 @@ function updateUI(){
     el.style.opacity = canEdit ? 1 : .6;
     el.style.pointerEvents = canEdit ? "auto" : "none";
   });
-  btnReset.disabled = false; btnReset.style.opacity = 1;     // iedereen mag alle vinkjes uit
+  btnReset.disabled = false; btnReset.style.opacity = 1;          // iedereen mag alle vinkjes uit
   btnSeed.disabled  = !canEdit; btnSeed.style.opacity = canEdit ? 1 : .5; // seed alleen in bewerk-modus
 }
 
-/* === Events === */
+/* ===== Events ===== */
 btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
 elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
 
 btnReset.onclick = ()=>{
   const next = Object.fromEntries(Object.keys(dataMap).map(k=>[k,false]));
+  dataMap = next;
   save({ items: next });
 };
-btnSeed.onclick = ()=>{
+btnSeed.onclick = async ()=>{
   if(!canEdit) return;
   if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  const s = getSeed();
-  save({ items: s.items, order: s.order }); // overschrijven
+  await hardSeed(); // volledige overschrijving, geen merge
 };
 </script>
 </body>
