@@ -118,6 +118,10 @@ btnEdit.onclick = () => {
 btnView.onclick = () => { canEdit = false; localStorage.removeItem("editMode"); updateUI(); render(); alert("Alleen afvinken 🔒"); };
 window.addEventListener("storage", (e)=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
 
+/* ===== Weekend-detectie + weergave zonder label ===== */
+const isWeekendKey = k => /\(weekend\)\s*$/i.test(k);
+const viewLabel = key => (key || "").replace(/\s*\(weekend\)\s*$/i, "");
+
 /* ===== Seed (dag + weekend) ===== */
 function getSeed(){
   const items = {
@@ -136,21 +140,22 @@ function getSeed(){
     "16:00 Friteuse 2/4 aan": false,
     "16:00 Wraps Toaster aan op 50 graden": false,
     "16:00 Bord omdraaien naar geopend!": false,
-    // Weekend
-"15:15 Afzuiging aan (weekend)": false,
-"15:15 Fietsen buiten en Dweilen (weekend)": false,
-"15:20 PC aan (weekend)": false,
-"15:20 brood/ bacon uithalen (weekend)": false,
-"15:20 Grill aan (weekend)": false,
-"15:25 Dresstafel klaarmaken (weekend)": false,
-"15:25 Bin aan inclusief verwarming aan de achterkant (weekend)": false,
-"15:30 Broodtoaster aan (weekend)": false,
-"15:35 Friteuse 1/3 aan (weekend)": false,
-"15:50 Kassatellen (weekend)": false,
-"15:55 Tv’s aanzetten (weekend)": false,
-"16:00 Friteuse 2/4 aan (weekend)": false,
-"16:00 Wraps Toaster aan op 50 graden (weekend)": false,
-"16:00 Bord omdraaien naar geopend! (weekend)": false
+    // Weekend (met tag in data, niet zichtbaar in UI)
+    "15:15 Afzuiging aan (weekend)": false,
+    "15:15 Fietsen buiten en Dweilen (weekend)": false,
+    "15:20 PC aan (weekend)": false,
+    "15:20 brood/ bacon uithalen (weekend)": false,
+    "15:20 Grill aan (weekend)": false,
+    "15:25 Dresstafel klaarmaken (weekend)": false,
+    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)": false,
+    "15:30 Broodtoaster aan (weekend)": false,
+    "15:35 Friteuse 1/3 aan (weekend)": false,
+    "15:50 Kassatellen (weekend)": false,
+    "15:55 Tv’s aanzetten (weekend)": false,
+    "16:00 Friteuse 2/4 aan (weekend)": false,
+    "16:00 Wraps Toaster aan op 50 graden (weekend)": false,
+    "16:00 Bord omdraaien naar geopend! (weekend)": false
+  };
 
   const order = [
     // dag eerst
@@ -168,21 +173,22 @@ function getSeed(){
     "16:00 Friteuse 2/4 aan",
     "16:00 Wraps Toaster aan op 50 graden",
     "16:00 Bord omdraaien naar geopend!",
-   // dan weekend
-"15:15 Afzuiging aan (weekend)",
-"15:15 Fietsen buiten en Dweilen (weekend)",
-"15:20 PC aan (weekend)",
-"15:20 brood/ bacon uithalen (weekend)",
-"15:20 Grill aan (weekend)",
-"15:25 Dresstafel klaarmaken (weekend)",
-"15:25 Bin aan inclusief verwarming aan de achterkant (weekend)",
-"15:30 Broodtoaster aan (weekend)",
-"15:35 Friteuse 1/3 aan (weekend)",
-"15:50 Kassatellen (weekend)",
-"15:55 Tv’s aanzetten (weekend)",
-"16:00 Friteuse 2/4 aan (weekend)",
-"16:00 Wraps Toaster aan op 50 graden (weekend)",
-"16:00 Bord omdraaien naar geopend! (weekend)"
+    // dan weekend
+    "15:15 Afzuiging aan (weekend)",
+    "15:15 Fietsen buiten en Dweilen (weekend)",
+    "15:20 PC aan (weekend)",
+    "15:20 brood/ bacon uithalen (weekend)",
+    "15:20 Grill aan (weekend)",
+    "15:25 Dresstafel klaarmaken (weekend)",
+    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)",
+    "15:30 Broodtoaster aan (weekend)",
+    "15:35 Friteuse 1/3 aan (weekend)",
+    "15:50 Kassatellen (weekend)",
+    "15:55 Tv’s aanzetten (weekend)",
+    "16:00 Friteuse 2/4 aan (weekend)",
+    "16:00 Wraps Toaster aan op 50 graden (weekend)",
+    "16:00 Bord omdraaien naar geopend! (weekend)"
+  ];
   return { items, order };
 }
 
@@ -220,18 +226,10 @@ function makeBtn(txt, title, onClick){
   }, {capture:true});
   return b;
 }
-  // Herken of een key een weekend-item is (blijft hetzelfde)
-const isWeekendKey = k => /\(weekend\)\s*$/i.test(k);
-
-// Toonbare tekst: haal " (weekend)" aan het eind weg voor de UI
-function viewLabel(key){
-  return (key || "").replace(/\s*\(weekend\)\s*$/i, "");
-}
 
 /* ===== Render ===== */
 function render(){
   ulDay.innerHTML=""; ulWeekend.innerHTML="";
-  const isWeekendKey = k => /\(weekend\)\s*$/i.test(k);
   const firstW = order.findIndex(isWeekendKey);
   const dayKeys = (firstW === -1) ? order.slice() : order.slice(0, firstW);
   const wkKeys  = (firstW === -1) ? [] : order.slice(firstW);
@@ -252,11 +250,9 @@ function render(){
       cb.type="checkbox"; cb.checked=!!dataMap[key];
       cb.onchange = ()=> toggle(key);
 
-      // toon label ZONDER “(weekend)”
-      const displayText = key.replace(/\s*\(weekend\)\s*$/i,'').trim();
       const span=document.createElement("div");
-    span.className = "label";
-span.textContent = viewLabel(key);  // <-- NIEUWE: geen "(weekend)" zichtbaar
+      span.className = "label";
+      span.textContent = viewLabel(key);  // toon zonder “(weekend)”
       if (!canEdit) span.onclick = () => toggle(key);
 
       if (canEdit){
@@ -335,16 +331,15 @@ async function removeItemConfirm(key){
 async function renameItem(oldKey){
   if(!canEdit || !(oldKey in dataMap)) return;
 
-  const current = viewLabel(oldKey);                // laat de schone tekst zien
+  const current = viewLabel(oldKey);  // schone tekst tonen
   const input = prompt("Nieuwe naam:", current);
   if (input === null) return;
   const newName = (input || "").trim();
   if (!newName) return;
 
-  // Weekend-status behouden, maar NIET tonen in lijst
+  // behoud weekend-status in de data, maar niet zichtbaar in UI
   const newKey = isWeekendKey(oldKey) ? `${newName} (weekend)` : newName;
 
-  // Als nieuwe key al bestaat: samenvoegen (vinkje aan als één van beide aan stond)
   const exists = (newKey in dataMap);
   let nextItems = { ...dataMap };
   let nextOrder = order.slice();
@@ -365,6 +360,7 @@ async function renameItem(oldKey){
   render();
   await save({ items: nextItems, order: nextOrder });
 }
+
 /* ===== UI state ===== */
 function updateUI(){
   [elNew, btnAdd].forEach(el=>{
@@ -386,6 +382,7 @@ btnReset.onclick = ()=>{
   dataMap = next;
   save({ items: next });
 };
+
 btnSeed.onclick = async ()=>{
   if(!canEdit) return;
   if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
