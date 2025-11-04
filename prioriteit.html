@@ -121,7 +121,7 @@ window.addEventListener("storage", (e)=>{ if(e.key==="editMode"){ canEdit=(local
 /* ===== Seed (dag + weekend) ===== */
 function getSeed(){
   const items = {
-    // ——— Normale dagen
+    // Dag
     "15:15 Afzuiging aan": false,
     "15:15 Fietsen buiten en Dweilen": false,
     "15:20 PC aan": false,
@@ -136,8 +136,7 @@ function getSeed(){
     "16:00 Friteuse 2/4 aan": false,
     "16:00 Wraps Toaster aan op 50 graden": false,
     "16:00 Bord omdraaien naar geopend!": false,
-
-    // ——— WEEKEND (exact jouw lijst + volgorde)
+    // Weekend
     "15:15 Afzuiging aan (weekend)": false,
     "15:15 Fietsen buiten en Dweilen (weekend)": false,
     "15:20 PC aan (weekend)": false,
@@ -155,7 +154,6 @@ function getSeed(){
   };
 
   const order = [
-    // dag
     "15:15 Afzuiging aan",
     "15:15 Fietsen buiten en Dweilen",
     "15:20 PC aan",
@@ -170,7 +168,7 @@ function getSeed(){
     "16:00 Friteuse 2/4 aan",
     "16:00 Wraps Toaster aan op 50 graden",
     "16:00 Bord omdraaien naar geopend!",
-    // weekend
+    // Weekend
     "15:15 Afzuiging aan (weekend)",
     "15:15 Fietsen buiten en Dweilen (weekend)",
     "15:20 PC aan (weekend)",
@@ -199,9 +197,6 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
     order=Array.isArray(d.order)? d.order.filter(k=>k in dataMap) : Object.keys(dataMap);
     Object.keys(dataMap).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    const s=getSeed();
-    dataMap=s.items; order=s.order;
-    // Eerste keer: schrijf document volledig (geen merge) zodat het schoon is
     hardSeed();
   }
   render();
@@ -211,11 +206,11 @@ onSnapshot(doc(db,"lists",DOC_ID), snap=>{
 async function save(p){ await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true }); }
 async function hardSeed(){
   const s=getSeed();
-  // Overschrijf het hele document (merge:false) → oude rommel verdwijnt
+  dataMap=s.items; order=s.order;
   await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
 }
 
-/* ===== Buttons helper (bubbels killen) ===== */
+/* ===== Buttons helper ===== */
 function makeBtn(txt, title, onClick){
   const b = document.createElement("button");
   b.className = "btn";
@@ -228,6 +223,36 @@ function makeBtn(txt, title, onClick){
     onClick();
   }, {capture:true});
   return b;
+}
+
+/* ===== Rename helpers (samenvoegen & (weekend) strippen) ===== */
+function stripWeekendTag(s){
+  return (s || "").replace(/\s*\(weekend\)\s*$/i, "").trim();
+}
+async function renameTo(oldKey, newKey){
+  if (!canEdit || !(oldKey in dataMap)) return;
+  newKey = (newKey || "").trim();
+  if (!newKey || newKey === oldKey) return;
+
+  const exists = (newKey in dataMap);
+  let nextItems = { ...dataMap };
+  let nextOrder = order.slice();
+
+  if (exists){
+    const merged = !!nextItems[oldKey] || !!nextItems[newKey];
+    nextItems[newKey] = merged;
+    delete nextItems[oldKey];
+    nextOrder = nextOrder.filter(k => k !== oldKey);
+  } else {
+    nextItems[newKey] = !!nextItems[oldKey];
+    delete nextItems[oldKey];
+    nextOrder = nextOrder.map(k => k === oldKey ? newKey : k);
+  }
+
+  dataMap = nextItems;
+  order   = nextOrder;
+  render();
+  await setDoc(doc(db,"lists",DOC_ID), { items: nextItems, order: nextOrder, updatedAt: serverTimestamp() }, { merge:true });
 }
 
 /* ===== Render ===== */
@@ -259,9 +284,13 @@ function render(){
       if (!canEdit) span.onclick = () => toggle(key);
 
       if (canEdit){
-        const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(key));
-        const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(key));
+        const pen  = makeBtn("✏️","Naam aanpassen",()=>renameItem(key));
+        const del  = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(key));
+        const untag = /\(weekend\)\s*$/i.test(key)
+          ? makeBtn("🏷️−","‘(weekend)’ weghalen", async ()=>{ await renameTo(key, stripWeekendTag(key)); })
+          : null;
 
+        // drag
         li.draggable = true;
         li.addEventListener("dragstart", e=>{
           li.classList.add("dragging");
@@ -282,7 +311,8 @@ function render(){
           }
         });
 
-        li.append(cb, span, pen, del);
+        if (untag) li.append(cb, span, pen, untag, del);
+        else       li.append(cb, span, pen, del);
       } else {
         li.append(cb, span);
       }
@@ -315,42 +345,25 @@ async function removeItemConfirm(key){
   if(!(key in dataMap)) return;
   if(!confirm(`Verwijder "${key}"?`)) return;
 
-  // 1) lokaal
   const nextMap = { ...dataMap }; 
   delete nextMap[key];
   const nextOrd = order.filter(k=>k!==key);
   dataMap = nextMap; order = nextOrd;
   render();
 
-  // 2) remote — verwijder veld echt uit Firestore
   await updateDoc(doc(db,"lists",DOC_ID), {
     [`items.${key}`]: deleteField(),
     order: nextOrd,
     updatedAt: serverTimestamp()
   });
 }
-function renameItem(oldKey){
-  if(!canEdit) return;
-  if(!(oldKey in dataMap)) return;
-  const s = prompt("Nieuwe naam:", oldKey);
-  if(s===null) return;
-  const n = (s||"").trim();
-  if(!n || n===oldKey) return;
-  if(n in dataMap){ alert("Bestaat al."); return; }
-
-  const nextMap = { ...dataMap, [n]: !!dataMap[oldKey] };
-  delete nextMap[oldKey];
-  const nextOrd = order.map(k=>k===oldKey?n:k);
-  dataMap = nextMap; order = nextOrd;
-  render();
-
-  // opslaan als ‘rename’ (delete + set)
-  updateDoc(doc(db,"lists",DOC_ID), {
-    [`items.${oldKey}`]: deleteField(),
-    [`items.${n}`]: !!dataMap[n],
-    order: nextOrd,
-    updatedAt: serverTimestamp()
-  });
+async function renameItem(oldKey){
+  if (!canEdit || !(oldKey in dataMap)) return;
+  const s = prompt("Nieuwe naam:", stripWeekendTag(oldKey) || oldKey);
+  if (s === null) return;
+  const newName = (s || "").trim();
+  if (!newName) return;
+  await renameTo(oldKey, newName);
 }
 
 /* ===== UI state ===== */
@@ -377,7 +390,7 @@ btnReset.onclick = ()=>{
 btnSeed.onclick = async ()=>{
   if(!canEdit) return;
   if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  await hardSeed(); // volledige overschrijving, geen merge
+  await hardSeed();
 };
 </script>
 </body>
