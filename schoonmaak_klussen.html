@@ -6,7 +6,10 @@
   <title>ShiftStart – Schoonmaakklussen</title>
   <link rel="icon" href="data:,">
   <style>
-    :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
+    :root {
+      --red:#a31212; --black:#0b0b0f; --panel:rgba(21,25,34,.86);
+      --line:#2a2f3a; --text:#eef2f8; --muted:#9fb0cb;
+    }
     *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
@@ -24,6 +27,8 @@
     .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
     li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    .divider{height:1px;background:#2a2f3a;margin:12px 0;border-radius:1px}
+    .section-head{font-weight:800;opacity:.95;margin:6px 0 8px;text-transform:uppercase;letter-spacing:.5px;color:#fff}
   </style>
 </head>
 <body>
@@ -38,12 +43,25 @@
       <div class="tools"></div>
     </header>
 
-    <div class="card">
+    <div class="card" id="card-root">
       <div class="add">
         <input id="newItem" type="text" placeholder="Nieuw item toevoegen..." />
         <button id="btnAdd">Toevoegen</button>
       </div>
-      <ul id="list"></ul>
+
+      <!-- Sectie: Snelle taken -->
+      <section id="sec-fast">
+        <div class="section-head" id="head-fast">SNELLE TAKEN</div>
+        <ul id="list-fast"></ul>
+      </section>
+
+      <div id="sec-divider" class="divider"></div>
+
+      <!-- Sectie: Grote klussen -->
+      <section id="sec-big">
+        <div class="section-head" id="head-big">GROTE SCHOONMAAKKLUSSEN</div>
+        <ul id="list-big"></ul>
+      </section>
     </div>
 
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
@@ -59,68 +77,108 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ===== Config ===== */
-const DOC_ID     = "schoonmaak_klussen";   // ← eigen document
+const DOC_ID     = "schoonmaak_klussen";
 const ADMIN_CODE = "YamanBS1";
 
 /* ===== UI refs ===== */
-const elList = document.getElementById("list");
+const elRoot = document.getElementById("card-root");
+const secFast = document.getElementById("sec-fast");
+const secBig  = document.getElementById("sec-big");
+const secDivider = document.getElementById("sec-divider");
+
+const ulFast = document.getElementById("list-fast");
+const ulBig  = document.getElementById("list-big");
 const elNew  = document.getElementById("newItem");
 const btnAdd = document.getElementById("btnAdd");
 
 /* ===== Toolbar ===== */
 let tools = document.querySelector(".tools");
-const bEdit  = document.createElement("button"); bEdit.type="button";  bEdit.textContent  = "🔓 Bewerk-modus";
-const bView  = document.createElement("button"); bView.type="button";  bView.textContent  = "🔒 Alleen afvinken";
-const bReset = document.createElement("button"); bReset.type="button"; bReset.textContent = "Alles herstellen";
-const bSeed  = document.createElement("button"); bSeed.type="button";  bSeed.textContent  = "Herstel lijst";
-tools.replaceChildren(bEdit,bView,bReset,bSeed);
+const bEdit  = document.createElement("button"); bEdit.textContent="🔓 Bewerk-modus";
+const bView  = document.createElement("button"); bView.textContent="🔒 Alleen afvinken";
+const bReset = document.createElement("button"); bReset.textContent="Alles herstellen";
+const bSeed  = document.createElement("button"); bSeed.textContent="Herstel lijst";
+const bSwap  = document.createElement("button"); bSwap.textContent="Secties omdraaien";
+tools.replaceChildren(bEdit,bView,bReset,bSeed,bSwap);
 
 let canEdit = (localStorage.getItem("editMode")==="1");
-bEdit.onclick = ()=>{
-  const c=prompt("Beheerderscode:");
-  if(c===ADMIN_CODE){ localStorage.setItem("editMode","1"); canEdit=true; updateUI(); render(); alert("Bewerk-modus aan ✅"); }
-  else alert("Onjuiste code");
-};
+bEdit.onclick = ()=>{ const c=prompt("Beheerderscode:"); if(c===ADMIN_CODE){ localStorage.setItem("editMode","1"); canEdit=true; updateUI(); render(); alert("Bewerk-modus aan ✅"); } else alert("Onjuiste code"); };
 bView.onclick = ()=>{ localStorage.removeItem("editMode"); canEdit=false; updateUI(); render(); alert("Alleen afvinken 🔒"); };
-window.addEventListener("storage", e=>{
-  if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }
-});
+window.addEventListener("storage", e=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
 
-/* ===== Seed (LEEG, jij bepaalt) ===== */
-/* Vul hier jouw standaard klussen als je wil.
-   Voor nu leeg = geen rommel.
-   Voorbeeld:
-   const items = { "Balie reinigen": false, "Toilet controleren": false };
-*/
+/* ===== State ===== */
+let items = {};
+let order = [];
+let bigFirst = false; // ⬅ wordt bewaard in Firestore
+
+/* ===== Seed ===== */
 function getSeed(){
-  const items = { };
+  const items = {
+    // — Snelle taken 
+    "Dresstafel volledig schoonmaken, onder de kratten en mandjes": false,
+    "Counterblad schoonmaken en desinfecteren (inclusief schermen)": false,
+    "Tafeltje bij shake apparaat schoonmaken en daarna met RVS": false,
+    "Bin aan de bovenkant schoonmaken": false,
+    "Vriezer aan de voorkant schoonmaken met blauwe spons en blauwe spray": false,
+    "Bovenkant milkshake & ijs apparaat afspoelen en afdrogen": false,
+    "Bezorgtafel schoonmaken en de tassen legen": false,
+    "Fietsbakken legen van de bonnen en schoonmaken": false,
+    "Vriezers in opslag met een doekje schoonmaken": false,
+    "Opslag & counter bij de shake apparaat vegen en dweilen": false,
+    "Deurposten schoonmaken met blauwe spons en blauwe spray": false,
+    "Bubble tea shaker/sealer schoonmaken":false,
+    "Voorkant en de bovenkant van de bubble tea koeling schoonamekn":false,
+    "De shakers(bekers) gronding schoonmaken met spons en water":false,
+
+    // — Grote klussen
+    "Vriezers in opslag schoonmaken": false,
+    "Vriezers in opslag naar voren en erachter schoonmaken": false,
+    "Rubbers van de vriezers/koelkast in opslag schoonmaken en de binnenkant stofzuigen": false,
+    "Koelkast Keuken/Opslag volledig schoonmaken inclusief het glas": false,
+    "Side vriezers schoonmaken/ijskrabben": false,
+    "Sink volledig schoonmaken en onder vegen en dweilen": false,
+    "Achter bij de stellingen vegen en dweilen (ook onder de stellingen)": false,
+    "Bezorgtafel schoonmaken en daarachter vegen en dweilen (let op kabels!)": false,
+    "Onderdelen van de bin schoonmaken en de binnenkant stofzuigen": false,
+    "Achter apparatuur schoonmaken inclusief de muren": false,
+    "Apparatuur schoonmaken, zij/voor/achterkant": false,
+    "Afzuigroosters schoonmaken": false,
+    "Stoffer en blik, wassen en drogen": false,
+    "Prullenbak schoonmaken en drogen": false,
+    "WC schoonmaken": false
+  };
   const order = Object.keys(items);
   return { items, order };
 }
 
-/* ===== State + realtime ===== */
-let items={}, order=[];
+/* ===== Snel/vast indelen (rule-of-thumb via beginsel) ===== */
+const FAST_PREFIXES = [
+  "Dresstafel","Counterblad","Tafeltje","Bin","Vriezer aan de voorkant",
+  "Bovenkant","Bezorgtafel","Fietsbakken","Vriezers in opslag met","Opslag","Deurposten"
+];
+function isFast(k){ return FAST_PREFIXES.some(w=>k.startsWith(w)); }
+
+/* ===== Live sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
   if (snap.exists()){
-    const d=snap.data();
-    items=d.items||{};
-    order=Array.isArray(d.order)? d.order.filter(k=>k in items) : Object.keys(items);
+    const d = snap.data();
+    items = d.items || {};
+    order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
     Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
+    bigFirst = !!d.bigFirst;
   } else {
-    // eerste keer: schrijf clean document (merge:false) → geen oude rommel
-    const s=getSeed();
-    items=s.items; order=s.order;
-    await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+    const s = getSeed();
+    items = s.items; order = s.order; bigFirst = false;
+    await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, bigFirst:false, updatedAt:serverTimestamp() }, { merge:false });
   }
   render();
 });
 
-/* ===== Persist helper ===== */
+/* ===== Save helper ===== */
 async function save(p){
   await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
 }
 
-/* ===== UI helper ===== */
+/* ===== Buttons helper ===== */
 function btn(txt,title,onClick){
   const b=document.createElement("button");
   b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
@@ -128,60 +186,61 @@ function btn(txt,title,onClick){
   return b;
 }
 
+/* ===== Sectie-volgorde toepassen ===== */
+function applySectionOrder(){
+  // herplaats de secties in de gewenste volgorde
+  if (bigFirst){
+    // Big boven, dan divider, dan Fast
+    if (secBig.nextSibling !== secDivider) elRoot.insertBefore(secBig, secFast);
+    elRoot.insertBefore(secDivider, secFast);
+  } else {
+    // Fast boven, dan divider, dan Big
+    if (secFast.nextSibling !== secDivider) elRoot.insertBefore(secFast, secBig);
+    elRoot.insertBefore(secDivider, secBig);
+  }
+}
+
 /* ===== Render ===== */
 function render(){
-  elList.innerHTML="";
+  ulFast.innerHTML=""; ulBig.innerHTML="";
+
   const keys = order.length? order.slice() : Object.keys(items);
+  const fastKeys = keys.filter(k=>isFast(k));
+  const bigKeys  = keys.filter(k=>!isFast(k));
 
-  keys.forEach((k,idx)=>{
-    if(!(k in items)) return;
+  const renderList = (arr, target)=>{
+    arr.forEach((k,idx)=>{
+      if(!(k in items)) return;
+      const li=document.createElement("li");
+      li.className="item"+(items[k]?" done":"");
 
-    const li=document.createElement("li");
-    li.className="item"+(items[k]?" done":"");
-    li.dataset.index=String(idx);
+      const cb=document.createElement("input");
+      cb.type="checkbox"; cb.checked=!!items[k];
+      cb.onchange=()=>toggle(k);
 
-    const cb=document.createElement("input");
-    cb.type="checkbox"; cb.checked=!!items[k];
-    cb.onchange=()=>toggle(k);
+      const span=document.createElement("div");
+      span.className="label"; span.textContent=k;
+      if(!canEdit) span.onclick=()=>toggle(k);
 
-    const label=document.createElement("div");
-    label.className="label";
-    label.textContent=k;
-    if(!canEdit) label.onclick=()=>toggle(k);
+      if (canEdit){
+        const pen=btn("✏️","Naam aanpassen",()=>renameItem(k));
+        const del=btn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+        // (optioneel) drag per item zou kunnen, maar we bewaren sectie-indeling simpel
+        li.append(cb,span,pen,del);
+      } else {
+        li.append(cb,span);
+      }
 
-    if (canEdit){
-      const pen=btn("✏️","Naam aanpassen",()=>renameItem(k));
-      const del=btn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+      target.appendChild(li);
+    });
+  };
 
-      // drag & drop (alleen in bewerk-modus)
-      li.draggable=true;
-      li.addEventListener("dragstart", e=>{
-        li.classList.add("dragging");
-        e.dataTransfer.setData("text/plain", String(idx));
-      });
-      li.addEventListener("dragend", ()=>li.classList.remove("dragging"));
-      li.addEventListener("dragover", e=>e.preventDefault());
-      li.addEventListener("drop", e=>{
-        e.preventDefault();
-        const from=Number(e.dataTransfer.getData("text/plain"));
-        const to=Number(li.dataset.index);
-        if(Number.isFinite(from)&&Number.isFinite(to)&&from!==to){
-          const next=order.slice();
-          const [moved]=next.splice(from,1);
-          next.splice(to,0,moved);
-          order=next;
-          save({order});
-          render();
-        }
-      });
+  // sectievolgorde in DOM
+  applySectionOrder();
 
-      li.append(cb,label,pen,del);
-    } else {
-      li.append(cb,label);
-    }
-
-    elList.appendChild(li);
-  });
+  // render content
+  renderList(fastKeys, ulFast);
+  renderList(bigKeys,  ulBig);
 
   updateUI();
 }
@@ -194,26 +253,24 @@ function updateUI(){
     el.style.opacity=canEdit?1:.6;
     el.style.pointerEvents=canEdit?"auto":"none";
   });
-  bReset.disabled=false; bReset.style.opacity=1;             // iedereen: alle vinkjes uit
-  bSeed.disabled=!canEdit; bSeed.style.opacity=canEdit?1:.5; // seed alleen met slot open
+  bReset.disabled=false; bReset.style.opacity=1;
+  bSeed.disabled=!canEdit; bSeed.style.opacity=canEdit?1:.5;
+  bSwap.disabled=!canEdit; bSwap.style.opacity=canEdit?1:.5;
 }
 
 function toggle(k){
   const next={...items,[k]:!items[k]};
-  items=next;
-  save({items:next});
+  items=next; save({items:next});
 }
 
 function addItem(t){
   if(!canEdit) return;
-  const x=(t||"").trim();
-  if(!x) return;
+  const x=(t||"").trim(); if(!x) return;
   if(x in items){ alert("Bestaat al."); return; }
   const next={...items,[x]:false};
   const nextOrder=order.concat(x);
   items=next; order=nextOrder;
-  render();
-  save({items:next,order:nextOrder});
+  render(); save({items:next,order:nextOrder});
 }
 
 async function removeItemConfirm(k){
@@ -221,13 +278,10 @@ async function removeItemConfirm(k){
   if(!(k in items)) return;
   if(!confirm(`Verwijder "${k}"?`)) return;
 
-  // 1) lokaal
   const next={...items}; delete next[k];
   const nextOrder=order.filter(x=>x!==k);
-  items=next; order=nextOrder;
-  render();
+  items=next; order=nextOrder; render();
 
-  // 2) Firestore: key echt weg
   await updateDoc(doc(db,"lists",DOC_ID),{
     [`items.${k}`]: deleteField(),
     order: nextOrder,
@@ -245,14 +299,13 @@ async function renameItem(oldK){
   const exists = (n in items);
   const merged = !!items[oldK] || !!items[n];
 
-  // lokaal updaten
   let nextItems = { ...items };
   let nextOrder = order.slice();
 
   if (exists){
     nextItems[n] = merged;
     delete nextItems[oldK];
-    nextOrder = nextOrder.filter(k => k !== oldK); // positie van bestaande n behouden
+    nextOrder = nextOrder.filter(k => k !== oldK);
   } else {
     nextItems[n] = !!nextItems[oldK];
     delete nextItems[oldK];
@@ -263,7 +316,6 @@ async function renameItem(oldK){
   order = nextOrder;
   render();
 
-  // Firestore: oude key verwijderen + nieuwe zetten
   await updateDoc(doc(db,"lists",DOC_ID),{
     [`items.${oldK}`]: deleteField(),
     [`items.${n}`]: merged,
@@ -277,10 +329,8 @@ btnAdd.onclick=()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
 elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
 
 bReset.onclick = ()=>{
-  // alleen alle vinkjes uit (structuur blijft)
   const next=Object.fromEntries(Object.keys(items).map(k=>[k,false]));
-  items=next;
-  save({items:next});
+  items=next; save({items:next});
 };
 
 bSeed.onclick  = async ()=>{
@@ -288,8 +338,15 @@ bSeed.onclick  = async ()=>{
   if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
   const s=getSeed();
   items=s.items; order=s.order;
-  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, bigFirst:false, updatedAt: serverTimestamp() }, { merge:false });
   render();
+};
+
+bSwap.onclick = async ()=>{
+  if(!canEdit) return;
+  bigFirst = !bigFirst;
+  applySectionOrder();
+  await save({ bigFirst });
 };
 </script>
 </body>
