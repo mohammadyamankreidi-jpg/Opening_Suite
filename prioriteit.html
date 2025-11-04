@@ -147,9 +147,7 @@ btnEdit.onclick = () => {
 btnView.onclick = () => { canEdit = false; localStorage.removeItem("editMode"); updateUI(); render(); alert("Alleen afvinken 🔒"); };
 window.addEventListener("storage", (e)=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
 
-/* ===== Weekend-detectie + weergave zonder label ===== */
-const isWeekendKey = k => /\(weekend\)\s*$/i.test(k);
-const viewLabel = key => (key || "").replace(/\s*\(weekend\)\s*$/i, "");
+
 
 /* ===== Seed (dag + weekend) ===== */
 function getSeed(){
