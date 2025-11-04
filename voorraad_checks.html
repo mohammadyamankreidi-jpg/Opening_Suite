@@ -26,6 +26,18 @@
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+
+    /* Notitieblok onderaan – statisch (niet in Firestore) */
+    .notes{
+      margin-top:14px;
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:12px;
+      padding:12px 14px;
+    }
+    .notes .h{font-weight:800;margin-bottom:6px}
+    .notes .row{opacity:.9}
+    .notes .divider{height:1px;background:#2a2f3a;margin:10px 0;border-radius:1px}
   </style>
 </head>
 <body>
@@ -41,9 +53,26 @@
         <input id="newItem" type="text" placeholder="Nieuw item toevoegen..." />
         <button id="btnAdd">Toevoegen</button>
       </div>
+
       <ul id="list"></ul>
+
+      <!-- vaste notities onderaan (niet in Firestore) -->
+      <div class="notes">
+        <div class="h">Voorraad groente</div>
+        <div class="row">Minimaal 5 zakken sla (in het weekend 6 zakken)</div>
+        <div class="row">Minimaal 1 zak rode ui</div>
+        <div class="row">Minimaal 1 zak witte ui</div>
+        <div class="row">Minimaal 1 zak salade mix</div>
+        <div class="row">Minimaal 1 stuk komkommer</div>
+        <div class="row">Minimaal 1 pot kimchi</div>
+        <div class="row">Minimaal halve bak snoeptomaatjes</div>
+        <div class="divider"></div>
+        <div class="row"><em>Mocht je de bovenstaande voorraad niet hebben, noteer voor jezelf om het te halen!</em></div>
+      </div>
+
       <p class="hint">Klik op de tekst of het vinkje om af te strepen.</p>
     </div>
+
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
@@ -86,9 +115,37 @@ window.addEventListener("storage", e=>{ if(e.key==="editMode"){ canEdit=(localSt
 /* ===== Seed ===== */
 function getSeed(){
   const items = {
-    "Koelcel checken": false,
-    "Sauzen bijvullen": false,
-    "Bakken bijvullen": false
+    "Groente&salade spullen check onderaan de pagina": false,
+    "Sauzen (inclusief cheddar)": false,
+    "Dresstafel en reserve sauzen boven": false,
+    "Chicken/Friet/beef/side Vriezers": false,
+    "Inpak/Junior/Dresspapier": false,
+    "Hamburger doosjes": false,
+    "Zoutmolens": false,
+    "Snackzakken&bakken": false,
+    "Friet bakjes": false,
+    "Cheezin bakjes": false,
+    "Thee": false,
+    "Popping": false,
+    "Matcha&Ice coffie poeders": false,
+    "Siropen bubble tea": false,
+    "Siropen lemonade&Tiger": false,
+    "Bubble tea bekers": false,
+    "Dranken bijvullen": false,
+    "Milkshake en ijs bekers&deksels": false,
+    "Milkshake&ijs": false,
+    "Plastic zakken&enkel en dubbel": false,
+    "Rietjes": false,
+    "Houdertjes": false,
+    "Servetten": false,
+    "Inpakzakken": false,
+    "Cheezin vorkjes": false,
+    "Salade deksels&bakken": false,
+    "Dipsauzen": false,
+    "Kindermenu's": false,
+    "Bakjes voor sauzen": false,
+    "Printerrol": false,
+    "Vuilneszakken vervangen indien nodig": false
   };
   const order = Object.keys(items);
   return { items, order };
@@ -103,7 +160,6 @@ onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
     order=Array.isArray(d.order)? d.order.filter(k=>k in items) : Object.keys(items);
     Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    // eerste keer: schrijf clean document (merge:false)
     const s=getSeed();
     items=s.items; order=s.order;
     await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
@@ -120,8 +176,12 @@ async function save(p){
 function makeBtn(txt,title,onClick){
   const b=document.createElement("button");
   b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
-  // belangrijk: ALLES tegenhouden zodat clicks niet bubbelen
-  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); if(b.onclick) e.stopImmediatePropagation?.(); onClick(); },{capture:true});
+  b.addEventListener("click",(e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+    onClick();
+  },{capture:true});
   return b;
 }
 
@@ -148,7 +208,6 @@ function render(){
       const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
       const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
 
-      // drag & drop volgorde
       li.draggable=true;
       li.addEventListener("dragstart", e=>{
         li.classList.add("dragging");
@@ -239,23 +298,19 @@ async function renameItem(oldK){
   const n = (s||"").trim();
   if(!n) return;
 
-  // als identiek → klaar
   if (n === oldK) return;
 
   const exists = (n in items);
-  const merged = !!items[oldK] || !!items[n]; // vinkje aan als één van beide aan stond
+  const merged = !!items[oldK] || !!items[n];
 
-  // 1) lokaal: samenvoegen of verplaatsen in order
   let nextItems = { ...items };
   let nextOrder = order.slice();
 
   if (exists){
-    // samenvoegen
     nextItems[n] = merged;
     delete nextItems[oldK];
-    nextOrder = nextOrder.filter(k => k !== oldK); // positie van bestaande n behouden
+    nextOrder = nextOrder.filter(k => k !== oldK);
   } else {
-    // gewone rename (positie blijft gelijk)
     nextItems[n] = !!nextItems[oldK];
     delete nextItems[oldK];
     nextOrder = nextOrder.map(k => k === oldK ? n : k);
@@ -265,7 +320,6 @@ async function renameItem(oldK){
   order = nextOrder;
   render();
 
-  // 2) Firestore: oude key weg, nieuwe set
   await updateDoc(doc(db,"lists",DOC_ID),{
     [`items.${oldK}`]: deleteField(),
     [`items.${n}`]: merged,
@@ -279,7 +333,6 @@ btnAdd.onclick=()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
 elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
 
 bReset.onclick = ()=>{
-  // alleen alle vinkjes uit
   const next=Object.fromEntries(Object.keys(items).map(k=>[k,false]));
   items=next;
   save({items:next});
@@ -290,7 +343,6 @@ bSeed.onclick  = async ()=>{
   if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
   const s=getSeed();
   items=s.items; order=s.order;
-  // volledige overschrijving, geen merge → alle oude rommel weg
   await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
   render();
 };
