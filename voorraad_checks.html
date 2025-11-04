@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="nl">
-<head>  
+<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShiftStart – Voorraad & Checks</title>
+  <link rel="icon" href="data:,">
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
@@ -20,7 +21,7 @@
     li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
     li.item.done{opacity:.6;text-decoration:line-through}
     .label{flex:1;cursor:pointer}
-    .btn-ico{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
+    .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
     li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
@@ -47,27 +48,30 @@
   </div>
 
 <script type="module">
-/* ===== imports ===== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15";
 
-/* ===== init ===== */
+/* ===== Firebase ===== */
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-/* ===== config ===== */
+/* ===== Config ===== */
 const DOC_ID     = "voorraad_checks";
 const ADMIN_CODE = "YamanBS1";
 
 /* ===== UI refs ===== */
-const elList = document.getElementById("list");
-const elNew  = document.getElementById("newItem");
-const btnAdd = document.getElementById("btnAdd");
+const elList=document.getElementById("list");
+const elNew =document.getElementById("newItem");
+const btnAdd=document.getElementById("btnAdd");
 
-/* ===== tools/slot ===== */
+/* ===== Toolbar / slot ===== */
 let tools = document.querySelector(".tools");
-if (!tools) { tools = document.createElement("div"); tools.className = "tools"; (document.querySelector("header.panel") || document.body).appendChild(tools); }
+if (!tools) {
+  tools = document.createElement("div");
+  tools.className = "tools";
+  (document.querySelector("header.panel") || document.body).appendChild(tools);
+}
 const bEdit  = document.createElement("button"); bEdit.type="button";  bEdit.textContent  = "🔓 Bewerk-modus";
 const bView  = document.createElement("button"); bView.type="button";  bView.textContent  = "🔒 Alleen afvinken";
 const bReset = document.createElement("button"); bReset.type="button"; bReset.textContent = "Alles herstellen";
@@ -75,24 +79,11 @@ const bSeed  = document.createElement("button"); bSeed.type="button";  bSeed.tex
 tools.replaceChildren(bEdit,bView,bReset,bSeed);
 
 let canEdit = (localStorage.getItem("editMode")==="1");
-bEdit.onclick = ()=>{
-  const c = prompt("Beheerderscode:");
-  if (c === ADMIN_CODE) {
-    localStorage.setItem("editMode","1");
-    canEdit = true; updateUI(); render();
-    alert("Bewerk-modus aan ✅");
-  } else { alert("Onjuiste code"); }
-};
-bView.onclick = ()=>{
-  localStorage.removeItem("editMode");
-  canEdit = false; updateUI(); render();
-  alert("Alleen afvinken 🔒");
-};
-window.addEventListener("storage", e=>{
-  if (e.key === "editMode") { canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }
-});
+bEdit.onclick = ()=>{ const c=prompt("Beheerderscode:"); if(c===ADMIN_CODE){ localStorage.setItem("editMode","1"); canEdit=true; updateUI(); render(); alert("Bewerk-modus aan ✅"); } else alert("Onjuiste code"); };
+bView.onclick = ()=>{ localStorage.removeItem("editMode"); canEdit=false; updateUI(); render(); alert("Alleen afvinken 🔒"); };
+window.addEventListener("storage", e=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
 
-/* ===== seed ===== */
+/* ===== Seed ===== */
 function getSeed(){
   const items = {
     "Koelcel checken": false,
@@ -103,136 +94,206 @@ function getSeed(){
   return { items, order };
 }
 
-/* ===== state + realtime ===== */
-let items = {}, order = [];
-onSnapshot(doc(db,"lists",DOC_ID), snap=>{
+/* ===== State + realtime ===== */
+let items={}, order=[];
+onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
   if (snap.exists()){
-    const d = snap.data();
-    items = d.items || {};
-    order = Array.isArray(d.order) ? d.order.filter(k => k in items) : Object.keys(items);
-    Object.keys(items).forEach(k => { if(!order.includes(k)) order.push(k); });
+    const d=snap.data();
+    items=d.items||{};
+    order=Array.isArray(d.order)? d.order.filter(k=>k in items) : Object.keys(items);
+    Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    const s = getSeed();
-    items = s.items; order = s.order;
-    save({items,order});
+    // eerste keer: schrijf clean document (merge:false)
+    const s=getSeed();
+    items=s.items; order=s.order;
+    await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
   }
   render();
 });
 
-/* ===== helpers ===== */
-function save(p){
-  return setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt:serverTimestamp() }, { merge:true });
+/* ===== Persist helpers ===== */
+async function save(p){
+  await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
 }
-function icoBtn(txt,title,onClick){
-  const b = document.createElement("button");
-  b.className="btn-ico"; b.type="button"; b.textContent=txt; b.title=title;
-  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); onClick(); },{capture:true});
+
+/* ===== UI helpers ===== */
+function makeBtn(txt,title,onClick){
+  const b=document.createElement("button");
+  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
+  // belangrijk: ALLES tegenhouden zodat clicks niet bubbelen
+  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); if(b.onclick) e.stopImmediatePropagation?.(); onClick(); },{capture:true});
   return b;
 }
 
-/* ===== render ===== */
+/* ===== Render ===== */
 function render(){
-  elList.innerHTML = "";
-  const labels = order.length ? order.slice() : Object.keys(items);
-
+  elList.innerHTML="";
+  const labels = order.length? order.slice() : Object.keys(items);
   labels.forEach((k,idx)=>{
-    const li = document.createElement("li");
-    li.className = "item" + (items[k] ? " done" : "");
-    li.dataset.index = String(idx);
+    if (!(k in items)) return;
+    const li=document.createElement("li");
+    li.className="item"+(items[k]?" done":"");
+    li.dataset.index=String(idx);
 
-    const cb   = document.createElement("input"); cb.type="checkbox"; cb.checked=!!items[k]; cb.onchange=()=>toggle(k);
-    const text = document.createElement("div");   text.className="label"; text.textContent=k; text.onclick=()=>toggle(k);
+    const cb=document.createElement("input");
+    cb.type="checkbox"; cb.checked=!!items[k];
+    cb.onchange=()=>toggle(k);
+
+    const span=document.createElement("div");
+    span.className="label";
+    span.textContent=k;
+    if (!canEdit) span.onclick=()=>toggle(k);
 
     if (canEdit){
-      const pen = icoBtn("✏️","Naam aanpassen",()=>renameItem(k));
-      const del = icoBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+      const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
+      const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
 
-      // drag & drop
-      li.draggable = true;
-      li.addEventListener("dragstart", e=>{ li.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(idx)); });
-      li.addEventListener("dragend",   ()=> li.classList.remove("dragging"));
-      li.addEventListener("dragover",  e=> e.preventDefault());
+      // drag & drop volgorde
+      li.draggable=true;
+      li.addEventListener("dragstart", e=>{
+        li.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", String(idx));
+      });
+      li.addEventListener("dragend", ()=>li.classList.remove("dragging"));
+      li.addEventListener("dragover", e=>e.preventDefault());
       li.addEventListener("drop", e=>{
         e.preventDefault();
-        const from = Number(e.dataTransfer.getData("text/plain"));
-        const to   = Number(li.dataset.index);
-        if (Number.isFinite(from) && Number.isFinite(to) && from !== to){
-          const next = order.slice(); const [m] = next.splice(from,1); next.splice(to,0,m);
-          order = next; render(); save({order});
+        const from=Number(e.dataTransfer.getData("text/plain"));
+        const to=Number(li.dataset.index);
+        if(Number.isFinite(from)&&Number.isFinite(to)&&from!==to){
+          const next=order.slice();
+          const [moved]=next.splice(from,1);
+          next.splice(to,0,moved);
+          order=next;
+          save({order});
+          render();
         }
       });
 
-      li.append(cb, text, pen, del);
+      li.append(cb,span,pen,del);
     } else {
-      li.append(cb, text);
+      li.append(cb,span);
     }
 
     elList.appendChild(li);
   });
-
   updateUI();
 }
 
-/* ===== actions ===== */
+/* ===== Actions ===== */
 function updateUI(){
   [elNew, btnAdd].forEach(el=>{
     if(!el) return;
-    el.disabled = !canEdit;
-    el.style.opacity = canEdit ? 1 : .6;
-    el.style.pointerEvents = canEdit ? "auto" : "none";
+    el.disabled=!canEdit;
+    el.style.opacity=canEdit?1:.6;
+    el.style.pointerEvents=canEdit?"auto":"none";
   });
-  // Altijd: alle vinkjes uit mogen
-  bReset.disabled = false; bReset.style.opacity = 1;
-  // Alleen met slot open: beginlijst terugzetten
-  bSeed.disabled = !canEdit; bSeed.style.opacity = canEdit ? 1 : .5;
+  bReset.disabled=false; bReset.style.opacity=1;             // iedereen mag reset (alle vinkjes uit)
+  bSeed.disabled=!canEdit; bSeed.style.opacity=canEdit?1:.5; // seed alleen met slot open
 }
 
 function toggle(k){
-  const next = { ...items, [k]: !items[k] };
-  save({ items: next });
+  const next={...items,[k]:!items[k]};
+  items=next;
+  save({items:next});
 }
 
 function addItem(t){
   if(!canEdit) return;
-  const x = (t||"").trim();
+  const x=(t||"").trim();
   if(!x) return;
-  if (x in items) { alert("Bestaat al."); return; }
-  const next = { ...items, [x]: false };
-  const nextOrder = order.concat(x);
-  items = next; order = nextOrder; render();
-  save({ items: next, order: nextOrder });
+  if(x in items){ alert("Bestaat al."); return; }
+
+  const next={...items,[x]:false};
+  const nextOrder=order.concat(x);
+
+  items=next; order=nextOrder;
+  render();
+  save({items:next,order:nextOrder});
 }
 
-function removeItemConfirm(k){
+async function removeItemConfirm(k){
   if(!canEdit) return;
-  if(!confirm(`Verwijder "${k}"?`)) return;
   if(!(k in items)) return;
-  const next = { ...items }; delete next[k];
-  const nextOrder = order.filter(x => x !== k);
-  items = next; order = nextOrder; render();
-  save({ items: next, order: nextOrder });
+  if(!confirm(`Verwijder "${k}"?`)) return;
+
+  // 1) lokaal
+  const next={...items}; delete next[k];
+  const nextOrder=order.filter(x=>x!==k);
+  items=next; order=nextOrder;
+  render();
+
+  // 2) Firestore veld echt verwijderen
+  await updateDoc(doc(db,"lists",DOC_ID),{
+    [`items.${k}`]: deleteField(),
+    order: nextOrder,
+    updatedAt: serverTimestamp()
+  });
 }
 
-function renameItem(oldK){
-  if(!canEdit) return;
-  if(!(oldK in items)) return;
-  const s = prompt("Nieuwe naam:", oldK);  
-  if (s === null) return;
+async function renameItem(oldK){
+  if(!canEdit || !(oldK in items)) return;
+
+  const s = prompt("Nieuwe naam:", oldK);
+  if (s===null) return;
   const n = (s||"").trim();
-  if (!n || n === oldK) return;
-  if (n in items) { alert("Bestaat al."); return; }
-  const next = { ...items, [n]: !!items[oldK] };
-  delete next[oldK];
-  const nextOrder = order.map(k => k === oldK ? n : k);
-  items = next; order = nextOrder; render();
-  save({ items: next, order: nextOrder });
+  if(!n) return;
+
+  // als identiek → klaar
+  if (n === oldK) return;
+
+  const exists = (n in items);
+  const merged = !!items[oldK] || !!items[n]; // vinkje aan als één van beide aan stond
+
+  // 1) lokaal: samenvoegen of verplaatsen in order
+  let nextItems = { ...items };
+  let nextOrder = order.slice();
+
+  if (exists){
+    // samenvoegen
+    nextItems[n] = merged;
+    delete nextItems[oldK];
+    nextOrder = nextOrder.filter(k => k !== oldK); // positie van bestaande n behouden
+  } else {
+    // gewone rename (positie blijft gelijk)
+    nextItems[n] = !!nextItems[oldK];
+    delete nextItems[oldK];
+    nextOrder = nextOrder.map(k => k === oldK ? n : k);
+  }
+
+  items = nextItems;
+  order = nextOrder;
+  render();
+
+  // 2) Firestore: oude key weg, nieuwe set
+  await updateDoc(doc(db,"lists",DOC_ID),{
+    [`items.${oldK}`]: deleteField(),
+    [`items.${n}`]: merged,
+    order: nextOrder,
+    updatedAt: serverTimestamp()
+  });
 }
 
-/* ===== events ===== */
-btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
+/* ===== Events ===== */
+btnAdd.onclick=()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
 elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
-bReset.onclick = ()=>{ const next = Object.fromEntries(Object.keys(items).map(k => [k,false])); save({items:next}); };
-bSeed.onclick  = ()=>{ if(!canEdit) return; if(!confirm("Herstel naar begin-lijst?")) return; const s=getSeed(); save({items:s.items,order:s.order}); };
+
+bReset.onclick = ()=>{
+  // alleen alle vinkjes uit
+  const next=Object.fromEntries(Object.keys(items).map(k=>[k,false]));
+  items=next;
+  save({items:next});
+};
+
+bSeed.onclick  = async ()=>{
+  if(!canEdit) return;
+  if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
+  const s=getSeed();
+  items=s.items; order=s.order;
+  // volledige overschrijving, geen merge → alle oude rommel weg
+  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+  render();
+};
 
 updateUI();
 </script>
