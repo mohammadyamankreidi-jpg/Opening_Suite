@@ -110,6 +110,9 @@ import { firebaseConfig } from "./firebase-config.js?v=15";
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
+  // Helpers om weekend-items te herkennen en tekst netjes te tonen
+const isWeekendKey = k => /\(weekend\)\s*$/i.test(k);           // herkent of het eindigt op "(weekend)"
+const viewLabel    = key => (key || "").replace(/\s*\(weekend\)\s*$/i, ""); // toont de tekst zonder "(weekend)"
 /* ===== Config ===== */
 const DOC_ID     = "shiftstart_prioriteit";
 const ADMIN_CODE = "YamanBS1";
@@ -355,38 +358,53 @@ async function removeItemConfirm(key){
 }
 
 async function renameItem(oldKey){
-  if(!canEdit || !(oldKey in dataMap)) return;
+  if (!canEdit || !(oldKey in dataMap)) return;
 
-  const current = viewLabel(oldKey);  // schone tekst tonen
-  const input = prompt("Nieuwe naam:", current);
-  if (input === null) return;
-  const newName = (input || "").trim();
-  if (!newName) return;
+  // Laat de gebruiker de 'schone' tekst bewerken (zonder "(weekend)")
+  const currentBase = viewLabel(oldKey);
+  const input = prompt("Nieuwe naam:", currentBase);
+  if (input === null) return;              // gebruiker annuleert
+  const clean = (input || "").trim();
+  if (!clean) return;                      // lege naam: stop
 
-  // behoud weekend-status in de data, maar niet zichtbaar in UI
-  const newKey = isWeekendKey(oldKey) ? `${newName} (weekend)` : newName;
+  // Weekend-tag behouden in de data-sleutel (maar niet zichtbaar in UI)
+  const newKey = isWeekendKey(oldKey) ? `${clean} (weekend)` : clean;
 
-  const exists = (newKey in dataMap);
-  let nextItems = { ...dataMap };
+  // Niks te doen als identiek
+  if (newKey === oldKey) return;
+
+  // Als de nieuwe key al bestaat: we voegen samen (vinkje blijft aan als één van beide aan stond)
+  const mergedValue = !!dataMap[oldKey] || !!dataMap[newKey];
+
+  // --- Lokaal updaten ---
+  const nextItems = { ...dataMap };
+  delete nextItems[oldKey];
+  nextItems[newKey] = mergedValue;
+
+  // order bijwerken:
   let nextOrder = order.slice();
 
-  if (exists){
-    const merged = !!nextItems[oldKey] || !!nextItems[newKey];
-    nextItems[newKey] = merged;
-    delete nextItems[oldKey];
+  if (nextOrder.includes(newKey)) {
+    // Bestond al: verwijder alleen de oude positie (positie van bestaande newKey blijft leidend)
     nextOrder = nextOrder.filter(k => k !== oldKey);
   } else {
-    nextItems[newKey] = !!nextItems[oldKey];
-    delete nextItems[oldKey];
+    // Bestond niet: vervang oude key door nieuwe op dezelfde plek
     nextOrder = nextOrder.map(k => (k === oldKey ? newKey : k));
   }
 
+  // In geheugen bijwerken en UI verversen
   dataMap = nextItems;
   order   = nextOrder;
   render();
-  await save({ items: nextItems, order: nextOrder });
-}
 
+  // --- Firestore: oude key echt verwijderen, nieuwe zetten, order bewaren ---
+  await updateDoc(doc(db, "lists", DOC_ID), {
+    [`items.${oldKey}`]: deleteField(),
+    [`items.${newKey}`]: mergedValue,
+    order: nextOrder,
+    updatedAt: serverTimestamp()
+  });
+}
 /* ===== UI state ===== */
 function updateUI(){
   [elNew, btnAdd].forEach(el=>{
