@@ -169,7 +169,7 @@ function getSeed(){
     "16:00 Friteuse 2/4 aan",
     "16:00 Wraps Toaster aan op 50 graden",
     "16:00 Bord omdraaien naar geopend!",
-    // dan weekend "(weekend)"
+    // dan weekend
     "15:15 Afzuiging aan",
     "15:15 Fietsen buiten en Dweilen",
     "15:20 PC aan",
@@ -222,6 +222,13 @@ function makeBtn(txt, title, onClick){
   }, {capture:true});
   return b;
 }
+  // Herken of een key een weekend-item is (blijft hetzelfde)
+const isWeekendKey = k => /\(weekend\)\s*$/i.test(k);
+
+// Toonbare tekst: haal " (weekend)" aan het eind weg voor de UI
+function viewLabel(key){
+  return (key || "").replace(/\s*\(weekend\)\s*$/i, "");
+}
 
 /* ===== Render ===== */
 function render(){
@@ -250,7 +257,8 @@ function render(){
       // toon label ZONDER “(weekend)”
       const displayText = key.replace(/\s*\(weekend\)\s*$/i,'').trim();
       const span=document.createElement("div");
-      span.className="label"; span.textContent=displayText;
+    span.className = "label";
+span.textContent = viewLabel(key);  // <-- NIEUWE: geen "(weekend)" zichtbaar
       if (!canEdit) span.onclick = () => toggle(key);
 
       if (canEdit){
@@ -327,42 +335,38 @@ async function removeItemConfirm(key){
 }
 
 async function renameItem(oldKey){
-  if (!canEdit || !(oldKey in dataMap)) return;
+  if(!canEdit || !(oldKey in dataMap)) return;
 
-  const base = oldKey.replace(/\s*\(weekend\)\s*$/i,'').trim(); // prompt zonder tag
-  const s = prompt("Nieuwe naam:", base);
-  if (s === null) return;
-  const newBase = (s || "").trim();
-  if (!newBase) return;
+  const current = viewLabel(oldKey);                // laat de schone tekst zien
+  const input = prompt("Nieuwe naam:", current);
+  if (input === null) return;
+  const newName = (input || "").trim();
+  if (!newName) return;
 
-  const isWeekend = /\(weekend\)\s*$/i.test(oldKey);
-  const newKey = isWeekend ? `${newBase} (weekend)` : newBase;
+  // Weekend-status behouden, maar NIET tonen in lijst
+  const newKey = isWeekendKey(oldKey) ? `${newName} (weekend)` : newName;
 
-  if (newKey in dataMap && newKey !== oldKey){
-    alert("Die naam bestaat al.");
-    return;
+  // Als nieuwe key al bestaat: samenvoegen (vinkje aan als één van beide aan stond)
+  const exists = (newKey in dataMap);
+  let nextItems = { ...dataMap };
+  let nextOrder = order.slice();
+
+  if (exists){
+    const merged = !!nextItems[oldKey] || !!nextItems[newKey];
+    nextItems[newKey] = merged;
+    delete nextItems[oldKey];
+    nextOrder = nextOrder.filter(k => k !== oldKey);
+  } else {
+    nextItems[newKey] = !!nextItems[oldKey];
+    delete nextItems[oldKey];
+    nextOrder = nextOrder.map(k => (k === oldKey ? newKey : k));
   }
 
-  // lokale state
-  const value   = !!dataMap[oldKey];
-  const nextMap = { ...dataMap };
-  delete nextMap[oldKey];
-  nextMap[newKey] = value;
-
-  const nextOrd = order.map(k => k === oldKey ? newKey : k);
-
-  dataMap = nextMap; order = nextOrd;
+  dataMap = nextItems;
+  order   = nextOrder;
   render();
-
-  // Firestore atomair: delete oude + set nieuwe + order
-  await updateDoc(doc(db,"lists",DOC_ID), {
-    [`items.${oldKey}`]: deleteField(),
-    [`items.${newKey}`]: value,
-    order: nextOrd,
-    updatedAt: serverTimestamp()
-  });
+  await save({ items: nextItems, order: nextOrder });
 }
-
 /* ===== UI state ===== */
 function updateUI(){
   [elNew, btnAdd].forEach(el=>{
