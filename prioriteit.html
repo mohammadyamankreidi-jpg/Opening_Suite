@@ -27,7 +27,19 @@
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
     .divider{height:1px;background:#2a2f3a;margin:12px 0}
-    .wk-head {font-weight: 800;opacity: .95;margin: -2px 0 8px;color: #a31212;}
+    .day-head {
+  font-weight: 800;
+  opacity: .95;
+  margin: 0 0 8px;
+  color: #eef2f8; /* wit zoals de rest van de tekst */
+}
+
+.wk-head {
+  font-weight: 800;
+  opacity: .95;
+  margin: -2px 0 8px;
+  color: #eef2f8; /* wit */
+}
     .notes{margin-top:14px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
     .notes .h{font-weight:800;margin-bottom:6px}
     .notes .row{opacity:.9}
@@ -48,12 +60,13 @@
         <button id="btnAdd">Toevoegen</button>
       </div>
 
-      <!-- lijsten -->
-      <ul id="list-day"></ul>
-      <div id="wk-divider" class="divider" style="display:none"></div>
-      <div id="wk-head" class="wk-head" style="display:none">TIJDEN VOOR IN HET WEEKEND</div>
-      <ul id="list-weekend"></ul>
+     <!-- lijsten -->
+<div id="day-head" class="day-head">LET OP: DOORDEWEEKS</div>
+<ul id="list-day"></ul>
 
+<div id="wk-divider" class="divider" style="display:none"></div>
+<div id="wk-head" class="wk-head" style="display:none">TIJDEN VOOR WEEKEND</div>
+<ul id="list-weekend"></ul>
       <!-- vaste notities onderaan (niet in Firestore) -->
       <div class="notes">
         <div class="h">Aantal brood</div>
