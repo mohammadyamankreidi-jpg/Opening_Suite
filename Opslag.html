@@ -72,65 +72,16 @@
       </div>
 
       <div class="cols">
-        <section class="section">
-          <div class="head">PAPIER & ZAKKEN</div>
-          <div class="divider"></div>
-          <ul id="list-PAPIER"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">BALIE & SERVIES</div>
-          <div class="divider"></div>
-          <ul id="list-BALIE"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">SALADE & CHEEZIN</div>
-          <div class="divider"></div>
-          <ul id="list-SALADE"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">SUNDAE & SHAKE</div>
-          <div class="divider"></div>
-          <ul id="list-SHAKE"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">POEDERS & SIROPEN</div>
-          <div class="divider"></div>
-          <ul id="list-POEDER"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">SAUZEN</div>
-          <div class="divider"></div>
-          <ul id="list-SAUZEN"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">TOPPINGS</div>
-          <div class="divider"></div>
-          <ul id="list-TOPPING"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">DRANKEN</div>
-          <div class="divider"></div>
-          <ul id="list-DRANK"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">KEUKEN</div>
-          <div class="divider"></div>
-          <ul id="list-KEUKEN"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">KINDERMENU & OVERIG</div>
-          <div class="divider"></div>
-          <ul id="list-OVERIG"></ul>
-        </section>
+        <section class="section"><div class="head">PAPIER & ZAKKEN</div><div class="divider"></div><ul id="list-PAPIER"></ul></section>
+        <section class="section"><div class="head">BALIE & SERVIES</div><div class="divider"></div><ul id="list-BALIE"></ul></section>
+        <section class="section"><div class="head">SALADE & CHEEZIN</div><div class="divider"></div><ul id="list-SALADE"></ul></section>
+        <section class="section"><div class="head">SUNDAE & SHAKE</div><div class="divider"></div><ul id="list-SHAKE"></ul></section>
+        <section class="section"><div class="head">POEDERS & SIROPEN</div><div class="divider"></div><ul id="list-POEDER"></ul></section>
+        <section class="section"><div class="head">SAUZEN</div><div class="divider"></div><ul id="list-SAUZEN"></ul></section>
+        <section class="section"><div class="head">TOPPINGS</div><div class="divider"></div><ul id="list-TOPPING"></ul></section>
+        <section class="section"><div class="head">DRANKEN</div><div class="divider"></div><ul id="list-DRANK"></ul></section>
+        <section class="section"><div class="head">KEUKEN</div><div class="divider"></div><ul id="list-KEUKEN"></ul></section>
+        <section class="section"><div class="head">KINDERMENU & OVERIG</div><div class="divider"></div><ul id="list-OVERIG"></ul></section>
       </div>
 
       <p class="hint">Vink af of pas aantallen aan. Alles synct voor iedereen (met code).</p>
@@ -151,6 +102,7 @@ const db  = getFirestore(app);
 /* ===== Config ===== */
 const DOC_ID     = "opslag_lijst";
 const ADMIN_CODE = "YamanBS1";
+let canEdit = true;  // ✅ direct gedeclareerd bovenaan
 
 /* ===== Locking ===== */
 const LS_KEY_UNLOCK = "ops_unlocked";
@@ -163,7 +115,6 @@ function updateLockUI(){
   const unlocked = localStorage.getItem(LS_KEY_UNLOCK)==="1";
   lockedEl.hidden  = unlocked;
   contentEl.hidden = !unlocked;
-  updateTools();
 }
 btnUnlock.onclick = ()=>{
   if ((codeInput.value||"").trim()===ADMIN_CODE){
@@ -180,32 +131,14 @@ updateLockUI();
 
 /* ===== Toolbar ===== */
 let tools = document.querySelector(".tools");
-const bReset = document.createElement("button"); bReset.type="button"; bReset.textContent = "Alles herstellen";
-const bSeed  = document.createElement("button"); bSeed.type="button";  bSeed.textContent  = "Herstel lijst";
-const bLock  = document.createElement("button"); bLock.type="button";  bLock.textContent  = "🔐 Vergrendel";
+const bReset = document.createElement("button"); bReset.textContent = "Alles herstellen";
+const bSeed  = document.createElement("button"); bSeed.textContent  = "Herstel lijst";
+const bLock  = document.createElement("button"); bLock.textContent  = "🔐 Vergrendel";
 tools.replaceChildren(bReset,bSeed,bLock);
 
-function updateTools(){
-  const unlocked = localStorage.getItem(LS_KEY_UNLOCK)==="1";
-  [bReset,bSeed,bLock].forEach(b=> b.disabled = !unlocked);
-}
-bReset.onclick = ()=>{ // alle vinkjes uit, qty=0
-  const next = {};
-  for (const k of Object.keys(items)){
-    next[k] = { done:false, qty:0 };
-  }
-  items = next;
-  save({ items: next });
-};
-bSeed.onclick  = async ()=>{
-  if(!isUnlocked()) return;
-  if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  await hardSeed();
-};
-bLock.onclick  = ()=>{
-  localStorage.removeItem(LS_KEY_UNLOCK);
-  updateLockUI();
-};
+bReset.onclick = ()=>{ for(const k in items){ items[k]={done:false,qty:0}; } save({items}); };
+bSeed.onclick  = async ()=>{ if(!confirm("Herstel naar begin-lijst?"))return; await hardSeed(); };
+bLock.onclick  = ()=>{ localStorage.removeItem(LS_KEY_UNLOCK); updateLockUI(); };
 
 /* ===== UI refs ===== */
 const elNew = document.getElementById("newItem");
@@ -223,251 +156,53 @@ const lists = {
   "OVERIG":  document.getElementById("list-OVERIG"),
 };
 
-function isUnlocked(){ return localStorage.getItem(LS_KEY_UNLOCK)==="1"; }
+/* ===== Seed ===== */
+function baseCats(){return{
+"PAPIER":["Inpakpapier","Junior papier","Dresspapier","Inpakkzakken groot","Inpakzakken medium","Inpakzakken klein","Servetten","Tork"],
+"BALIE":["Rietjes","Houdertjes 2&4"],
+"SALADE":["Saladedeksel en Saladebakken 500&1000mm","Cheezin bakjes","Cheezin vorkjes"],
+"SHAKE":["Sundae lepels","Sundae bekers","Sundae deksels","Shuffel lepels","Milkshake bekers 500","Milkshake bekers 400","Milkshake bekers 300","Milkshake deksels"],
+"POEDER":["Matcha & ice coffee","Popping&siropen","Kleine sauzen bakjes"],
+"SAUZEN":["Piñata","Jalapeños","Honeymosterd","Caesar","Yoghurt"],
+"TOPPING":["Aardbei topping","Chocolate topping","Kinderbueno topping"],
+"DRANK":["Cola","Cola zero","Fanta","Fanta zero","Sprite","Fernandez groen","Fernandez rood","Ice tea sparkling","Ice tea peach","Ice tea green","Chocomel","Fristi","Cassis","Appelsap","Sinaasappelsap","Caprisun","Water","Chocomel pakjes","Fristi pakjes"],
+"KEUKEN":["Levo vet"],
+"OVERIG":["Kinderspeelgoed"]
+};}
+function getSeed(){const cats=baseCats();const items={};Object.values(cats).flat().forEach(k=>items[k]={done:false,qty:0});const orderPerCat={};Object.keys(cats).forEach(cat=>orderPerCat[cat]=cats[cat].slice());return{items,orderPerCat};}
 
-/* ===== Seed + categorie-indeling ===== */
-function baseCats(){
-  return {
-    "PAPIER": [
-      "Inpakpapier","Junior papier","Dresspapier",
-      "Inpakkzakken groot","Inpakzakken medium","Inpakzakken klein",
-      "Servetten","Tork"
-    ],
-    "BALIE":  [
-      "Rietjes","Houdertjes 2&4"
-    ],
-    "SALADE": [
-      "Saladedeksel en Saladebakken 500&1000mm",
-      "Cheezin bakjes","Cheezin vorkjes"
-    ],
-    "SHAKE": [
-      "Sundae lepels","Sundae bekers","Sundae deksels","Shuffel lepels",
-      "Milkshake bekers 500","Milkshake bekers 400","Milkshake bekers 300","Milkshake deksels"
-    ],
-    "POEDER": [
-      "Matcha & ice coffee","Popping&siropen","Kleine sauzen bakjes"
-    ],
-    "SAUZEN": [
-      "Piñata","Jalapeños","Honeymosterd","Caesar","Yoghurt"
-    ],
-    "TOPPING": [
-      "Aardbei topping","Chocolate topping","Kinderbueno topping"
-    ],
-    "DRANK": [
-      "Cola","Cola zero","Fanta","Fanta zero","Sprite",
-      "Fernandez groen","Fernandez rood",
-      "Ice tea sparkling","Ice tea peach","Ice tea green",
-      "Chocomel","Fristi","Cassis","Appelsap","Sinaasappelsap",
-      "Caprisun","Water","Chocomel pakjes","Fristi pakjes"
-    ],
-    "KEUKEN": ["Levo vet"],
-    "OVERIG": ["Kinderspeelgoed"]
-  };
-}
-function getSeed(){
-  const cats = baseCats();
-  const items = {};
-  Object.values(cats).flat().forEach(k => items[k] = { done:false, qty:0 });
-  const orderPerCat = {};
-  Object.keys(cats).forEach(cat => orderPerCat[cat] = cats[cat].slice());
-  return { items, orderPerCat };
-}
+/* ===== Firestore state ===== */
+let items={},orderPerCat={};
+onSnapshot(doc(db,"lists",DOC_ID),async s=>{if(s.exists()){const d=s.data();items=d.items||{};orderPerCat=d.orderPerCat||{};}else{await hardSeed();}render();});
+async function save(p){await setDoc(doc(db,"lists",DOC_ID),{...(p||{}),updatedAt:serverTimestamp()},{merge:true});}
+async function hardSeed(){const s=getSeed();items=s.items;orderPerCat=s.orderPerCat;await setDoc(doc(db,"lists",DOC_ID),{items,orderPerCat,updatedAt:serverTimestamp()},{merge:false});}
 
-/* ===== State + realtime ===== */
-let items = {};                // { label: {done:boolean, qty:number} }
-let orderPerCat = {};          // { CAT: [labels...] }
-
-onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
-  if (snap.exists()){
-    const d = snap.data();
-    items      = d.items || {};
-    orderPerCat= d.orderPerCat || {};
-  } else {
-    await hardSeed();
-  }
-  render();
-});
-
-/* ===== Persist helpers ===== */
-async function save(p){
-  await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
-}
-async function hardSeed(){
-  const s = getSeed();
-  items = s.items; orderPerCat = s.orderPerCat;
-  await setDoc(doc(db,"lists",DOC_ID), { items, orderPerCat, updatedAt: serverTimestamp() }, { merge:false });
-}
-
-/* ===== Small helpers ===== */
-function makeBtn(txt,title,onClick){
-  const b=document.createElement("button");
-  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
-  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.(); onClick(); },{capture:true});
-  return b;
-}
-function catOf(label){
-  for (const [cat, arr] of Object.entries(orderPerCat)){
-    if (Array.isArray(arr) && arr.includes(label)) return cat;
-  }
-  return "OVERIG";
-}
+/* ===== Helpers ===== */
+function catOf(lbl){for(const[c,a]of Object.entries(orderPerCat)){if(a.includes(lbl))return c;}return"OVERIG";}
+function makeBtn(t,tt,fn){const b=document.createElement("button");b.className="btn";b.textContent=t;b.title=tt;b.onclick=e=>{e.stopPropagation();fn();};return b;}
 
 /* ===== Render ===== */
-function render(){
-  Object.values(lists).forEach(ul=> ul.innerHTML="");
-
-  const unlocked = isUnlocked();
-  if (elNew)   elNew.disabled = !unlocked;
-  if (btnAdd) btnAdd.disabled = !unlocked;
-
-  for (const [cat, ul] of Object.entries(lists)){
-    const keys = (orderPerCat[cat] || []).filter(k => k in items);
-    keys.forEach((k,idx)=>{
-      const st   = items[k] || {done:false, qty:0};
-      const li   = document.createElement("li");
-      li.className = "item" + (st.done ? " done" : "");
-      li.dataset.cat   = cat;
-      li.dataset.index = String(idx);
-
-      const cb = document.createElement("input");
-      cb.type="checkbox"; cb.checked=!!st.done;
-      cb.onchange = ()=> toggleDone(k);
-
-      const label = document.createElement("div");
-      label.className="label"; label.textContent = k;
-      if(unlocked) label.onclick=()=> toggleDone(k);
-
-      // qty controls
-      const qwrap = document.createElement("div");
-      qwrap.className = "qtywrap";
-      const minus = makeBtn("−","Aantal −1", ()=> changeQty(k, (items[k]?.qty||0) - 1));
-      const input = document.createElement("input");
-      input.type="number"; input.min="0"; input.step="1";
-      input.value = String(st.qty ?? 0);
-      input.addEventListener("change", ()=>{
-        const val = Math.max(0, parseInt(input.value || "0", 10) || 0);
-        input.value = String(val);
-        setQty(k, val);
-      });
-      const plus  = makeBtn("+","Aantal +1", ()=> changeQty(k, (items[k]?.qty||0) + 1));
-      [minus, input, plus].forEach(el=> el.disabled=!unlocked);
-      qwrap.append(minus, input, plus);
-
-      if (unlocked){
-        const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
-        const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
-
-        // drag across categories
-        li.draggable = true;
-        li.addEventListener("dragstart", e=>{
-          li.classList.add("dragging");
-          e.dataTransfer.setData("text/plain", JSON.stringify({ fromCat: cat, fromIdx: idx, label: k }));
-        });
-        li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
-        ul.addEventListener("dragover", e=> e.preventDefault());
-        ul.addEventListener("drop", e=>{
-          e.preventDefault();
-          const data = JSON.parse(e.dataTransfer.getData("text/plain")||"{}");
-          if (!data || !data.label) return;
-          const toCat = cat;
-          const fromArr = orderPerCat[data.fromCat] || [];
-          const toArr   = orderPerCat[toCat] || [];
-          const i = fromArr.indexOf(data.label);
-          if (i>-1) fromArr.splice(i,1);
-          const toIndex = Number(li.dataset.index);
-          if (Number.isFinite(toIndex)) toArr.splice(toIndex,0,data.label);
-          else toArr.push(data.label);
-          orderPerCat[data.fromCat] = fromArr;
-          orderPerCat[toCat]       = toArr;
-          save({ orderPerCat });
-          render();
-        });
-
-        li.append(cb,label,qwrap,pen,del);
-      } else {
-        li.append(cb,label,qwrap);
-      }
-      ul.appendChild(li);
-    });
-  }
-}
-
-/* ===== Actions (done/qty) ===== */
-function toggleDone(k){
-  const cur = items[k]?.done || false;
-  items[k] = { done: !cur, qty: items[k]?.qty||0 };
-  save({ items });
-}
-function setQty(k, val){
-  val = Math.max(0, Number(val)||0);
-  items[k] = { done: !!(items[k]?.done), qty: val };
-  save({ items });
-}
-function changeQty(k, val){
-  setQty(k, Math.max(0, val));
-}
-
-/* ===== CRUD ===== */
-function addItem(t){
-  if(!isUnlocked()) return;
-  const x=(t||"").trim(); if(!x) return;
-  if(x in items){ alert("Bestaat al."); return; }
-  items = { ...items, [x]: {done:false, qty:0} };
-  orderPerCat.OVERIG = Array.isArray(orderPerCat.OVERIG) ? orderPerCat.OVERIG.concat(x) : [x];
-  render(); save({ items, orderPerCat });
-}
-async function removeItemConfirm(k){
-  if(!isUnlocked()) return;
-  if(!(k in items)) return;
-  if(!confirm(`Verwijder "${k}"?`)) return;
-  const c = catOf(k);
-  const nextItems={...items}; delete nextItems[k];
-  const nextCatOrder=(orderPerCat[c]||[]).filter(x=>x!==k);
-  items=nextItems; orderPerCat[c]=nextCatOrder;
-  render();
-  await updateDoc(doc(db,"lists",DOC_ID),{
-    [`items.${k}`]: deleteField(),
-    orderPerCat,
-    updatedAt: serverTimestamp()
-  });
-}
-async function renameItem(oldK){
-  if(!isUnlocked() || !(oldK in items)) return;
-  const s = prompt("Nieuwe naam:", oldK);
-  if (s===null) return;
-  const n = (s||"").trim();
-  if(!n) return;
-  if(n===oldK) return;
-
-  const cOld = catOf(oldK);
-  const exists = (n in items);
-  const mergedDone = !!items[oldK].done || (exists ? !!items[n].done : false);
-  const mergedQty  = Math.max(items[oldK].qty||0, exists ? (items[n].qty||0) : 0);
-
-  let ni={...items};
-  delete ni[oldK];
-  ni[n] = { done: mergedDone, qty: mergedQty };
-
-  let arr = (orderPerCat[cOld]||[]).slice();
-  if (exists){
-    arr = arr.filter(x=>x!==oldK);
-  } else {
-    arr = arr.map(x=>x===oldK?n:x);
-  }
-  items=ni; orderPerCat[cOld]=arr;
-  render();
-
-  await updateDoc(doc(db,"lists",DOC_ID),{
-    [`items.${oldK}`]: deleteField(),
-    [`items.${n}`]: { done: mergedDone, qty: mergedQty },
-    orderPerCat,
-    updatedAt: serverTimestamp()
-  });
-}
-
-/* ===== Events ===== */
-if (btnAdd) btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
-if (elNew)  elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+function render(){Object.values(lists).forEach(ul=>ul.innerHTML="");
+for(const[cat,ul]of Object.entries(lists)){
+const keys=(orderPerCat[cat]||[]).filter(k=>k in items);
+keys.forEach((k,idx)=>{
+const st=items[k]||{done:false,qty:0};
+const li=document.createElement("li");li.className="item"+(st.done?" done":"");
+const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!st.done;cb.onchange=()=>{st.done=!st.done;save({items});};
+const label=document.createElement("div");label.className="label";label.textContent=k;
+const qwrap=document.createElement("div");qwrap.className="qtywrap";
+const minus=makeBtn("−","Aantal -1",()=>{if(st.qty>0){st.qty--;save({items});render();}});
+const input=document.createElement("input");input.type="number";input.min="0";input.value=st.qty;input.onchange=()=>{st.qty=Math.max(0,parseInt(input.value)||0);save({items});};
+const plus=makeBtn("+","Aantal +1",()=>{st.qty++;save({items});render();});
+qwrap.append(minus,input,plus);
+const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
+const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+li.append(cb,label,qwrap,pen,del);ul.appendChild(li);});
+}}
+async function renameItem(oldK){const s=prompt("Nieuwe naam:",oldK);if(!s)return;const n=s.trim();if(!n)return;const c=catOf(oldK);items[n]=items[oldK];delete items[oldK];orderPerCat[c]=orderPerCat[c].map(x=>x===oldK?n:x);save({items,orderPerCat});render();}
+async function removeItemConfirm(k){if(!confirm(`Verwijder "${k}"?`))return;const c=catOf(k);delete items[k];orderPerCat[c]=orderPerCat[c].filter(x=>x!==k);save({items,orderPerCat});render();}
+btnAdd.onclick=()=>{const x=elNew.value.trim();if(!x)return;if(items[x])return alert("Bestaat al");items[x]={done:false,qty:0};orderPerCat.OVERIG.push(x);save({items,orderPerCat});render();elNew.value="";};
+elNew.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();btnAdd.click();}});
 </script>
 </body>
 </html>
