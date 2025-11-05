@@ -104,61 +104,13 @@ const DOC_ID     = "opslag_lijst";
 const ADMIN_CODE = "YamanBS1";
 let canEdit = true;  // ✅ direct gedeclareerd bovenaan
 
-<script type="module">
-// ... (je imports + config erboven blijven hetzelfde)
-
-/* ===== Locking (robuste versie) ===== */
+/* ===== Locking ===== */
 const LS_KEY_UNLOCK = "ops_unlocked";
 const lockedEl  = document.getElementById("locked");
 const contentEl = document.getElementById("content");
 const codeInput = document.getElementById("codeInput");
 const btnUnlock = document.getElementById("btnUnlock");
 
-// Fallback in-memory vlag voor browsers die localStorage niet opslaan
-let UNLOCKED = false;
-
-function isUnlocked(){
-  // werkt ook als localStorage in private mode faalt
-  try { return UNLOCKED || localStorage.getItem(LS_KEY_UNLOCK) === "1"; }
-  catch { return UNLOCKED; }
-}
-
-function updateLockUI(){
-  const open = isUnlocked();
-
-  // zowel hidden als style.display zetten = werkt in álle browsers
-  lockedEl.hidden = open;
-  contentEl.hidden = !open;
-  lockedEl.style.display  = open ? "none"  : "";
-  contentEl.style.display = open ? ""      : "none";
-}
-
-btnUnlock.onclick = ()=>{
-  const val = (codeInput.value || "").trim();
-  if (val === ADMIN_CODE){
-    UNLOCKED = true;
-    try { localStorage.setItem(LS_KEY_UNLOCK, "1"); } catch {}
-    codeInput.value = "";
-    updateLockUI();
-  } else {
-    alert("Onjuiste code.");
-  }
-};
-
-// Sync UI als tab/focus verandert of localStorage in een andere tab wijzigt
-window.addEventListener("storage", (e)=>{ if(e.key === LS_KEY_UNLOCK) updateLockUI(); });
-document.addEventListener("visibilitychange", updateLockUI);
-
-// Init
-updateLockUI();
-
-// Optioneel: vergrendel-knop ergens aanroepen
-function relock(){
-  UNLOCKED = false;
-  try { localStorage.removeItem(LS_KEY_UNLOCK); } catch {}
-  updateLockUI();
-}
-</script>
 
 function updateLockUI(){
   const unlocked = localStorage.getItem(LS_KEY_UNLOCK)==="1";
