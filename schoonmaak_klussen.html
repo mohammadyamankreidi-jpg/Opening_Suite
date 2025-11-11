@@ -46,8 +46,9 @@
       gap:8px;
     }
 
+    /* tools zijn standaard onzichtbaar: alleen Back Office is te zien */
     .tools{
-      display:flex;
+      display:none;
       gap:8px;
       flex-wrap:wrap;
     }
@@ -147,6 +148,42 @@
       font-size:12px;
       text-align:center;
     }
+
+    /* Back Office overlay met password (sterretjes) */
+    .bo-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    .bo-overlay .panel{
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:14px;
+      padding:16px 18px;
+      max-width:320px;
+      width:90%;
+    }
+    .bo-overlay h1{
+      margin:0 0 8px;
+      font-size:16px;
+    }
+    .bo-overlay .row{
+      display:flex;
+      gap:8px;
+      margin-top:10px;
+    }
+    .bo-overlay input{
+      flex:1;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #2a2f3a;
+      background:#0b0f18;
+      color:#eef2f8;
+    }
   </style>
 </head>
 <body>
@@ -163,6 +200,18 @@
         <div class="tools"></div>
       </div>
     </header>
+
+    <!-- Back Office overlay met password -->
+    <div id="boOverlay" class="bo-overlay">
+      <div class="panel">
+        <h1>Back Office</h1>
+        <p class="hint">Voer de beheerderscode in.</p>
+        <div class="row">
+          <input id="boCode" type="password" placeholder="Beheerderscode" />
+          <button id="boOk" type="button">Open</button>
+        </div>
+      </div>
+    </div>
 
     <div class="card" id="card-root">
       <div class="add">
@@ -205,6 +254,10 @@ const LS_BACK_KEY = "bo_schoonmaak_unlocked";
 /* ===== UI refs ===== */
 const toolsBar      = document.querySelector(".tools");
 const btnBackoffice = document.getElementById("btnBackoffice");
+
+const boOverlay = document.getElementById("boOverlay");
+const boCode    = document.getElementById("boCode");
+const boOk      = document.getElementById("boOk");
 
 const elRoot  = document.getElementById("card-root");
 const elNew   = document.getElementById("newItem");
@@ -294,24 +347,39 @@ function isFast(label){
   return FAST_PREFIXES.some(p => label.startsWith(p));
 }
 
-/* ===== Toolbar opbouwen ===== */
+/* ===== Tools zichtbaarheid ===== */
+function updateToolsBar(){
+  toolsBar.style.display = backUnlocked ? "flex" : "none";
+}
 function rebuildTools(){
   toolsBar.innerHTML = "";
-  // Altijd zichtbaar voor iedereen:
-  toolsBar.appendChild(bReset);
-  // Extra knoppen alleen als Back Office is geopend:
   if (backUnlocked){
+    toolsBar.appendChild(bReset);
     toolsBar.appendChild(bSeed);
     toolsBar.appendChild(bPrio1);
     toolsBar.appendChild(bPrio2);
     toolsBar.appendChild(btnView);
   }
+  updateToolsBar();
 }
 rebuildTools();
 
-/* ===== Back Office knop ===== */
+/* ===== Back Office overlay behaviour ===== */
+function openBackofficeOverlay(){
+  boCode.value = "";
+  boOverlay.style.display = "flex";
+  boCode.focus();
+}
+function closeBackofficeOverlay(){
+  boOverlay.style.display = "none";
+}
+
 btnBackoffice.onclick = () => {
-  const code = prompt("Beheerderscode:");
+  openBackofficeOverlay();
+};
+
+boOk.onclick = () => {
+  const code = boCode.value.trim();
   if (code === ADMIN_CODE){
     backUnlocked = true;
     canEdit      = true;
@@ -320,11 +388,23 @@ btnBackoffice.onclick = () => {
     rebuildTools();
     updateUI();
     render();
+    closeBackofficeOverlay();
     alert("Back Office geopend ✅");
   } else {
     alert("Onjuiste code");
+    boCode.focus();
   }
 };
+
+boCode.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    boOk.click();
+  } else if (e.key === "Escape"){
+    e.preventDefault();
+    closeBackofficeOverlay();
+  }
+});
 
 /* ===== Alleen afvinken ===== */
 btnView.onclick = () => {
@@ -432,7 +512,7 @@ function render(){
       if (!canEdit) span.onclick = ()=> toggle(k);
 
       if (backUnlocked && canEdit){
-        // drag alleen in bewerk-modus
+        // drag alleen in bewerkmodus
         li.draggable = true;
         li.addEventListener("dragstart", e=>{
           li.classList.add("dragging");
@@ -479,7 +559,7 @@ function render(){
   updateUI();
 }
 
-/* ===== Actie-knoppen toolbar ===== */
+/* ===== Actie-knoppen ===== */
 bReset.onclick = ()=>{
   // alleen alle vinkjes uit
   const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
