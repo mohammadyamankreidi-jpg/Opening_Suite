@@ -11,24 +11,107 @@
       --line:#2a2f3a; --text:#eef2f8; --muted:#9fb0cb;
     }
     *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    body{
+      margin:0;
+      background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial
+    }
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
-    .brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:20px;
+      backdrop-filter:blur(6px)
+    }
+    header.panel{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:14px 16px;
+      margin-bottom:12px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px
+    }
+    .brand .h{font-weight:800;font-size:18px}
+    .brand .s{color:var(--muted);font-size:12px}
     .tools{display:flex;gap:8px;flex-wrap:wrap}
-    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
-    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
-    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
-    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
-    li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
+    button{
+      background:#101624;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600
+    }
+    .add{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      margin:8px 0 4px
+    }
+    input[type="text"]{
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0b0f18;
+      color:var(--text)
+    }
+    ul{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px
+    }
+    li.item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:12px;
+      padding:12px 14px
+    }
     li.item.done{opacity:.6;text-decoration:line-through}
     .label{flex:1;cursor:pointer}
-    .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:28px;
+      height:28px;
+      border:1px solid #444;
+      border-radius:6px;
+      background:#151a23;
+      cursor:pointer;
+      opacity:.95
+    }
     li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
-    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    .nav{display:flex;gap:10px;margin-bottom:12px}
+    .nav a{color:#d8e6ff}
     .divider{height:1px;background:#2a2f3a;margin:12px 0;border-radius:1px}
-    .section-head{font-weight:800;opacity:.95;margin:6px 0 8px;text-transform:uppercase;letter-spacing:.5px;color:#fff}
+    .section-head{
+      font-weight:800;
+      opacity:.95;
+      margin:6px 0 8px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      color:#fff
+    }
+    footer.note{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      text-align:center
+    }
   </style>
 </head>
 <body>
@@ -81,9 +164,9 @@ const DOC_ID     = "schoonmaak_klussen";
 const ADMIN_CODE = "YamanBS1";
 
 /* ===== UI refs ===== */
-const elRoot = document.getElementById("card-root");
-const secFast = document.getElementById("sec-fast");
-const secBig  = document.getElementById("sec-big");
+const elRoot     = document.getElementById("card-root");
+const secFast    = document.getElementById("sec-fast");
+const secBig     = document.getElementById("sec-big");
 const secDivider = document.getElementById("sec-divider");
 
 const ulFast = document.getElementById("list-fast");
@@ -93,22 +176,50 @@ const btnAdd = document.getElementById("btnAdd");
 
 /* ===== Toolbar ===== */
 let tools = document.querySelector(".tools");
-const bEdit  = document.createElement("button"); bEdit.textContent="🔓 Bewerk-modus";
-const bView  = document.createElement("button"); bView.textContent="🔒 Alleen afvinken";
-const bReset = document.createElement("button"); bReset.textContent="Alles herstellen";
-const bSeed  = document.createElement("button"); bSeed.textContent="Herstel lijst";
-const bSwap  = document.createElement("button"); bSwap.textContent="Secties omdraaien";
-tools.replaceChildren(bEdit,bView,bReset,bSeed,bSwap);
+const bEdit   = document.createElement("button"); bEdit.textContent  = "🔓 Bewerk-modus";
+const bView   = document.createElement("button"); bView.textContent  = "🔒 Alleen afvinken";
+const bReset  = document.createElement("button"); bReset.textContent = "Alles herstellen";
+const bSeed   = document.createElement("button"); bSeed.textContent  = "Resetten";      // <- nieuwe tekst
+const bPrio1  = document.createElement("button"); bPrio1.textContent = "Prioriteit 1"; // grote klussen
+const bPrio2  = document.createElement("button"); bPrio2.textContent = "Prioriteit 2"; // snelle taken
+tools.replaceChildren(bEdit,bView,bReset,bSeed,bPrio1,bPrio2);
 
+/* ===== Edit-mode (slot) ===== */
 let canEdit = (localStorage.getItem("editMode")==="1");
-bEdit.onclick = ()=>{ const c=prompt("Beheerderscode:"); if(c===ADMIN_CODE){ localStorage.setItem("editMode","1"); canEdit=true; updateUI(); render(); alert("Bewerk-modus aan ✅"); } else alert("Onjuiste code"); };
-bView.onclick = ()=>{ localStorage.removeItem("editMode"); canEdit=false; updateUI(); render(); alert("Alleen afvinken 🔒"); };
-window.addEventListener("storage", e=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
+
+bEdit.onclick = ()=>{
+  const c=prompt("Beheerderscode:");
+  if(c===ADMIN_CODE){
+    localStorage.setItem("editMode","1");
+    canEdit=true;
+    updateUI();
+    render();
+    alert("Bewerk-modus aan ✅");
+  } else {
+    alert("Onjuiste code");
+  }
+};
+bView.onclick = ()=>{
+  localStorage.removeItem("editMode");
+  canEdit=false;
+  updateUI();
+  render();
+  alert("Alleen afvinken 🔒");
+};
+window.addEventListener("storage", e=>{
+  if(e.key==="editMode"){
+    canEdit=(localStorage.getItem("editMode")==="1");
+    updateUI();
+    render();
+  }
+});
 
 /* ===== State ===== */
 let items = {};
 let order = [];
-let bigFirst = false; // ⬅ wordt bewaard in Firestore
+
+// viewMode: "ALL" | "BIG" | "FAST"
+let viewMode = "ALL";
 
 /* ===== Seed ===== */
 function getSeed(){
@@ -125,9 +236,9 @@ function getSeed(){
     "Vriezers in opslag met een doekje schoonmaken": false,
     "Opslag & counter bij de shake apparaat vegen en dweilen": false,
     "Deurposten schoonmaken met blauwe spons en blauwe spray": false,
-    "Bubble tea shaker/sealer schoonmaken":false,
-    "Voorkant en de bovenkant van de bubble tea koeling schoonamekn":false,
-    "De shakers(bekers) gronding schoonmaken met spons en water":false,
+    "Bubble tea shaker/sealer schoonmaken": false,
+    "Voorkant en de bovenkant van de bubble tea koeling schoonmaken": false,
+    "De shakers (bekers) grondig schoonmaken met spons en water": false,
 
     // — Grote klussen
     "Vriezers in opslag schoonmaken": false,
@@ -144,18 +255,34 @@ function getSeed(){
     "Afzuigroosters schoonmaken": false,
     "Stoffer en blik, wassen en drogen": false,
     "Prullenbak schoonmaken en drogen": false,
+    "Dranken koelkast volledig schoonmaken met blauwe spons en een doek": false,
+    "Broodkar schoonmaken inclusief de kratten": false,
     "WC schoonmaken": false
   };
   const order = Object.keys(items);
   return { items, order };
 }
 
-/* ===== Snel/vast indelen (rule-of-thumb via beginsel) ===== */
+/* ===== Indeling snelle / grote taken ===== */
 const FAST_PREFIXES = [
-  "Dresstafel","Counterblad","Tafeltje","Bin","Vriezer aan de voorkant",
-  "Bovenkant","Bezorgtafel","Fietsbakken","Vriezers in opslag met","Opslag","Deurposten"
+  "Dresstafel",
+  "Counterblad",
+  "Tafeltje",
+  "Bin aan de bovenkant",
+  "Vriezer aan de voorkant",
+  "Bovenkant milkshake",
+  "Bezorgtafel",
+  "Fietsbakken",
+  "Vriezers in opslag met",
+  "Opslag & counter",
+  "Deurposten",
+  "Bubble tea",
+  "Voorkant en de bovenkant van de bubble tea koeling",
+  "De shakers"
 ];
-function isFast(k){ return FAST_PREFIXES.some(w=>k.startsWith(w)); }
+function isFast(k){
+  return FAST_PREFIXES.some(w => k.startsWith(w));
+}
 
 /* ===== Live sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
@@ -164,68 +291,88 @@ onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
     items = d.items || {};
     order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
     Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
-    bigFirst = !!d.bigFirst;
   } else {
     const s = getSeed();
-    items = s.items; order = s.order; bigFirst = false;
-    await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, bigFirst:false, updatedAt:serverTimestamp() }, { merge:false });
+    items = s.items; order = s.order;
+    await setDoc(
+      doc(db,"lists",DOC_ID),
+      { items:s.items, order:s.order, updatedAt:serverTimestamp() },
+      { merge:false }
+    );
   }
   render();
 });
 
 /* ===== Save helper ===== */
 async function save(p){
-  await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
+  await setDoc(
+    doc(db,"lists",DOC_ID),
+    { ...(p||{}), updatedAt: serverTimestamp() },
+    { merge:true }
+  );
 }
 
 /* ===== Buttons helper ===== */
 function btn(txt,title,onClick){
   const b=document.createElement("button");
-  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
-  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.(); onClick(); },{capture:true});
+  b.className="btn";
+  b.textContent=txt;
+  b.title=title;
+  b.type="button";
+  b.addEventListener(
+    "click",
+    (e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.(); onClick(); },
+    {capture:true}
+  );
   return b;
 }
 
-/* ===== Sectie-volgorde toepassen ===== */
-function applySectionOrder(){
-  // herplaats de secties in de gewenste volgorde
-  if (bigFirst){
-    // Big boven, dan divider, dan Fast
-    if (secBig.nextSibling !== secDivider) elRoot.insertBefore(secBig, secFast);
-    elRoot.insertBefore(secDivider, secFast);
+/* ===== View-mode (Prioriteit 1/2) ===== */
+function applyViewMode(){
+  if (viewMode === "BIG"){
+    secBig.style.display  = "";
+    secFast.style.display = "none";
+    secDivider.style.display = "none";
+  } else if (viewMode === "FAST"){
+    secFast.style.display = "";
+    secBig.style.display  = "none";
+    secDivider.style.display = "none";
   } else {
-    // Fast boven, dan divider, dan Big
-    if (secFast.nextSibling !== secDivider) elRoot.insertBefore(secFast, secBig);
-    elRoot.insertBefore(secDivider, secBig);
+    // ALL
+    secFast.style.display = "";
+    secBig.style.display  = "";
+    secDivider.style.display = "";
   }
 }
 
 /* ===== Render ===== */
 function render(){
-  ulFast.innerHTML=""; ulBig.innerHTML="";
+  ulFast.innerHTML = "";
+  ulBig.innerHTML  = "";
 
-  const keys = order.length? order.slice() : Object.keys(items);
-  const fastKeys = keys.filter(k=>isFast(k));
-  const bigKeys  = keys.filter(k=>!isFast(k));
+  const keys = order.length ? order.slice() : Object.keys(items);
+  const fastKeys = keys.filter(k => isFast(k));
+  const bigKeys  = keys.filter(k => !isFast(k));
 
   const renderList = (arr, target)=>{
-    arr.forEach((k,idx)=>{
+    arr.forEach((k)=>{
       if(!(k in items)) return;
       const li=document.createElement("li");
       li.className="item"+(items[k]?" done":"");
 
       const cb=document.createElement("input");
-      cb.type="checkbox"; cb.checked=!!items[k];
+      cb.type="checkbox";
+      cb.checked=!!items[k];
       cb.onchange=()=>toggle(k);
 
       const span=document.createElement("div");
-      span.className="label"; span.textContent=k;
+      span.className="label";
+      span.textContent=k;
       if(!canEdit) span.onclick=()=>toggle(k);
 
       if (canEdit){
         const pen=btn("✏️","Naam aanpassen",()=>renameItem(k));
         const del=btn("🗑️","Verwijderen",()=>removeItemConfirm(k));
-        // (optioneel) drag per item zou kunnen, maar we bewaren sectie-indeling simpel
         li.append(cb,span,pen,del);
       } else {
         li.append(cb,span);
@@ -235,42 +382,45 @@ function render(){
     });
   };
 
-  // sectievolgorde in DOM
-  applySectionOrder();
-
-  // render content
   renderList(fastKeys, ulFast);
   renderList(bigKeys,  ulBig);
 
   updateUI();
+  applyViewMode();
 }
 
 /* ===== Actions ===== */
 function updateUI(){
   [elNew, btnAdd].forEach(el=>{
     if(!el) return;
-    el.disabled=!canEdit;
-    el.style.opacity=canEdit?1:.6;
-    el.style.pointerEvents=canEdit?"auto":"none";
+    el.disabled = !canEdit;
+    el.style.opacity = canEdit ? 1 : .6;
+    el.style.pointerEvents = canEdit ? "auto" : "none";
   });
-  bReset.disabled=false; bReset.style.opacity=1;
-  bSeed.disabled=!canEdit; bSeed.style.opacity=canEdit?1:.5;
-  bSwap.disabled=!canEdit; bSwap.style.opacity=canEdit?1:.5;
+  bReset.disabled = false;
+  bReset.style.opacity = 1;
+  bSeed.disabled  = !canEdit;
+  bSeed.style.opacity = canEdit ? 1 : .5;
+  // Prioriteit-knoppen zijn altijd bruikbaar (alleen view)
 }
 
 function toggle(k){
   const next={...items,[k]:!items[k]};
-  items=next; save({items:next});
+  items=next;
+  save({items:next});
 }
 
 function addItem(t){
   if(!canEdit) return;
-  const x=(t||"").trim(); if(!x) return;
+  const x=(t||"").trim();
+  if(!x) return;
   if(x in items){ alert("Bestaat al."); return; }
   const next={...items,[x]:false};
   const nextOrder=order.concat(x);
-  items=next; order=nextOrder;
-  render(); save({items:next,order:nextOrder});
+  items=next;
+  order=nextOrder;
+  render();
+  save({items:next,order:nextOrder});
 }
 
 async function removeItemConfirm(k){
@@ -278,9 +428,12 @@ async function removeItemConfirm(k){
   if(!(k in items)) return;
   if(!confirm(`Verwijder "${k}"?`)) return;
 
-  const next={...items}; delete next[k];
+  const next={...items};
+  delete next[k];
   const nextOrder=order.filter(x=>x!==k);
-  items=next; order=nextOrder; render();
+  items=next;
+  order=nextOrder;
+  render();
 
   await updateDoc(doc(db,"lists",DOC_ID),{
     [`items.${k}`]: deleteField(),
@@ -325,28 +478,51 @@ async function renameItem(oldK){
 }
 
 /* ===== Events ===== */
-btnAdd.onclick=()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
-elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+btnAdd.onclick = ()=>{
+  addItem(elNew.value);
+  elNew.value="";
+  elNew.focus();
+};
+elNew.addEventListener("keydown", e=>{
+  if(e.key==="Enter"){
+    e.preventDefault();
+    addItem(elNew.value);
+    elNew.value="";
+  }
+});
 
 bReset.onclick = ()=>{
-  const next=Object.fromEntries(Object.keys(items).map(k=>[k,false]));
-  items=next; save({items:next});
+  // alleen alle vinkjes uit
+  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
+  items=next;
+  save({items:next});
 };
 
 bSeed.onclick  = async ()=>{
   if(!canEdit) return;
-  if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
+  if(!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
   const s=getSeed();
-  items=s.items; order=s.order;
-  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, bigFirst:false, updatedAt: serverTimestamp() }, { merge:false });
+  items=s.items;
+  order=s.order;
+  await setDoc(
+    doc(db,"lists",DOC_ID),
+    { items:s.items, order:s.order, updatedAt: serverTimestamp() },
+    { merge:false }
+  );
+  viewMode = "ALL";
   render();
 };
 
-bSwap.onclick = async ()=>{
-  if(!canEdit) return;
-  bigFirst = !bigFirst;
-  applySectionOrder();
-  await save({ bigFirst });
+/* Prioriteit-knoppen (filteren welke sectie zichtbaar is) */
+bPrio1.onclick = ()=>{
+  // Grote klussen
+  viewMode = (viewMode === "BIG") ? "ALL" : "BIG";
+  applyViewMode();
+};
+bPrio2.onclick = ()=>{
+  // Snelle taken
+  viewMode = (viewMode === "FAST") ? "ALL" : "FAST";
+  applyViewMode();
 };
 </script>
 </body>
