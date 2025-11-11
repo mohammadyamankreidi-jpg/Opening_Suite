@@ -11,25 +11,142 @@
       --line:#2a2f3a; --text:#eef2f8; --muted:#9fb0cb;
     }
     *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    body{
+      margin:0;
+      background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    }
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
-    .brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-    .tools{display:none;gap:8px;flex-wrap:wrap}
-    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
-    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
-    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
-    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;min-height:10px}
-    li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px;cursor:grab}
-    li.item.done{opacity:.6;text-decoration:line-through}
-    li.item.dragging{opacity:.5;outline:1px dashed #6aa0ff;cursor:grabbing}
-    .label{flex:1;cursor:pointer}
-    .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
-    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
-    .divider{height:1px;background:#2a2f3a;margin:12px 0;border-radius:1px}
-    .section-head{font-weight:800;opacity:.95;margin:6px 0 8px;text-transform:uppercase;letter-spacing:.5px;color:#fff}
-    footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:20px;
+      backdrop-filter:blur(6px);
+    }
+    header.panel{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:14px 16px;
+      margin-bottom:12px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px;
+    }
+    .brand .h{font-weight:800;font-size:18px}
+    .brand .s{color:var(--muted);font-size:12px}
+
+    .header-right{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .tools{
+      display:none;         /* alleen zichtbaar na Back Office */
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    button{
+      background:#101624;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+
+    .add{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      margin:8px 0 4px;
+    }
+    input[type="text"]{
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0b0f18;
+      color:var(--text);
+    }
+
+    ul{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:8px;
+    }
+    li.item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:12px;
+      padding:12px 14px;
+      cursor:grab;
+    }
+    li.item.done{
+      opacity:.6;
+      text-decoration:line-through;
+    }
+    li.item.dragging{
+      opacity:.5;
+      outline:1px dashed #6aa0ff;
+      cursor:grabbing;
+    }
+
+    .label{
+      flex:1;
+      cursor:pointer;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:28px;
+      height:28px;
+      border:1px solid #444;
+      border-radius:6px;
+      background:#151a23;
+      cursor:pointer;
+      opacity:.95;
+    }
+
+    .nav{display:flex;gap:10px;margin-bottom:12px}
+    .nav a{color:#d8e6ff}
+
+    .divider{
+      height:1px;
+      background:#2a2f3a;
+      margin:12px 0;
+      border-radius:1px;
+    }
+    .section-head{
+      font-weight:800;
+      opacity:.95;
+      margin:6px 0 8px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      color:#fff;
+    }
+
+    footer.note{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+    }
   </style>
 </head>
 <body>
@@ -81,75 +198,173 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ===== Config ===== */
-const DOC_ID     = "schoonmaak_klussen";
-const ADMIN_CODE = "YamanBS1";
+const DOC_ID      = "schoonmaak_klussen";
+const ADMIN_CODE  = "YamanBS1";
+const LS_BACK_KEY = "bo_schoonmaak_unlocked";
 
 /* ===== UI refs ===== */
 const toolsBar      = document.querySelector(".tools");
 const btnBackoffice = document.getElementById("btnBackoffice");
+
 const elRoot  = document.getElementById("card-root");
 const elNew   = document.getElementById("newItem");
 const btnAdd  = document.getElementById("btnAdd");
+
+const secFast = document.getElementById("sec-fast");
+const secBig  = document.getElementById("sec-big");
+
 const ulFast  = document.getElementById("list-fast");
 const ulBig   = document.getElementById("list-big");
 
 /* ===== Toolbar-knoppen ===== */
-const bReset  = document.createElement("button"); bReset.textContent = "Alles herstellen";
-const bSeed   = document.createElement("button"); bSeed.textContent  = "Resetten";
-const bPrio1  = document.createElement("button"); bPrio1.textContent = "Prioriteit 1";
-const bPrio2  = document.createElement("button"); bPrio2.textContent = "Prioriteit 2";
-toolsBar.replaceChildren(bReset,bSeed,bPrio1,bPrio2);
+const btnEdit  = document.createElement("button"); btnEdit.textContent  = "🔓 Bewerk-modus";
+const btnView  = document.createElement("button"); btnView.textContent  = "🔒 Alleen afvinken";
+const bReset   = document.createElement("button"); bReset.textContent   = "Alles herstellen";
+const bSeed    = document.createElement("button"); bSeed.textContent    = "Resetten";
+const bPrio1   = document.createElement("button"); bPrio1.textContent   = "Prioriteit 1";
+const bPrio2   = document.createElement("button"); bPrio2.textContent   = "Prioriteit 2";
+toolsBar.replaceChildren(btnEdit, btnView, bReset, bSeed, bPrio1, bPrio2);
 
 /* ===== State ===== */
-let canEdit = false;
-let viewMode = "ALL";
+let backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+let canEdit      = (localStorage.getItem("editMode")==="1");
+let viewMode     = "ALL";     // ALL | FAST | BIG
+
 let items = {};
 let order = [];
 
-/* ===== Back Office login ===== */
+/* ===== Seed – volledige lijst zoals jij had ===== */
+function getSeed(){
+  const items = {
+    // — Snelle taken 
+    "Dresstafel volledig schoonmaken, onder de kratten en mandjes": false,
+    "Counterblad schoonmaken en desinfecteren (inclusief schermen)": false,
+    "Tafeltje bij shake apparaat schoonmaken en daarna met RVS": false,
+    "Bin aan de bovenkant schoonmaken": false,
+    "Vriezer aan de voorkant schoonmaken met blauwe spons en blauwe spray": false,
+    "Bovenkant milkshake & ijs apparaat afspoelen en afdrogen": false,
+    "Bezorgtafel schoonmaken en de tassen legen": false,
+    "Fietsbakken legen van de bonnen en schoonmaken": false,
+    "Vriezers in opslag met een doekje schoonmaken": false,
+    "Opslag & counter bij de shake apparaat vegen en dweilen": false,
+    "Deurposten schoonmaken met blauwe spons en blauwe spray": false,
+    "Bubble tea shaker/sealer schoonmaken": false,
+    "Voorkant en de bovenkant van de bubble tea koeling schoonamekn": false,
+    "De shakers(bekers) gronding schoonmaken met spons en water": false,
+
+    // — Grote klussen
+    "Vriezers in opslag schoonmaken": false,
+    "Vriezers in opslag naar voren en erachter schoonmaken": false,
+    "Rubbers van de vriezers/koelkast in opslag schoonmaken en de binnenkant stofzuigen": false,
+    "Koelkast Keuken/Opslag volledig schoonmaken inclusief het glas": false,
+    "Side vriezers schoonmaken/ijskrabben": false,
+    "Sink volledig schoonmaken en onder vegen en dweilen": false,
+    "Achter bij de stellingen vegen en dweilen (ook onder de stellingen)": false,
+    "Bezorgtafel schoonmaken en daarachter vegen en dweilen (let op kabels!)": false,
+    "Onderdelen van de bin schoonmaken en de binnenkant stofzuigen": false,
+    "Achter apparatuur schoonmaken inclusief de muren": false,
+    "Apparatuur schoonmaken, zij/voor/achterkant": false,
+    "Afzuigroosters schoonmaken": false,
+    "Stoffer en blik, wassen en drogen": false,
+    "Prullenbak schoonmaken en drogen": false,
+    "Dranken koelkat volledig schoonmaken met blauwe spons en een doek": false,
+    "Broodkar schoonmaken inclusief de kratten": false,
+    "WC schoonmaken": false
+  };
+  const order = Object.keys(items);
+  return { items, order };
+}
+
+/* ===== Snelle vs grote klussen bepalen ===== */
+const FAST_PREFIXES = [
+  "Dresstafel",
+  "Counterblad",
+  "Tafeltje",
+  "Bin",
+  "Vriezer aan de voorkant",
+  "Vriezer aan de voorkant schoonmaken",
+  "Bovenkant milkshake",
+  "Bezorgtafel schoonmaken en de tassen legen",
+  "Fietsbakken",
+  "Vriezers in opslag met",
+  "Opslag & counter",
+  "Deurposten",
+  "Bubble tea",
+  "Voorkant en de bovenkant van de bubble tea koeling",
+  "De shakers"
+];
+function isFast(label){
+  return FAST_PREFIXES.some(p => label.startsWith(p));
+}
+
+/* ===== Back Office zichtbaarheid ===== */
+function updateToolsVisible(){
+  toolsBar.style.display = backUnlocked ? "flex" : "none";
+}
+updateToolsVisible();
+
+/* ===== Back Office knop ===== */
 btnBackoffice.onclick = () => {
   const code = prompt("Beheerderscode:");
-  if (code === ADMIN_CODE) {
-    canEdit = true;
-    localStorage.setItem("editMode","1");
-    toolsBar.style.display = "flex";
-    elNew.disabled = btnAdd.disabled = false;
+  if (code === ADMIN_CODE){
+    backUnlocked = true;
+    localStorage.setItem(LS_BACK_KEY,"1");
+    updateToolsVisible();
     alert("Back Office geopend ✅");
     render();
-  } else alert("Onjuiste code");
+  } else {
+    alert("Onjuiste code");
+  }
 };
 
-/* ===== Sync andere tabs ===== */
+/* ===== Bewerk / Alleen afvinken ===== */
+btnEdit.onclick = () => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE){
+    canEdit = true;
+    localStorage.setItem("editMode","1");
+    updateUI();
+    render();
+    alert("Bewerk-modus aan ✅");
+  } else {
+    alert("Onjuiste code");
+  }
+};
+
+btnView.onclick = () => {
+  canEdit = false;
+  localStorage.removeItem("editMode");
+  updateUI();
+  render();
+  alert("Alleen afvinken 🔒");
+};
+
+/* ===== Storage sync (andere tabbladen) ===== */
 window.addEventListener("storage", e=>{
-  if (e.key==="editMode"){
-    canEdit=(localStorage.getItem("editMode")==="1");
-    toolsBar.style.display = canEdit ? "flex" : "none";
+  if (e.key === "editMode"){
+    canEdit = (localStorage.getItem("editMode")==="1");
+    updateUI();
+    render();
+  }
+  if (e.key === LS_BACK_KEY){
+    backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+    updateToolsVisible();
     render();
   }
 });
-
-/* ===== Seed data ===== */
-function getSeed(){
-  const items = {
-    "Dresstafel volledig schoonmaken":false,
-    "Counterblad schoonmaken":false,
-    "Vriezer voorkant schoonmaken":false,
-    "Sink volledig schoonmaken":false,
-    "WC schoonmaken":false
-  };
-  return { items, order:Object.keys(items) };
-}
 
 /* ===== Firestore sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
   if (snap.exists()){
     const d = snap.data();
     items = d.items || {};
-    order = d.order || Object.keys(items);
+    order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
+    Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
     const s = getSeed();
-    await setDoc(doc(db,"lists",DOC_ID), { ...s, updatedAt: serverTimestamp() });
-    items = s.items; order = s.order;
+    items = s.items;
+    order = s.order;
+    await setDoc(doc(db,"lists",DOC_ID), { items, order, updatedAt: serverTimestamp() }, { merge:false });
   }
   render();
 });
@@ -159,110 +374,228 @@ async function save(p){
   await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
 }
 
-/* ===== Render ===== */
+/* ===== UI helper ===== */
+function makeBtn(txt,title,onClick){
+  const b=document.createElement("button");
+  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
+  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.(); onClick(); },{capture:true});
+  return b;
+}
+
+function updateUI(){
+  const canType = backUnlocked && canEdit;
+  [elNew, btnAdd].forEach(el=>{
+    if (!el) return;
+    el.disabled = !canType;
+    el.style.opacity = canType ? 1 : .6;
+    el.style.pointerEvents = canType ? "auto" : "none";
+  });
+}
+
+/* ===== Render + drag & drop ===== */
 function render(){
-  ulFast.innerHTML="";
-  ulBig.innerHTML="";
+  ulFast.innerHTML = "";
+  ulBig.innerHTML  = "";
 
-  const fastKeys = order.filter(k=>k.toLowerCase().includes("counter") || k.toLowerCase().includes("dresstafel") || k.toLowerCase().includes("vriezer voorkant"));
-  const bigKeys  = order.filter(k=>!fastKeys.includes(k));
+  const base = order.length ? order.slice() : Object.keys(items);
+  let fastKeys = base.filter(k => isFast(k));
+  let bigKeys  = base.filter(k => !isFast(k));
 
-  const makeList = (arr, target)=>{
-    arr.forEach((k)=>{
-      const li=document.createElement("li");
-      li.className="item"+(items[k]?" done":"");
-      li.draggable=canEdit;
+  const renderList = (arr, target, group)=>{
+    target.innerHTML = "";
+    arr.forEach((k, idx)=>{
+      if (!(k in items)) return;
 
-      li.addEventListener("dragstart", e=>{
-        e.dataTransfer.setData("text/plain", k);
-        li.classList.add("dragging");
-      });
-      li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
-      target.addEventListener("dragover", e=>e.preventDefault());
-      target.addEventListener("drop", e=>{
-        e.preventDefault();
-        const moved=e.dataTransfer.getData("text/plain");
-        const arrCopy=order.slice();
-        const from=arrCopy.indexOf(moved);
-        const to=arr.indexOf(k);
-        if(from>-1 && to>-1){
-          arrCopy.splice(from,1);
-          arrCopy.splice(to,0,moved);
-          order=arrCopy;
-          save({order});
+      const li = document.createElement("li");
+      li.className = "item" + (items[k] ? " done" : "");
+      li.dataset.idx   = String(idx);
+      li.dataset.group = group;
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!items[k];
+      cb.onchange = ()=> toggle(k);
+
+      const span = document.createElement("div");
+      span.className = "label";
+      span.textContent = k;
+      if (!canEdit) span.onclick = ()=> toggle(k);
+
+      if (backUnlocked && canEdit){
+        // drag alleen in bewerk-modus
+        li.draggable = true;
+        li.addEventListener("dragstart", e=>{
+          li.classList.add("dragging");
+          e.dataTransfer.setData("text/plain", JSON.stringify({ group, from: idx }));
+        });
+        li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
+        li.addEventListener("dragover", e=> e.preventDefault());
+        li.addEventListener("drop", e=>{
+          e.preventDefault();
+          const data = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
+          if (!data || data.group !== group) return;
+          const from = data.from;
+          const to   = Number(li.dataset.idx);
+          if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return;
+
+          // lokale kopie van groep herschikken
+          let gArr = group === "FAST" ? fastKeys.slice() : bigKeys.slice();
+          const [moved] = gArr.splice(from,1);
+          gArr.splice(to,0,moved);
+
+          if (group === "FAST") fastKeys = gArr;
+          else                  bigKeys  = gArr;
+
+          // nieuwe globale order: eerst fast, dan big
+          const nextOrder = fastKeys.concat(bigKeys);
+          order = nextOrder;
+          save({ order: nextOrder });
           render();
-        }
-      });
+        });
 
-      const cb=document.createElement("input");
-      cb.type="checkbox"; cb.checked=!!items[k];
-      cb.onchange=()=>toggle(k);
+        const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
+        const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+        li.append(cb, span, pen, del);
+      } else {
+        li.append(cb, span);
+      }
 
-      const span=document.createElement("div");
-      span.className="label"; span.textContent=k;
-      if(!canEdit) span.onclick=()=>toggle(k);
-
-      if(canEdit){
-        const pen=btn("✏️","Naam aanpassen",()=>renameItem(k));
-        const del=btn("🗑️","Verwijderen",()=>removeItemConfirm(k));
-        li.append(cb,span,pen,del);
-      } else li.append(cb,span);
       target.appendChild(li);
     });
   };
 
-  makeList(fastKeys,ulFast);
-  makeList(bigKeys,ulBig);
+  // secties vullen
+  renderList(fastKeys, ulFast, "FAST");
+  renderList(bigKeys,  ulBig,  "BIG");
+
   applyView();
+  updateUI();
 }
 
-/* ===== Filter view ===== */
+/* ===== View filters (Prioriteit 1/2) ===== */
 function applyView(){
-  if(viewMode==="BIG"){
-    ulBig.parentElement.style.display="";
-    ulFast.parentElement.style.display="none";
-  } else if(viewMode==="FAST"){
-    ulFast.parentElement.style.display="";
-    ulBig.parentElement.style.display="none";
+  if (viewMode === "BIG"){
+    secBig.style.display  = "";
+    secFast.style.display = "none";
+  } else if (viewMode === "FAST"){
+    secFast.style.display = "";
+    secBig.style.display  = "none";
   } else {
-    ulFast.parentElement.style.display="";
-    ulBig.parentElement.style.display="";
+    secFast.style.display = "";
+    secBig.style.display  = "";
   }
 }
 
-/* ===== Buttons ===== */
-function btn(txt,title,onClick){
-  const b=document.createElement("button");
-  b.className="btn";
-  b.textContent=txt;
-  b.title=title;
-  b.onclick=(e)=>{e.preventDefault();onClick();};
-  return b;
-}
-
-bReset.onclick=()=>{
-  const next=Object.fromEntries(Object.keys(items).map(k=>[k,false]));
-  items=next;
-  save({items:next});
+/* ===== Actie-knoppen toolbar ===== */
+bReset.onclick = ()=>{
+  // alleen alle vinkjes uit
+  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
+  items = next;
+  save({ items: next });
 };
 
-bSeed.onclick=async()=>{
-  if(!canEdit) return;
-  if(!confirm("Resetten naar beginlijst?"))return;
-  const s=getSeed();
-  items=s.items;order=s.order;
-  await setDoc(doc(db,"lists",DOC_ID),{items,order,updatedAt:serverTimestamp()},{merge:false});
+bSeed.onclick = async ()=>{
+  if (!backUnlocked || !canEdit) return;
+  if (!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
+  const s = getSeed();
+  items = s.items;
+  order = s.order;
+  await setDoc(doc(db,"lists",DOC_ID), { items, order, updatedAt: serverTimestamp() }, { merge:false });
   render();
 };
 
-bPrio1.onclick=()=>{viewMode=viewMode==="BIG"?"ALL":"BIG";applyView();};
-bPrio2.onclick=()=>{viewMode=viewMode==="FAST"?"ALL":"FAST";applyView();};
+bPrio1.onclick = ()=>{
+  // Prioriteit 1 = alleen GROTE SCHOONMAAKKLUSSEN
+  viewMode = (viewMode === "BIG") ? "ALL" : "BIG";
+  applyView();
+};
 
-/* ===== Actions ===== */
-function toggle(k){items[k]=!items[k];save({items});}
-btnAdd.onclick=()=>{if(canEdit){const x=elNew.value.trim();if(x&&!items[x]){items[x]=false;order.push(x);save({items,order});render();}}};
-async function removeItemConfirm(k){if(canEdit&&confirm("Verwijder "+k+"?")){delete items[k];order=order.filter(i=>i!==k);save({items,order});render();}}
-async function renameItem(oldK){const n=prompt("Nieuwe naam:",oldK);if(!n||!canEdit)return;if(n===oldK)return;items[n]=items[oldK];delete items[oldK];order=order.map(x=>x===oldK?n:x);save({items,order});render();}
+bPrio2.onclick = ()=>{
+  // Prioriteit 2 = alleen SNELLE TAKEN
+  viewMode = (viewMode === "FAST") ? "ALL" : "FAST";
+  applyView();
+};
+
+/* ===== Basis-acties ===== */
+function toggle(k){
+  const next = { ...items, [k]: !items[k] };
+  items = next;
+  save({ items: next });
+}
+
+btnAdd.onclick = ()=>{
+  if (!backUnlocked || !canEdit) return;
+  const x = (elNew.value || "").trim();
+  if (!x) return;
+  if (x in items){ alert("Bestaat al."); return; }
+  items = { ...items, [x]: false };
+  order = order.concat(x);
+  elNew.value = "";
+  elNew.focus();
+  save({ items, order });
+  render();
+};
+
+elNew.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    btnAdd.click();
+  }
+});
+
+async function removeItemConfirm(k){
+  if (!backUnlocked || !canEdit) return;
+  if (!(k in items)) return;
+  if (!confirm(`Verwijder "${k}"?`)) return;
+
+  const nextItems = { ...items };
+  delete nextItems[k];
+  const nextOrder = order.filter(x=>x!==k);
+  items = nextItems;
+  order = nextOrder;
+  render();
+
+  await updateDoc(doc(db,"lists",DOC_ID), {
+    [`items.${k}`]: deleteField(),
+    order: nextOrder,
+    updatedAt: serverTimestamp()
+  });
+}
+
+async function renameItem(oldK){
+  if (!backUnlocked || !canEdit || !(oldK in items)) return;
+  const s = prompt("Nieuwe naam:", oldK);
+  if (s === null) return;
+  const n = (s || "").trim();
+  if (!n || n === oldK) return;
+
+  const exists = (n in items);
+  const merged = !!items[oldK] || !!items[n];
+
+  let nextItems = { ...items };
+  let nextOrder = order.slice();
+
+  if (exists){
+    nextItems[n] = merged;
+    delete nextItems[oldK];
+    nextOrder = nextOrder.filter(k => k !== oldK);
+  } else {
+    nextItems[n] = !!nextItems[oldK];
+    delete nextItems[oldK];
+    nextOrder = nextOrder.map(k => k === oldK ? n : k);
+  }
+
+  items = nextItems;
+  order = nextOrder;
+  render();
+
+  await updateDoc(doc(db,"lists",DOC_ID), {
+    [`items.${oldK}`]: deleteField(),
+    [`items.${n}`]: merged,
+    order: nextOrder,
+    updatedAt: serverTimestamp()
+  });
+}
 </script>
 </body>
 </html>
