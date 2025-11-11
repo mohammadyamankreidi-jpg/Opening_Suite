@@ -223,13 +223,20 @@ const bPrio1 = document.createElement("button"); bPrio1.textContent = "Prioritei
 const bPrio2 = document.createElement("button"); bPrio2.textContent = "Prioriteit 2";
 const btnView= document.createElement("button"); btnView.textContent = "Alleen afvinken";
 
-/* ===== State ===== */
-let backUnlocked = (localStorage.getItem(LS_BACK_KEY) === "1");
-let canEdit      = backUnlocked;     // als backoffice open → standaard editen
-let viewMode     = "ALL";            // ALL | FAST | BIG
-
-let items = {};
-let order = [];
+/* ===== Tools zichtbaarheid: Altijd Alles herstellen, rest na Back Office ===== */
+function rebuildTools(){
+  toolsBar.innerHTML = "";
+  // Altijd zichtbaar:
+  toolsBar.appendChild(bReset);
+  // Alleen als Back Office open is:
+  if (backUnlocked){
+    toolsBar.appendChild(bSeed);
+    toolsBar.appendChild(bPrio1);
+    toolsBar.appendChild(bPrio2);
+    toolsBar.appendChild(btnView);
+  }
+}
+rebuildTools();
 
 /* ===== Seed ===== */
 function getSeed(){
@@ -316,7 +323,7 @@ btnBackoffice.onclick = () => {
     backUnlocked = true;
     canEdit      = true;
     localStorage.setItem(LS_BACK_KEY,"1");
-    rebuildTools();
+    rebuildTools();        // 🔹 pas na code toont hij de extra knoppen
     updateUI();
     render();
     alert("Back Office geopend ✅");
