@@ -18,51 +18,178 @@
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
     }
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:20px;
+      backdrop-filter:blur(6px);
+    }
     header.panel{
-      display:flex;justify-content:space-between;align-items:center;
-      gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;
-      background:var(--panel);border:1px solid var(--line);border-radius:14px
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:14px 16px;
+      margin-bottom:12px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px;
     }
     .brand .h{font-weight:800;font-size:18px}
     .brand .s{color:var(--muted);font-size:12px}
-    .nav{display:flex;gap:10px;margin-bottom:12px}
-    .nav a{color:#d8e6ff}
-    button{background:#101624;color:var(--text);border:1px solid var(--line);
-      border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
-    .header-right{display:flex;align-items:center;gap:8px}
 
-    /* tools standaard onzichtbaar: alleen Back Office-knop zichtbaar */
+    .header-right{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    /* tools: alleen zichtbaar als Back Office open is */
     .tools{
       display:none;
       gap:8px;
       flex-wrap:wrap;
     }
 
-    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
+    button{
+      background:#101624;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+
+    .add{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      margin:8px 0 4px;
+    }
     input[type="text"]{
-      width:100%;padding:12px 14px;border-radius:10px;
-      border:1px solid var(--line);background:#0b0f18;color:var(--text)
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0b0f18;
+      color:var(--text);
     }
-    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+
+    ul{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:8px;
+    }
     li.item{
-      display:flex;align-items:center;gap:8px;
-      background:#0f1320;border:1px solid #262c39;border-radius:12px;
-      padding:12px 14px
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:12px;
+      padding:12px 14px;
+      cursor:grab;
     }
-    li.item.done{opacity:.6;text-decoration:line-through}
-    .label{flex:1;cursor:pointer}
+    li.item.done{
+      opacity:.6;
+      text-decoration:line-through;
+    }
+    li.item.dragging{
+      opacity:.5;
+      outline:1px dashed #6aa0ff;
+      cursor:grabbing;
+    }
+
+    .label{
+      flex:1;
+      cursor:pointer;
+    }
     .btn{
-      display:inline-flex;align-items:center;justify-content:center;
-      width:28px;height:28px;border:1px solid #444;border-radius:6px;
-      background:#151a23;cursor:pointer;opacity:.95
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:28px;
+      height:28px;
+      border:1px solid #444;
+      border-radius:6px;
+      background:#151a23;
+      cursor:pointer;
+      opacity:.95;
     }
-    .divider{height:1px;background:#2a2f3a;margin:12px 0;border-radius:1px}
+
+    .nav{display:flex;gap:10px;margin-bottom:12px}
+    .nav a{color:#d8e6ff}
+
+    .divider{
+      height:1px;
+      background:#2a2f3a;
+      margin:12px 0;
+      border-radius:1px;
+    }
     .section-head{
-      font-weight:800;opacity:.95;margin:6px 0 8px;
-      text-transform:uppercase;letter-spacing:.5px;color:#fff
+      font-weight:800;
+      opacity:.95;
+      margin:6px 0 8px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      color:#fff;
     }
-    footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+
+    footer.note{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+    }
+
+    /* ===== Code-popup met sterretjes ===== */
+    .code-modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.7);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    .code-panel{
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:14px;
+      padding:18px 16px 14px;
+      min-width:260px;
+      max-width:90%;
+    }
+    .code-panel h2{
+      margin:0 0 8px;
+      font-size:16px;
+    }
+    .code-panel .hint{
+      margin:0 0 10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .code-panel input{
+      width:100%;
+      margin-bottom:10px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #2a2f3a;
+      background:#0b0f18;
+      color:#eef2f8;
+    }
+    .code-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+    }
   </style>
 </head>
 <body>
@@ -76,6 +203,9 @@
       </div>
       <div class="header-right">
         <button id="btnBackoffice" type="button">Back Office</button>
+        <!-- Deze blijft altijd zichtbaar voor iedereen -->
+        <button id="btnResetAll" type="button">Alles herstellen</button>
+        <!-- De rest van de knoppen komen pas bij Back Office -->
         <div class="tools"></div>
       </div>
     </header>
@@ -86,7 +216,7 @@
         <button id="btnAdd">Toevoegen</button>
       </div>
 
-      <!-- SNELLE TAKEN -->
+      <!-- Sectie: Snelle taken -->
       <section id="sec-fast">
         <div class="section-head">SNELLE TAKEN</div>
         <ul id="list-fast"></ul>
@@ -94,7 +224,7 @@
 
       <div id="sec-divider" class="divider"></div>
 
-      <!-- GROTE SCHOONMAAKKLUSSEN -->
+      <!-- Sectie: Grote klussen -->
       <section id="sec-big">
         <div class="section-head">GROTE SCHOONMAAKKLUSSEN</div>
         <ul id="list-big"></ul>
@@ -102,6 +232,19 @@
     </div>
 
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
+  </div>
+
+  <!-- Popup voor code met sterretjes -->
+  <div id="codeModal" class="code-modal" hidden>
+    <div class="code-panel">
+      <h2>Beheerderscode</h2>
+      <p class="hint">Voer de code in om Back Office / bewerken te openen.</p>
+      <input id="codeField" type="password" placeholder="Code" />
+      <div class="code-actions">
+        <button id="codeCancel" type="button">Annuleer</button>
+        <button id="codeOk" type="button">OK</button>
+      </div>
+    </div>
   </div>
 
 <script type="module">
@@ -114,163 +257,52 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ===== Config ===== */
-const DOC_ID     = "schoonmaak_klussen";
-const ADMIN_CODE = "Yali313";
-const LS_EDIT    = "editMode";
-const LS_BACK    = "backoffice_unlocked";
+const DOC_ID      = "schoonmaak_klussen";
+const ADMIN_CODE  = "Yali313";
+const LS_BACK_KEY = "bo_schoonmaak_unlocked";
 
 /* ===== UI refs ===== */
-const elRoot      = document.getElementById("card-root");
-const secFast     = document.getElementById("sec-fast");
-const secBig      = document.getElementById("sec-big");
-const secDivider  = document.getElementById("sec-divider");
-
-const ulFast = document.getElementById("list-fast");
-const ulBig  = document.getElementById("list-big");
-const elNew  = document.getElementById("newItem");
-const btnAdd = document.getElementById("btnAdd");
-
 const toolsBar      = document.querySelector(".tools");
 const btnBackoffice = document.getElementById("btnBackoffice");
+const btnResetAll   = document.getElementById("btnResetAll");
 
-/* ===== Toolbar-knoppen ===== */
-const bEdit   = document.createElement("button"); bEdit.textContent  = "🔓 Bewerk-modus";
-const bView   = document.createElement("button"); bView.textContent  = "🔒 Alleen afvinken";
-const bReset  = document.createElement("button"); bReset.textContent = "Resetten";
-const bSeed   = document.createElement("button"); bSeed.textContent  = "Herstel lijst";
-const bPrio1  = document.createElement("button"); bPrio1.textContent = "Prioriteit 1";
-const bPrio2  = document.createElement("button"); bPrio2.textContent = "Prioriteit 2";
-toolsBar.replaceChildren(bEdit,bView,bReset,bSeed,bPrio1,bPrio2);
+const elRoot  = document.getElementById("card-root");
+const elNew   = document.getElementById("newItem");
+const btnAdd  = document.getElementById("btnAdd");
+
+const secFast = document.getElementById("sec-fast");
+const secBig  = document.getElementById("sec-big");
+
+const ulFast  = document.getElementById("list-fast");
+const ulBig   = document.getElementById("list-big");
+
+/* Code-popup refs */
+const codeModal  = document.getElementById("codeModal");
+const codeField  = document.getElementById("codeField");
+const codeOk     = document.getElementById("codeOk");
+const codeCancel = document.getElementById("codeCancel");
+
+/* ===== Toolbar-knoppen (alleen binnen Back Office) ===== */
+const btnEdit  = document.createElement("button"); btnEdit.textContent  = "🔓 Bewerk-modus";
+const btnView  = document.createElement("button"); btnView.textContent  = "🔒 Alleen afvinken";
+const bSeed    = document.createElement("button"); bSeed.textContent    = "Resetten";
+const bPrio1   = document.createElement("button"); bPrio1.textContent   = "Prioriteit 1";
+const bPrio2   = document.createElement("button"); bPrio2.textContent   = "Prioriteit 2";
+
+toolsBar.replaceChildren(btnEdit, btnView, bSeed, bPrio1, bPrio2);
 
 /* ===== State ===== */
-let backUnlocked = (localStorage.getItem(LS_BACK)==="1");
-let canEdit      = backUnlocked && (localStorage.getItem(LS_EDIT)==="1");
+let backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+let canEdit      = (localStorage.getItem("editMode")==="1");
+let viewMode     = "ALL";     // ALL | FAST | BIG
+
 let items = {};
 let order = [];
-let viewMode = "ALL"; // ALL | FAST | BIG
 
-/* ===== Helpers ===== */
-function makeBtn(txt,title,onClick){
-  const b=document.createElement("button");
-  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
-  b.addEventListener("click",(e)=>{
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-    onClick();
-  },{capture:true});
-  return b;
-}
-
-/* Snelle vs grote taken bepalen */
-const FAST_PREFIXES = [
-  "Dresstafel",
-  "Counterblad",
-  "Tafeltje",
-  "Bin aan de bovenkant",
-  "Vriezer aan de voorkant",
-  "Bovenkant milkshake & ijs apparaat",
-  "Bezorgtafel schoonmaken en de tassen legen",
-  "Fietsbakken legen van de bonnen en schoonmaken",
-  "Vriezers in opslag met een doekje schoonmaken",
-  "Opslag & counter bij de shake apparaat vegen en dweilen",
-  "Deurposten schoonmaken",
-  "Bubble tea shaker/sealer schoonmaken",
-  "Voorkant en de bovenkant van de bubble tea koeling",
-  "De shakers(bekers) gronding schoonmaken"
-];
-function isFast(k){
-  return FAST_PREFIXES.some(w=>k.startsWith(w));
-}
-
-/* ===== Back Office zichtbaarheid ===== */
-function updateToolsVisible(){
-  toolsBar.style.display = backUnlocked ? "flex" : "none";
-}
-updateToolsVisible();
-
-/* ===== Back Office klik (met sterretjes) ===== */
-btnBackoffice.addEventListener("click", ()=>{
-  if (backUnlocked){
-    // al ontgrendeld → doe niks bijzonders
-    alert("Back Office is al geopend ✅");
-    return;
-  }
-
-  const overlay = document.createElement("div");
-  Object.assign(overlay.style,{
-    position:"fixed",inset:"0",background:"rgba(0,0,0,.65)",
-    display:"flex",alignItems:"center",justifyContent:"center",zIndex:"9999"
-  });
-  const box = document.createElement("div");
-  Object.assign(box.style,{
-    background:"#0f1320",border:"1px solid #262c39",borderRadius:"12px",
-    padding:"18px 16px",width:"260px",maxWidth:"90%",textAlign:"center"
-  });
-  const title = document.createElement("div");
-  title.textContent = "Beheerderscode";
-  title.style.fontWeight = "700";
-  title.style.marginBottom = "6px";
-  const hint = document.createElement("div");
-  hint.textContent = "Voer de code in om Back Office te openen.";
-  hint.style.fontSize = "12px";
-  hint.style.opacity = "0.8";
-  hint.style.marginBottom = "10px";
-  const input = document.createElement("input");
-  input.type = "password";
-  input.placeholder = "••••••";
-  Object.assign(input.style,{
-    width:"100%",padding:"9px 10px",borderRadius:"8px",
-    border:"1px solid #333",background:"#0b0f18",color:"#fff",
-    marginBottom:"10px"
-  });
-  const row = document.createElement("div");
-  row.style.display="flex";
-  row.style.justifyContent="flex-end";
-  row.style.gap="8px";
-  const btnCancel=document.createElement("button");
-  btnCancel.textContent="Annuleren";
-  Object.assign(btnCancel.style,{
-    background:"#333",color:"#ccc",border:"1px solid #555",
-    borderRadius:"8px",padding:"7px 10px",cursor:"pointer"
-  });
-  const btnOk=document.createElement("button");
-  btnOk.textContent="Ontgrendel";
-  Object.assign(btnOk.style,{
-    background:"#1c2333",color:"#fff",border:"1px solid #444",
-    borderRadius:"8px",padding:"7px 12px",cursor:"pointer"
-  });
-
-  row.append(btnCancel,btnOk);
-  box.append(title,hint,input,row);
-  overlay.append(box);
-  document.body.append(overlay);
-  input.focus();
-
-  btnCancel.onclick = ()=> overlay.remove();
-  btnOk.onclick = ()=>{
-    if (input.value.trim()===ADMIN_CODE){
-      backUnlocked = true;
-      canEdit = true;
-      localStorage.setItem(LS_BACK,"1");
-      localStorage.setItem(LS_EDIT,"1");
-      updateToolsVisible();
-      updateUI();
-      render();
-      overlay.remove();
-      alert("Back Office geopend ✅");
-    } else {
-      alert("Onjuiste code");
-      input.value = "";
-      input.focus();
-    }
-  };
-});
-
-/* ===== Seed (begin-lijst) ===== */
+/* ===== Seed – volledige lijst ===== */
 function getSeed(){
   const items = {
-    // — SNELLE TAKEN
+    // — Snelle taken 
     "Dresstafel volledig schoonmaken, onder de kratten en mandjes": false,
     "Counterblad schoonmaken en desinfecteren (inclusief schermen)": false,
     "Tafeltje bij shake apparaat schoonmaken en daarna met RVS": false,
@@ -286,7 +318,7 @@ function getSeed(){
     "Voorkant en de bovenkant van de bubble tea koeling schoonamekn": false,
     "De shakers(bekers) gronding schoonmaken met spons en water": false,
 
-    // — GROTE SCHOONMAAKKLUSSEN
+    // — Grote klussen
     "Vriezers in opslag schoonmaken": false,
     "Vriezers in opslag naar voren en erachter schoonmaken": false,
     "Rubbers van de vriezers/koelkast in opslag schoonmaken en de binnenkant stofzuigen": false,
@@ -309,17 +341,122 @@ function getSeed(){
   return { items, order };
 }
 
-/* ===== State + realtime ===== */
+/* ===== Snelle vs grote klussen bepalen ===== */
+const FAST_PREFIXES = [
+  "Dresstafel",
+  "Counterblad",
+  "Tafeltje",
+  "Bin",
+  "Vriezer aan de voorkant",
+  "Vriezer aan de voorkant schoonmaken",
+  "Bovenkant milkshake",
+  "Bezorgtafel schoonmaken en de tassen legen",
+  "Fietsbakken",
+  "Vriezers in opslag met",
+  "Opslag & counter",
+  "Deurposten",
+  "Bubble tea",
+  "Voorkant en de bovenkant van de bubble tea koeling",
+  "De shakers"
+];
+function isFast(label){
+  return FAST_PREFIXES.some(p => label.startsWith(p));
+}
+
+/* ===== Code-popup helper (met sterretjes) ===== */
+function askAdminCode(onSuccess){
+  codeField.value = "";
+  codeModal.hidden = false;
+  codeField.focus();
+
+  function close(){
+    codeModal.hidden = true;
+    codeOk.onclick = null;
+    codeCancel.onclick = null;
+  }
+
+  codeCancel.onclick = () => {
+    close();
+  };
+
+  codeOk.onclick = () => {
+    if (codeField.value.trim() === ADMIN_CODE){
+      close();
+      onSuccess();
+    } else {
+      alert("Onjuiste code");
+      codeField.focus();
+      codeField.select();
+    }
+  };
+}
+
+codeField.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    codeOk.click();
+  }
+});
+
+/* ===== Back Office zichtbaarheid ===== */
+function updateToolsVisible(){
+  toolsBar.style.display = backUnlocked ? "flex" : "none";
+}
+updateToolsVisible();
+
+/* ===== Back Office knop ===== */
+btnBackoffice.onclick = () => {
+  askAdminCode(() => {
+    backUnlocked = true;
+    localStorage.setItem(LS_BACK_KEY,"1");
+    updateToolsVisible();
+    render();
+  });
+};
+
+/* ===== Bewerk / Alleen afvinken ===== */
+btnEdit.onclick = () => {
+  askAdminCode(() => {
+    canEdit = true;
+    localStorage.setItem("editMode","1");
+    updateUI();
+    render();
+  });
+};
+
+btnView.onclick = () => {
+  canEdit = false;
+  localStorage.removeItem("editMode");
+  updateUI();
+  render();
+};
+
+/* ===== Storage sync (andere tabbladen) ===== */
+window.addEventListener("storage", e=>{
+  if (e.key === "editMode"){
+    canEdit = (localStorage.getItem("editMode")==="1");
+    updateUI();
+    render();
+  }
+  if (e.key === LS_BACK_KEY){
+    backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+    updateToolsVisible();
+    render();
+  }
+});
+
+/* ===== Firestore sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
   if (snap.exists()){
-    const d=snap.data();
+    const d = snap.data();
     items = d.items || {};
     order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
     Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    const s=getSeed();
-    items=s.items; order=s.order;
-    await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+    const s = getSeed();
+    items = s.items;
+    order = s.order;
+    await setDoc(doc(db,"lists",DOC_ID), { items, order, updatedAt: serverTimestamp() }, { merge:false });
   }
   render();
 });
@@ -329,131 +466,203 @@ async function save(p){
   await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
 }
 
-/* ===== UI state ===== */
+/* ===== UI helper ===== */
+function makeBtn(txt,title,onClick){
+  const b=document.createElement("button");
+  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
+  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.(); onClick(); },{capture:true});
+  return b;
+}
+
 function updateUI(){
-  const inputs = [elNew, btnAdd];
-  inputs.forEach(el=>{
-    if(!el) return;
-    // alleen bewerkbaar als backoffice open EN bewerk-modus aan
-    el.disabled = !(backUnlocked && canEdit);
-    el.style.opacity       = (backUnlocked && canEdit) ? 1 : .6;
-    el.style.pointerEvents = (backUnlocked && canEdit) ? "auto" : "none";
-  });
-
-  // Reset mag altijd als je in Back Office zit
-  bReset.disabled = !backUnlocked;
-  bReset.style.opacity = backUnlocked ? 1 : .5;
-
-  // Herstel lijst: alleen in bewerk-modus
-  bSeed.disabled = !(backUnlocked && canEdit);
-  bSeed.style.opacity = (backUnlocked && canEdit) ? 1 : .5;
-
-  // Prioriteit-knoppen: alleen Back Office nodig
-  [bPrio1,bPrio2].forEach(b=>{
-    b.disabled = !backUnlocked;
-    b.style.opacity = backUnlocked ? 1 : .5;
+  const canType = backUnlocked && canEdit;
+  [elNew, btnAdd].forEach(el=>{
+    if (!el) return;
+    el.disabled = !canType;
+    el.style.opacity = canType ? 1 : .6;
+    el.style.pointerEvents = canType ? "auto" : "none";
   });
 }
 
-/* ===== Render ===== */
-function applyViewMode(){
-  if (viewMode==="ALL"){
-    secFast.style.display = "";
-    secBig.style.display  = "";
-    secDivider.style.display = "";
-  } else if (viewMode==="FAST"){
-    secFast.style.display = "";
-    secBig.style.display  = "none";
-    secDivider.style.display = "none";
-  } else if (viewMode==="BIG"){
-    secFast.style.display = "none";
-    secBig.style.display  = "";
-    secDivider.style.display = "none";
-  }
-}
-
+/* ===== Render + drag & drop ===== */
 function render(){
-  ulFast.innerHTML=""; ulBig.innerHTML="";
+  ulFast.innerHTML = "";
+  ulBig.innerHTML  = "";
 
-  const keys = order.length ? order.slice() : Object.keys(items);
-  const fastKeys = keys.filter(k=>isFast(k));
-  const bigKeys  = keys.filter(k=>!isFast(k));
+  const base = order.length ? order.slice() : Object.keys(items);
+  let fastKeys = base.filter(k => isFast(k));
+  let bigKeys  = base.filter(k => !isFast(k));
 
-  const renderList = (arr, ul)=>{
-    arr.forEach((k)=>{
-      if(!(k in items)) return;
-      const li=document.createElement("li");
-      li.className="item"+(items[k]?" done":"");
+  const renderList = (arr, target, group)=>{
+    target.innerHTML = "";
+    arr.forEach((k, idx)=>{
+      if (!(k in items)) return;
 
-      const cb=document.createElement("input");
-      cb.type="checkbox"; cb.checked=!!items[k];
-      cb.onchange=()=>toggle(k);
+      const li = document.createElement("li");
+      li.className = "item" + (items[k] ? " done" : "");
+      li.dataset.idx   = String(idx);
+      li.dataset.group = group;
 
-      const span=document.createElement("div");
-      span.className="label"; span.textContent=k;
-      if(!canEdit) span.onclick=()=>toggle(k);
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!items[k];
+      cb.onchange = ()=> toggle(k);
+
+      const span = document.createElement("div");
+      span.className = "label";
+      span.textContent = k;
+      if (!canEdit) span.onclick = ()=> toggle(k);
 
       if (backUnlocked && canEdit){
+        // drag alleen in bewerk-modus
+        li.draggable = true;
+        li.addEventListener("dragstart", e=>{
+          li.classList.add("dragging");
+          e.dataTransfer.setData("text/plain", JSON.stringify({ group, from: idx }));
+        });
+        li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
+        li.addEventListener("dragover", e=> e.preventDefault());
+        li.addEventListener("drop", e=>{
+          e.preventDefault();
+          const data = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
+          if (!data || data.group !== group) return;
+          const from = data.from;
+          const to   = Number(li.dataset.idx);
+          if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return;
+
+          // lokale kopie van groep herschikken
+          let gArr = group === "FAST" ? fastKeys.slice() : bigKeys.slice();
+          const [moved] = gArr.splice(from,1);
+          gArr.splice(to,0,moved);
+
+          if (group === "FAST") fastKeys = gArr;
+          else                  bigKeys  = gArr;
+
+          // nieuwe globale order: eerst fast, dan big
+          const nextOrder = fastKeys.concat(bigKeys);
+          order = nextOrder;
+          save({ order: nextOrder });
+          render();
+        });
+
         const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
         const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
-        li.append(cb,span,pen,del);
+        li.append(cb, span, pen, del);
       } else {
-        li.append(cb,span);
+        li.append(cb, span);
       }
-      ul.appendChild(li);
+
+      target.appendChild(li);
     });
   };
 
-  renderList(fastKeys, ulFast);
-  renderList(bigKeys,  ulBig);
+  // secties vullen
+  renderList(fastKeys, ulFast, "FAST");
+  renderList(bigKeys,  ulBig,  "BIG");
 
-  applyViewMode();
+  applyView();
   updateUI();
 }
 
-/* ===== Actions ===== */
-function toggle(k){
-  const next={...items,[k]:!items[k]};
-  items=next;
-  save({items:next});
+/* ===== View filters (Prioriteit 1/2) ===== */
+function applyView(){
+  if (viewMode === "BIG"){
+    secBig.style.display  = "";
+    secFast.style.display = "none";
+  } else if (viewMode === "FAST"){
+    secFast.style.display = "";
+    secBig.style.display  = "none";
+  } else {
+    secFast.style.display = "";
+    secBig.style.display  = "";
+  }
 }
 
-function addItem(t){
-  if(!(backUnlocked && canEdit)) return;
-  const x=(t||"").trim(); if(!x) return;
-  if(x in items){ alert("Bestaat al."); return; }
-  const nextMap = { ...items, [x]: false };
-  const nextOrd = order.concat(x);
-  items = nextMap; order = nextOrd;
-  render(); save({ items: nextMap, order: nextOrd });
+/* ===== Actie-knoppen ===== */
+
+/* Deze blijft ALTIJD zichtbaar (ook zonder Back Office / bewerken):
+   → alleen ALLE VINKJES UIT, geen items aanpassen. */
+btnResetAll.onclick = ()=>{
+  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
+  items = next;
+  save({ items: next });
+};
+
+/* Volledige begin-lijst (alle items + volgorde) – alleen in Back Office + bewerkmodus */
+bSeed.onclick = async ()=>{
+  if (!backUnlocked || !canEdit) return;
+  if (!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
+  const s = getSeed();
+  items = s.items;
+  order = s.order;
+  await setDoc(doc(db,"lists",DOC_ID), { items, order, updatedAt: serverTimestamp() }, { merge:false });
+  render();
+};
+
+/* Prioriteit 1 = alleen grote klussen */
+bPrio1.onclick = ()=>{
+  viewMode = (viewMode === "BIG") ? "ALL" : "BIG";
+  applyView();
+};
+
+/* Prioriteit 2 = alleen snelle taken */
+bPrio2.onclick = ()=>{
+  viewMode = (viewMode === "FAST") ? "ALL" : "FAST";
+  applyView();
+};
+
+/* ===== Basis-acties ===== */
+function toggle(k){
+  const next = { ...items, [k]: !items[k] };
+  items = next;
+  save({ items: next });
 }
+
+btnAdd.onclick = ()=>{
+  if (!backUnlocked || !canEdit) return;
+  const x = (elNew.value || "").trim();
+  if (!x) return;
+  if (x in items){ alert("Bestaat al."); return; }
+  items = { ...items, [x]: false };
+  order = order.concat(x);
+  elNew.value = "";
+  elNew.focus();
+  save({ items, order });
+  render();
+};
+
+elNew.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    btnAdd.click();
+  }
+});
 
 async function removeItemConfirm(k){
-  if(!(backUnlocked && canEdit)) return;
-  if(!(k in items)) return;
-  if(!confirm(`Verwijder "${k}"?`)) return;
+  if (!backUnlocked || !canEdit) return;
+  if (!(k in items)) return;
+  if (!confirm(`Verwijder "${k}"?`)) return;
 
-  const nextMap = { ...items };
-  delete nextMap[k];
-  const nextOrd = order.filter(x=>x!==k);
-  items = nextMap; order = nextOrd;
+  const nextItems = { ...items };
+  delete nextItems[k];
+  const nextOrder = order.filter(x=>x!==k);
+  items = nextItems;
+  order = nextOrder;
   render();
 
-  await updateDoc(doc(db,"lists",DOC_ID),{
+  await updateDoc(doc(db,"lists",DOC_ID), {
     [`items.${k}`]: deleteField(),
-    order: nextOrd,
+    order: nextOrder,
     updatedAt: serverTimestamp()
   });
 }
 
 async function renameItem(oldK){
-  if(!(backUnlocked && canEdit)) return;
-  if(!(oldK in items)) return;
-
+  if (!backUnlocked || !canEdit || !(oldK in items)) return;
   const s = prompt("Nieuwe naam:", oldK);
-  if (s===null) return;
-  const n = (s||"").trim();
-  if(!n || n===oldK) return;
+  if (s === null) return;
+  const n = (s || "").trim();
+  if (!n || n === oldK) return;
 
   const exists = (n in items);
   const merged = !!items[oldK] || !!items[n];
@@ -475,82 +684,13 @@ async function renameItem(oldK){
   order = nextOrder;
   render();
 
-  await updateDoc(doc(db,"lists",DOC_ID),{
+  await updateDoc(doc(db,"lists",DOC_ID), {
     [`items.${oldK}`]: deleteField(),
     [`items.${n}`]: merged,
     order: nextOrder,
     updatedAt: serverTimestamp()
   });
 }
-
-/* ===== Toolbar acties ===== */
-bEdit.onclick = ()=>{
-  if (!backUnlocked){
-    alert("Open eerst Back Office met de code.");
-    return;
-  }
-  canEdit = true;
-  localStorage.setItem(LS_EDIT,"1");
-  render();
-  alert("Bewerk-modus aan ✅");
-};
-
-bView.onclick = ()=>{
-  if (!backUnlocked){
-    alert("Back Office is niet geopend.");
-    return;
-  }
-  canEdit = false;
-  localStorage.removeItem(LS_EDIT);
-  render();
-  alert("Alleen afvinken 🔒");
-};
-
-bReset.onclick = ()=>{
-  if (!backUnlocked) return;
-  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
-  items = next;
-  save({ items: next });
-  render();
-};
-
-bSeed.onclick = async ()=>{
-  if(!(backUnlocked && canEdit)) return;
-  if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  const s = getSeed();
-  items = s.items; order = s.order;
-  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
-  viewMode = "ALL";
-  render();
-};
-
-bPrio1.onclick = ()=>{
-  if (!backUnlocked) return;
-  viewMode = "BIG";
-  applyViewMode();
-};
-
-bPrio2.onclick = ()=>{
-  if (!backUnlocked) return;
-  viewMode = "FAST";
-  applyViewMode();
-};
-
-/* ===== Events ===== */
-btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
-elNew.addEventListener("keydown", e=>{
-  if(e.key==="Enter"){
-    e.preventDefault();
-    addItem(elNew.value);
-    elNew.value=""; 
-  }
-});
-
-/* sync tussen tabbladen */
-window.addEventListener("storage",(e)=>{
-  if (e.key===LS_BACK){ backUnlocked = (localStorage.getItem(LS_BACK)==="1"); updateToolsVisible(); updateUI(); render(); }
-  if (e.key===LS_EDIT){ canEdit = backUnlocked && (localStorage.getItem(LS_EDIT)==="1"); updateUI(); render(); }
-});
 </script>
 </body>
 </html>
