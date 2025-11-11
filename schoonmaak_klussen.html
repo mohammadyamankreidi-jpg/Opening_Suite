@@ -46,9 +46,8 @@
       gap:8px;
     }
 
-    /* tools: alleen zichtbaar als Back Office open is */
     .tools{
-      display:none;
+      display:flex;        /* altijd zichtbaar (maar niet alle knoppen erin) */
       gap:8px;
       flex-wrap:wrap;
     }
@@ -148,48 +147,6 @@
       font-size:12px;
       text-align:center;
     }
-
-    /* ===== Code-popup met sterretjes ===== */
-    .code-modal{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.7);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index:50;
-    }
-    .code-panel{
-      background:#0f1320;
-      border:1px solid #262c39;
-      border-radius:14px;
-      padding:18px 16px 14px;
-      min-width:260px;
-      max-width:90%;
-    }
-    .code-panel h2{
-      margin:0 0 8px;
-      font-size:16px;
-    }
-    .code-panel .hint{
-      margin:0 0 10px;
-      font-size:12px;
-      color:var(--muted);
-    }
-    .code-panel input{
-      width:100%;
-      margin-bottom:10px;
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid #2a2f3a;
-      background:#0b0f18;
-      color:#eef2f8;
-    }
-    .code-actions{
-      display:flex;
-      justify-content:flex-end;
-      gap:8px;
-    }
   </style>
 </head>
 <body>
@@ -203,9 +160,6 @@
       </div>
       <div class="header-right">
         <button id="btnBackoffice" type="button">Back Office</button>
-        <!-- Deze blijft altijd zichtbaar voor iedereen -->
-        <button id="btnResetAll" type="button">Alles herstellen</button>
-        <!-- De rest van de knoppen komen pas bij Back Office -->
         <div class="tools"></div>
       </div>
     </header>
@@ -234,19 +188,6 @@
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
   </div>
 
-  <!-- Popup voor code met sterretjes -->
-  <div id="codeModal" class="code-modal" hidden>
-    <div class="code-panel">
-      <h2>Beheerderscode</h2>
-      <p class="hint">Voer de code in om Back Office / bewerken te openen.</p>
-      <input id="codeField" type="password" placeholder="Code" />
-      <div class="code-actions">
-        <button id="codeCancel" type="button">Annuleer</button>
-        <button id="codeOk" type="button">OK</button>
-      </div>
-    </div>
-  </div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
@@ -264,7 +205,6 @@ const LS_BACK_KEY = "bo_schoonmaak_unlocked";
 /* ===== UI refs ===== */
 const toolsBar      = document.querySelector(".tools");
 const btnBackoffice = document.getElementById("btnBackoffice");
-const btnResetAll   = document.getElementById("btnResetAll");
 
 const elRoot  = document.getElementById("card-root");
 const elNew   = document.getElementById("newItem");
@@ -276,30 +216,22 @@ const secBig  = document.getElementById("sec-big");
 const ulFast  = document.getElementById("list-fast");
 const ulBig   = document.getElementById("list-big");
 
-/* Code-popup refs */
-const codeModal  = document.getElementById("codeModal");
-const codeField  = document.getElementById("codeField");
-const codeOk     = document.getElementById("codeOk");
-const codeCancel = document.getElementById("codeCancel");
-
-/* ===== Toolbar-knoppen (alleen binnen Back Office) ===== */
-const btnEdit  = document.createElement("button"); btnEdit.textContent  = "🔓 Bewerk-modus";
-const btnView  = document.createElement("button"); btnView.textContent  = "🔒 Alleen afvinken";
-const bSeed    = document.createElement("button"); bSeed.textContent    = "Resetten";
-const bPrio1   = document.createElement("button"); bPrio1.textContent   = "Prioriteit 1";
-const bPrio2   = document.createElement("button"); bPrio2.textContent   = "Prioriteit 2";
-
-toolsBar.replaceChildren(btnEdit, btnView, bSeed, bPrio1, bPrio2);
+/* ===== Toolbar-knoppen ===== */
+const bReset = document.createElement("button"); bReset.textContent = "Alles herstellen";
+const bSeed  = document.createElement("button"); bSeed.textContent  = "Resetten";
+const bPrio1 = document.createElement("button"); bPrio1.textContent = "Prioriteit 1";
+const bPrio2 = document.createElement("button"); bPrio2.textContent = "Prioriteit 2";
+const btnView= document.createElement("button"); btnView.textContent = "Alleen afvinken";
 
 /* ===== State ===== */
-let backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
-let canEdit      = (localStorage.getItem("editMode")==="1");
-let viewMode     = "ALL";     // ALL | FAST | BIG
+let backUnlocked = (localStorage.getItem(LS_BACK_KEY) === "1");
+let canEdit      = backUnlocked;     // als backoffice open → standaard editen
+let viewMode     = "ALL";            // ALL | FAST | BIG
 
 let items = {};
 let order = [];
 
-/* ===== Seed – volledige lijst ===== */
+/* ===== Seed ===== */
 function getSeed(){
   const items = {
     // — Snelle taken 
@@ -341,14 +273,13 @@ function getSeed(){
   return { items, order };
 }
 
-/* ===== Snelle vs grote klussen bepalen ===== */
+/* Snelle vs grote klussen */
 const FAST_PREFIXES = [
   "Dresstafel",
   "Counterblad",
   "Tafeltje",
   "Bin",
   "Vriezer aan de voorkant",
-  "Vriezer aan de voorkant schoonmaken",
   "Bovenkant milkshake",
   "Bezorgtafel schoonmaken en de tassen legen",
   "Fietsbakken",
@@ -363,87 +294,44 @@ function isFast(label){
   return FAST_PREFIXES.some(p => label.startsWith(p));
 }
 
-/* ===== Code-popup helper (met sterretjes) ===== */
-function askAdminCode(onSuccess){
-  codeField.value = "";
-  codeModal.hidden = false;
-  codeField.focus();
-
-  function close(){
-    codeModal.hidden = true;
-    codeOk.onclick = null;
-    codeCancel.onclick = null;
+/* ===== Tools zichtbaarheid: Altijd Alles herstellen, rest na Back Office ===== */
+function rebuildTools(){
+  toolsBar.innerHTML = "";
+  // Altijd zichtbaar:
+  toolsBar.appendChild(bReset);
+  // Alleen als Back Office open is:
+  if (backUnlocked){
+    toolsBar.appendChild(bSeed);
+    toolsBar.appendChild(bPrio1);
+    toolsBar.appendChild(bPrio2);
+    toolsBar.appendChild(btnView);
   }
-
-  codeCancel.onclick = () => {
-    close();
-  };
-
-  codeOk.onclick = () => {
-    if (codeField.value.trim() === ADMIN_CODE){
-      close();
-      onSuccess();
-    } else {
-      alert("Onjuiste code");
-      codeField.focus();
-      codeField.select();
-    }
-  };
 }
-
-codeField.addEventListener("keydown", e=>{
-  if (e.key === "Enter"){
-    e.preventDefault();
-    codeOk.click();
-  }
-});
-
-/* ===== Back Office zichtbaarheid ===== */
-function updateToolsVisible(){
-  toolsBar.style.display = backUnlocked ? "flex" : "none";
-}
-updateToolsVisible();
+rebuildTools();
 
 /* ===== Back Office knop ===== */
 btnBackoffice.onclick = () => {
-  askAdminCode(() => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE){
     backUnlocked = true;
+    canEdit      = true;
     localStorage.setItem(LS_BACK_KEY,"1");
-    updateToolsVisible();
-    render();
-  });
-};
-
-/* ===== Bewerk / Alleen afvinken ===== */
-btnEdit.onclick = () => {
-  askAdminCode(() => {
-    canEdit = true;
-    localStorage.setItem("editMode","1");
+    rebuildTools();
     updateUI();
     render();
-  });
+    alert("Back Office geopend ✅");
+  } else {
+    alert("Onjuiste code");
+  }
 };
 
+/* ===== Alleen afvinken ===== */
 btnView.onclick = () => {
   canEdit = false;
-  localStorage.removeItem("editMode");
   updateUI();
   render();
+  alert("Alleen afvinken 🔒");
 };
-
-/* ===== Storage sync (andere tabbladen) ===== */
-window.addEventListener("storage", e=>{
-  if (e.key === "editMode"){
-    canEdit = (localStorage.getItem("editMode")==="1");
-    updateUI();
-    render();
-  }
-  if (e.key === LS_BACK_KEY){
-    backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
-    updateToolsVisible();
-    render();
-  }
-});
 
 /* ===== Firestore sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
@@ -484,7 +372,7 @@ function updateUI(){
   });
 }
 
-/* ===== Render + drag & drop ===== */
+/* ===== Render + drag ===== */
 function render(){
   ulFast.innerHTML = "";
   ulBig.innerHTML  = "";
@@ -514,7 +402,7 @@ function render(){
       if (!canEdit) span.onclick = ()=> toggle(k);
 
       if (backUnlocked && canEdit){
-        // drag alleen in bewerk-modus
+        // DRAG alleen in edit
         li.draggable = true;
         li.addEventListener("dragstart", e=>{
           li.classList.add("dragging");
@@ -530,7 +418,6 @@ function render(){
           const to   = Number(li.dataset.idx);
           if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return;
 
-          // lokale kopie van groep herschikken
           let gArr = group === "FAST" ? fastKeys.slice() : bigKeys.slice();
           const [moved] = gArr.splice(from,1);
           gArr.splice(to,0,moved);
@@ -538,7 +425,6 @@ function render(){
           if (group === "FAST") fastKeys = gArr;
           else                  bigKeys  = gArr;
 
-          // nieuwe globale order: eerst fast, dan big
           const nextOrder = fastKeys.concat(bigKeys);
           order = nextOrder;
           save({ order: nextOrder });
@@ -556,7 +442,6 @@ function render(){
     });
   };
 
-  // secties vullen
   renderList(fastKeys, ulFast, "FAST");
   renderList(bigKeys,  ulBig,  "BIG");
 
@@ -564,7 +449,7 @@ function render(){
   updateUI();
 }
 
-/* ===== View filters (Prioriteit 1/2) ===== */
+/* ===== View filters ===== */
 function applyView(){
   if (viewMode === "BIG"){
     secBig.style.display  = "";
@@ -578,17 +463,13 @@ function applyView(){
   }
 }
 
-/* ===== Actie-knoppen ===== */
-
-/* Deze blijft ALTIJD zichtbaar (ook zonder Back Office / bewerken):
-   → alleen ALLE VINKJES UIT, geen items aanpassen. */
-btnResetAll.onclick = ()=>{
+/* ===== Toolbar acties ===== */
+bReset.onclick = ()=>{
   const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
   items = next;
   save({ items: next });
 };
 
-/* Volledige begin-lijst (alle items + volgorde) – alleen in Back Office + bewerkmodus */
 bSeed.onclick = async ()=>{
   if (!backUnlocked || !canEdit) return;
   if (!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
@@ -599,14 +480,14 @@ bSeed.onclick = async ()=>{
   render();
 };
 
-/* Prioriteit 1 = alleen grote klussen */
 bPrio1.onclick = ()=>{
+  // GROTE klussen
   viewMode = (viewMode === "BIG") ? "ALL" : "BIG";
   applyView();
 };
 
-/* Prioriteit 2 = alleen snelle taken */
 bPrio2.onclick = ()=>{
+  // SNELLE taken
   viewMode = (viewMode === "FAST") ? "ALL" : "FAST";
   applyView();
 };
