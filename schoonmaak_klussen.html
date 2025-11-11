@@ -47,7 +47,7 @@
     }
 
     .tools{
-      display:flex;        /* altijd zichtbaar (maar niet alle knoppen erin) */
+      display:flex;
       gap:8px;
       flex-wrap:wrap;
     }
@@ -223,22 +223,15 @@ const bPrio1 = document.createElement("button"); bPrio1.textContent = "Prioritei
 const bPrio2 = document.createElement("button"); bPrio2.textContent = "Prioriteit 2";
 const btnView= document.createElement("button"); btnView.textContent = "Alleen afvinken";
 
-/* ===== Tools zichtbaarheid: Altijd Alles herstellen, rest na Back Office ===== */
-function rebuildTools(){
-  toolsBar.innerHTML = "";
-  // Altijd zichtbaar:
-  toolsBar.appendChild(bReset);
-  // Alleen als Back Office open is:
-  if (backUnlocked){
-    toolsBar.appendChild(bSeed);
-    toolsBar.appendChild(bPrio1);
-    toolsBar.appendChild(bPrio2);
-    toolsBar.appendChild(btnView);
-  }
-}
-rebuildTools();
+/* ===== State ===== */
+let backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+let canEdit      = (localStorage.getItem("editMode")==="1");
+let viewMode     = "ALL";     // ALL | FAST | BIG
 
-/* ===== Seed ===== */
+let items = {};
+let order = [];
+
+/* ===== Seed – volledige lijst ===== */
 function getSeed(){
   const items = {
     // — Snelle taken 
@@ -280,7 +273,7 @@ function getSeed(){
   return { items, order };
 }
 
-/* Snelle vs grote klussen */
+/* ===== Snelle vs grote klussen ===== */
 const FAST_PREFIXES = [
   "Dresstafel",
   "Counterblad",
@@ -301,12 +294,12 @@ function isFast(label){
   return FAST_PREFIXES.some(p => label.startsWith(p));
 }
 
-/* ===== Tools zichtbaarheid: Altijd Alles herstellen, rest na Back Office ===== */
+/* ===== Toolbar opbouwen ===== */
 function rebuildTools(){
   toolsBar.innerHTML = "";
-  // Altijd zichtbaar:
+  // Altijd zichtbaar voor iedereen:
   toolsBar.appendChild(bReset);
-  // Alleen als Back Office open is:
+  // Extra knoppen alleen als Back Office is geopend:
   if (backUnlocked){
     toolsBar.appendChild(bSeed);
     toolsBar.appendChild(bPrio1);
@@ -323,7 +316,8 @@ btnBackoffice.onclick = () => {
     backUnlocked = true;
     canEdit      = true;
     localStorage.setItem(LS_BACK_KEY,"1");
-    rebuildTools();        // 🔹 pas na code toont hij de extra knoppen
+    localStorage.setItem("editMode","1");
+    rebuildTools();
     updateUI();
     render();
     alert("Back Office geopend ✅");
@@ -335,10 +329,25 @@ btnBackoffice.onclick = () => {
 /* ===== Alleen afvinken ===== */
 btnView.onclick = () => {
   canEdit = false;
+  localStorage.removeItem("editMode");
   updateUI();
   render();
   alert("Alleen afvinken 🔒");
 };
+
+/* ===== Storage sync (andere tabbladen) ===== */
+window.addEventListener("storage", e=>{
+  if (e.key === "editMode"){
+    canEdit = (localStorage.getItem("editMode")==="1");
+    updateUI();
+    render();
+  }
+  if (e.key === LS_BACK_KEY){
+    backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+    rebuildTools();
+    render();
+  }
+});
 
 /* ===== Firestore sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
@@ -379,7 +388,21 @@ function updateUI(){
   });
 }
 
-/* ===== Render + drag ===== */
+/* ===== View filters (Prioriteit 1/2) ===== */
+function applyView(){
+  if (viewMode === "BIG"){
+    secBig.style.display  = "";
+    secFast.style.display = "none";
+  } else if (viewMode === "FAST"){
+    secFast.style.display = "";
+    secBig.style.display  = "none";
+  } else {
+    secFast.style.display = "";
+    secBig.style.display  = "";
+  }
+}
+
+/* ===== Render + drag & drop ===== */
 function render(){
   ulFast.innerHTML = "";
   ulBig.innerHTML  = "";
@@ -409,7 +432,7 @@ function render(){
       if (!canEdit) span.onclick = ()=> toggle(k);
 
       if (backUnlocked && canEdit){
-        // DRAG alleen in edit
+        // drag alleen in bewerk-modus
         li.draggable = true;
         li.addEventListener("dragstart", e=>{
           li.classList.add("dragging");
@@ -456,22 +479,9 @@ function render(){
   updateUI();
 }
 
-/* ===== View filters ===== */
-function applyView(){
-  if (viewMode === "BIG"){
-    secBig.style.display  = "";
-    secFast.style.display = "none";
-  } else if (viewMode === "FAST"){
-    secFast.style.display = "";
-    secBig.style.display  = "none";
-  } else {
-    secFast.style.display = "";
-    secBig.style.display  = "";
-  }
-}
-
-/* ===== Toolbar acties ===== */
+/* ===== Actie-knoppen toolbar ===== */
 bReset.onclick = ()=>{
+  // alleen alle vinkjes uit
   const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
   items = next;
   save({ items: next });
@@ -488,13 +498,13 @@ bSeed.onclick = async ()=>{
 };
 
 bPrio1.onclick = ()=>{
-  // GROTE klussen
+  // Prioriteit 1 = alleen GROTE SCHOONMAAKKLUSSEN
   viewMode = (viewMode === "BIG") ? "ALL" : "BIG";
   applyView();
 };
 
 bPrio2.onclick = ()=>{
-  // SNELLE taken
+  // Prioriteit 2 = alleen SNELLE TAKEN
   viewMode = (viewMode === "FAST") ? "ALL" : "FAST";
   applyView();
 };
