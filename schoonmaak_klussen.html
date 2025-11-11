@@ -19,20 +19,50 @@
     }
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
-    .brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
-    .tools{display:none;gap:8px;flex-wrap:wrap}
+    header.panel{
+      display:flex;justify-content:space-between;align-items:center;
+      gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;
+      background:var(--panel);border:1px solid var(--line);border-radius:14px
+    }
+    .brand .h{font-weight:800;font-size:18px}
+    .brand .s{color:var(--muted);font-size:12px}
+    .nav{display:flex;gap:10px;margin-bottom:12px}
+    .nav a{color:#d8e6ff}
+    button{background:#101624;color:var(--text);border:1px solid var(--line);
+      border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
+    .header-right{display:flex;align-items:center;gap:8px}
+
+    /* tools standaard onzichtbaar: alleen Back Office-knop zichtbaar */
+    .tools{
+      display:none;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
     .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
-    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
+    input[type="text"]{
+      width:100%;padding:12px 14px;border-radius:10px;
+      border:1px solid var(--line);background:#0b0f18;color:var(--text)
+    }
     ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
-    li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
+    li.item{
+      display:flex;align-items:center;gap:8px;
+      background:#0f1320;border:1px solid #262c39;border-radius:12px;
+      padding:12px 14px
+    }
     li.item.done{opacity:.6;text-decoration:line-through}
     .label{flex:1;cursor:pointer}
-    .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
-    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:28px;height:28px;border:1px solid #444;border-radius:6px;
+      background:#151a23;cursor:pointer;opacity:.95
+    }
     .divider{height:1px;background:#2a2f3a;margin:12px 0;border-radius:1px}
-    .section-head{font-weight:800;opacity:.95;margin:6px 0 8px;text-transform:uppercase;letter-spacing:.5px;color:#fff}
+    .section-head{
+      font-weight:800;opacity:.95;margin:6px 0 8px;
+      text-transform:uppercase;letter-spacing:.5px;color:#fff
+    }
+    footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
   </style>
 </head>
 <body>
@@ -45,7 +75,7 @@
         <div class="s">Schoonmaakklussen</div>
       </div>
       <div class="header-right">
-        <button id="btnBackoffice">Back Office</button>
+        <button id="btnBackoffice" type="button">Back Office</button>
         <div class="tools"></div>
       </div>
     </header>
@@ -56,13 +86,15 @@
         <button id="btnAdd">Toevoegen</button>
       </div>
 
+      <!-- SNELLE TAKEN -->
       <section id="sec-fast">
         <div class="section-head">SNELLE TAKEN</div>
         <ul id="list-fast"></ul>
       </section>
 
-      <div class="divider"></div>
+      <div id="sec-divider" class="divider"></div>
 
+      <!-- GROTE SCHOONMAAKKLUSSEN -->
       <section id="sec-big">
         <div class="section-head">GROTE SCHOONMAAKKLUSSEN</div>
         <ul id="list-big"></ul>
@@ -77,58 +109,168 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/fireba
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15";
 
+/* ===== Firebase ===== */
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-const DOC_ID = "schoonmaak_klussen";
+/* ===== Config ===== */
+const DOC_ID     = "schoonmaak_klussen";
 const ADMIN_CODE = "Yali313";
-const LS_EDIT = "editMode";
-const LS_BACK = "backoffice_unlocked";
+const LS_EDIT    = "editMode";
+const LS_BACK    = "backoffice_unlocked";
 
-/* UI refs */
-const toolsBar = document.querySelector(".tools");
-const btnBackoffice = document.getElementById("btnBackoffice");
-const elNew = document.getElementById("newItem");
-const btnAdd = document.getElementById("btnAdd");
+/* ===== UI refs ===== */
+const elRoot      = document.getElementById("card-root");
+const secFast     = document.getElementById("sec-fast");
+const secBig      = document.getElementById("sec-big");
+const secDivider  = document.getElementById("sec-divider");
+
 const ulFast = document.getElementById("list-fast");
-const ulBig = document.getElementById("list-big");
+const ulBig  = document.getElementById("list-big");
+const elNew  = document.getElementById("newItem");
+const btnAdd = document.getElementById("btnAdd");
 
-/* Tools */
-const btnEdit = document.createElement("button");
-btnEdit.textContent = "🔓 Bewerk-modus";
-const btnView = document.createElement("button");
-btnView.textContent = "🔒 Alleen afvinken";
-const btnReset = document.createElement("button");
-btnReset.textContent = "🔁 Resetten";
-const btnPrio1 = document.createElement("button");
-btnPrio1.textContent = "Prioriteit 1";
-const btnPrio2 = document.createElement("button");
-btnPrio2.textContent = "Prioriteit 2";
-toolsBar.replaceChildren(btnEdit, btnView, btnReset, btnPrio1, btnPrio2);
+const toolsBar      = document.querySelector(".tools");
+const btnBackoffice = document.getElementById("btnBackoffice");
 
-/* State */
-let canEdit = localStorage.getItem(LS_EDIT)==="1";
-let backUnlocked = localStorage.getItem(LS_BACK)==="1";
+/* ===== Toolbar-knoppen ===== */
+const bEdit   = document.createElement("button"); bEdit.textContent  = "🔓 Bewerk-modus";
+const bView   = document.createElement("button"); bView.textContent  = "🔒 Alleen afvinken";
+const bReset  = document.createElement("button"); bReset.textContent = "Resetten";
+const bSeed   = document.createElement("button"); bSeed.textContent  = "Herstel lijst";
+const bPrio1  = document.createElement("button"); bPrio1.textContent = "Prioriteit 1";
+const bPrio2  = document.createElement("button"); bPrio2.textContent = "Prioriteit 2";
+toolsBar.replaceChildren(bEdit,bView,bReset,bSeed,bPrio1,bPrio2);
+
+/* ===== State ===== */
+let backUnlocked = (localStorage.getItem(LS_BACK)==="1");
+let canEdit      = backUnlocked && (localStorage.getItem(LS_EDIT)==="1");
 let items = {};
 let order = [];
+let viewMode = "ALL"; // ALL | FAST | BIG
 
-/* ===== Firebase sync ===== */
-onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
-  if(snap.exists()){
-    const d = snap.data();
-    items = d.items || {};
-    order = d.order || Object.keys(items);
-  } else {
-    const s = getSeed();
-    items = s.items; order = s.order;
-    await setDoc(doc(db,"lists",DOC_ID), { items, order });
+/* ===== Helpers ===== */
+function makeBtn(txt,title,onClick){
+  const b=document.createElement("button");
+  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
+  b.addEventListener("click",(e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    onClick();
+  },{capture:true});
+  return b;
+}
+
+/* Snelle vs grote taken bepalen */
+const FAST_PREFIXES = [
+  "Dresstafel",
+  "Counterblad",
+  "Tafeltje",
+  "Bin aan de bovenkant",
+  "Vriezer aan de voorkant",
+  "Bovenkant milkshake & ijs apparaat",
+  "Bezorgtafel schoonmaken en de tassen legen",
+  "Fietsbakken legen van de bonnen en schoonmaken",
+  "Vriezers in opslag met een doekje schoonmaken",
+  "Opslag & counter bij de shake apparaat vegen en dweilen",
+  "Deurposten schoonmaken",
+  "Bubble tea shaker/sealer schoonmaken",
+  "Voorkant en de bovenkant van de bubble tea koeling",
+  "De shakers(bekers) gronding schoonmaken"
+];
+function isFast(k){
+  return FAST_PREFIXES.some(w=>k.startsWith(w));
+}
+
+/* ===== Back Office zichtbaarheid ===== */
+function updateToolsVisible(){
+  toolsBar.style.display = backUnlocked ? "flex" : "none";
+}
+updateToolsVisible();
+
+/* ===== Back Office klik (met sterretjes) ===== */
+btnBackoffice.addEventListener("click", ()=>{
+  if (backUnlocked){
+    // al ontgrendeld → doe niks bijzonders
+    alert("Back Office is al geopend ✅");
+    return;
   }
-  render();
+
+  const overlay = document.createElement("div");
+  Object.assign(overlay.style,{
+    position:"fixed",inset:"0",background:"rgba(0,0,0,.65)",
+    display:"flex",alignItems:"center",justifyContent:"center",zIndex:"9999"
+  });
+  const box = document.createElement("div");
+  Object.assign(box.style,{
+    background:"#0f1320",border:"1px solid #262c39",borderRadius:"12px",
+    padding:"18px 16px",width:"260px",maxWidth:"90%",textAlign:"center"
+  });
+  const title = document.createElement("div");
+  title.textContent = "Beheerderscode";
+  title.style.fontWeight = "700";
+  title.style.marginBottom = "6px";
+  const hint = document.createElement("div");
+  hint.textContent = "Voer de code in om Back Office te openen.";
+  hint.style.fontSize = "12px";
+  hint.style.opacity = "0.8";
+  hint.style.marginBottom = "10px";
+  const input = document.createElement("input");
+  input.type = "password";
+  input.placeholder = "••••••";
+  Object.assign(input.style,{
+    width:"100%",padding:"9px 10px",borderRadius:"8px",
+    border:"1px solid #333",background:"#0b0f18",color:"#fff",
+    marginBottom:"10px"
+  });
+  const row = document.createElement("div");
+  row.style.display="flex";
+  row.style.justifyContent="flex-end";
+  row.style.gap="8px";
+  const btnCancel=document.createElement("button");
+  btnCancel.textContent="Annuleren";
+  Object.assign(btnCancel.style,{
+    background:"#333",color:"#ccc",border:"1px solid #555",
+    borderRadius:"8px",padding:"7px 10px",cursor:"pointer"
+  });
+  const btnOk=document.createElement("button");
+  btnOk.textContent="Ontgrendel";
+  Object.assign(btnOk.style,{
+    background:"#1c2333",color:"#fff",border:"1px solid #444",
+    borderRadius:"8px",padding:"7px 12px",cursor:"pointer"
+  });
+
+  row.append(btnCancel,btnOk);
+  box.append(title,hint,input,row);
+  overlay.append(box);
+  document.body.append(overlay);
+  input.focus();
+
+  btnCancel.onclick = ()=> overlay.remove();
+  btnOk.onclick = ()=>{
+    if (input.value.trim()===ADMIN_CODE){
+      backUnlocked = true;
+      canEdit = true;
+      localStorage.setItem(LS_BACK,"1");
+      localStorage.setItem(LS_EDIT,"1");
+      updateToolsVisible();
+      updateUI();
+      render();
+      overlay.remove();
+      alert("Back Office geopend ✅");
+    } else {
+      alert("Onjuiste code");
+      input.value = "";
+      input.focus();
+    }
+  };
 });
 
-/* ===== Data seed ===== */
+/* ===== Seed (begin-lijst) ===== */
 function getSeed(){
   const items = {
+    // — SNELLE TAKEN
     "Dresstafel volledig schoonmaken, onder de kratten en mandjes": false,
     "Counterblad schoonmaken en desinfecteren (inclusief schermen)": false,
     "Tafeltje bij shake apparaat schoonmaken en daarna met RVS": false,
@@ -140,9 +282,11 @@ function getSeed(){
     "Vriezers in opslag met een doekje schoonmaken": false,
     "Opslag & counter bij de shake apparaat vegen en dweilen": false,
     "Deurposten schoonmaken met blauwe spons en blauwe spray": false,
-    "Bubble tea shaker/sealer schoonmaken":false,
-    "Voorkant en de bovenkant van de bubble tea koeling schoonamekn":false,
-    "De shakers(bekers) gronding schoonmaken met spons en water":false,
+    "Bubble tea shaker/sealer schoonmaken": false,
+    "Voorkant en de bovenkant van de bubble tea koeling schoonamekn": false,
+    "De shakers(bekers) gronding schoonmaken met spons en water": false,
+
+    // — GROTE SCHOONMAAKKLUSSEN
     "Vriezers in opslag schoonmaken": false,
     "Vriezers in opslag naar voren en erachter schoonmaken": false,
     "Rubbers van de vriezers/koelkast in opslag schoonmaken en de binnenkant stofzuigen": false,
@@ -161,60 +305,252 @@ function getSeed(){
     "Broodkar schoonmaken inclusief de kratten": false,
     "WC schoonmaken": false
   };
-  return { items, order:Object.keys(items) };
+  const order = Object.keys(items);
+  return { items, order };
 }
 
-/* ===== Render ===== */
-function render(){
-  ulFast.innerHTML=""; ulBig.innerHTML="";
-  order.forEach(k=>{
-    const li=document.createElement("li");
-    li.className="item"+(items[k]?" done":"");
-    const cb=document.createElement("input");
-    cb.type="checkbox"; cb.checked=!!items[k];
-    cb.onchange=()=>toggle(k);
-    const label=document.createElement("div");
-    label.className="label"; label.textContent=k;
-    if(!canEdit) label.onclick=()=>toggle(k);
-    li.append(cb,label);
-    (k.includes("Dresstafel")||k.includes("Counterblad")||k.includes("Shake")||k.includes("Bin")||k.includes("Bezorgtafel")||k.includes("Vriezer aan de voorkant") ? ulFast : ulBig).appendChild(li);
+/* ===== State + realtime ===== */
+onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
+  if (snap.exists()){
+    const d=snap.data();
+    items = d.items || {};
+    order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
+    Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
+  } else {
+    const s=getSeed();
+    items=s.items; order=s.order;
+    await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+  }
+  render();
+});
+
+/* ===== Save helper ===== */
+async function save(p){
+  await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
+}
+
+/* ===== UI state ===== */
+function updateUI(){
+  const inputs = [elNew, btnAdd];
+  inputs.forEach(el=>{
+    if(!el) return;
+    // alleen bewerkbaar als backoffice open EN bewerk-modus aan
+    el.disabled = !(backUnlocked && canEdit);
+    el.style.opacity       = (backUnlocked && canEdit) ? 1 : .6;
+    el.style.pointerEvents = (backUnlocked && canEdit) ? "auto" : "none";
+  });
+
+  // Reset mag altijd als je in Back Office zit
+  bReset.disabled = !backUnlocked;
+  bReset.style.opacity = backUnlocked ? 1 : .5;
+
+  // Herstel lijst: alleen in bewerk-modus
+  bSeed.disabled = !(backUnlocked && canEdit);
+  bSeed.style.opacity = (backUnlocked && canEdit) ? 1 : .5;
+
+  // Prioriteit-knoppen: alleen Back Office nodig
+  [bPrio1,bPrio2].forEach(b=>{
+    b.disabled = !backUnlocked;
+    b.style.opacity = backUnlocked ? 1 : .5;
   });
 }
 
-/* ===== Toggle ===== */
-function toggle(k){
-  items[k]=!items[k];
-  setDoc(doc(db,"lists",DOC_ID),{items},{merge:true});
+/* ===== Render ===== */
+function applyViewMode(){
+  if (viewMode==="ALL"){
+    secFast.style.display = "";
+    secBig.style.display  = "";
+    secDivider.style.display = "";
+  } else if (viewMode==="FAST"){
+    secFast.style.display = "";
+    secBig.style.display  = "none";
+    secDivider.style.display = "none";
+  } else if (viewMode==="BIG"){
+    secFast.style.display = "none";
+    secBig.style.display  = "";
+    secDivider.style.display = "none";
+  }
 }
 
-/* ===== Reset knop ===== */
-btnReset.onclick=()=>{ Object.keys(items).forEach(k=>items[k]=false); setDoc(doc(db,"lists",DOC_ID),{items},{merge:true}); render(); };
+function render(){
+  ulFast.innerHTML=""; ulBig.innerHTML="";
 
-/* ===== Prioriteitknoppen ===== */
-btnPrio1.onclick=()=>{document.getElementById("sec-big").style.display="block";document.getElementById("sec-fast").style.display="none";}
-btnPrio2.onclick=()=>{document.getElementById("sec-big").style.display="none";document.getElementById("sec-fast").style.display="block";}
+  const keys = order.length ? order.slice() : Object.keys(items);
+  const fastKeys = keys.filter(k=>isFast(k));
+  const bigKeys  = keys.filter(k=>!isFast(k));
 
-/* ===== Back Office popup met sterretjes ===== */
-btnBackoffice.onclick=()=>{
-  const modal=document.createElement("div");
-  Object.assign(modal.style,{position:"fixed",inset:"0",background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:"9999"});
-  const box=document.createElement("div");
-  Object.assign(box.style,{background:"#141824",padding:"20px",borderRadius:"12px",textAlign:"center",width:"260px"});
-  const label=document.createElement("div");label.textContent="Voer beheerderscode in:";label.style.marginBottom="10px";
-  const input=document.createElement("input");input.type="password";input.placeholder="••••••";Object.assign(input.style,{width:"100%",padding:"10px",borderRadius:"8px",border:"1px solid #333",background:"#0b0f18",color:"#fff",marginBottom:"12px"});
-  const ok=document.createElement("button");ok.textContent="Ontgrendel";Object.assign(ok.style,{background:"#1c2333",color:"#fff",border:"1px solid #444",borderRadius:"8px",padding:"8px 14px",cursor:"pointer"});
-  const cancel=document.createElement("button");cancel.textContent="Annuleren";Object.assign(cancel.style,{marginLeft:"8px",background:"#333",color:"#ccc",border:"1px solid #555",borderRadius:"8px",padding:"8px 14px",cursor:"pointer"});
-  box.append(label,input,ok,cancel);modal.append(box);document.body.append(modal);input.focus();
-  ok.onclick=()=>{if(input.value.trim()===ADMIN_CODE){backUnlocked=true;canEdit=true;localStorage.setItem(LS_BACK,"1");localStorage.setItem(LS_EDIT,"1");toolsBar.style.display="flex";modal.remove();alert("Back Office geopend ✅");render();}else{alert("Onjuiste code");input.value="";input.focus();}}
-  cancel.onclick=()=>modal.remove();
+  const renderList = (arr, ul)=>{
+    arr.forEach((k)=>{
+      if(!(k in items)) return;
+      const li=document.createElement("li");
+      li.className="item"+(items[k]?" done":"");
+
+      const cb=document.createElement("input");
+      cb.type="checkbox"; cb.checked=!!items[k];
+      cb.onchange=()=>toggle(k);
+
+      const span=document.createElement("div");
+      span.className="label"; span.textContent=k;
+      if(!canEdit) span.onclick=()=>toggle(k);
+
+      if (backUnlocked && canEdit){
+        const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
+        const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+        li.append(cb,span,pen,del);
+      } else {
+        li.append(cb,span);
+      }
+      ul.appendChild(li);
+    });
+  };
+
+  renderList(fastKeys, ulFast);
+  renderList(bigKeys,  ulBig);
+
+  applyViewMode();
+  updateUI();
+}
+
+/* ===== Actions ===== */
+function toggle(k){
+  const next={...items,[k]:!items[k]};
+  items=next;
+  save({items:next});
+}
+
+function addItem(t){
+  if(!(backUnlocked && canEdit)) return;
+  const x=(t||"").trim(); if(!x) return;
+  if(x in items){ alert("Bestaat al."); return; }
+  const nextMap = { ...items, [x]: false };
+  const nextOrd = order.concat(x);
+  items = nextMap; order = nextOrd;
+  render(); save({ items: nextMap, order: nextOrd });
+}
+
+async function removeItemConfirm(k){
+  if(!(backUnlocked && canEdit)) return;
+  if(!(k in items)) return;
+  if(!confirm(`Verwijder "${k}"?`)) return;
+
+  const nextMap = { ...items };
+  delete nextMap[k];
+  const nextOrd = order.filter(x=>x!==k);
+  items = nextMap; order = nextOrd;
+  render();
+
+  await updateDoc(doc(db,"lists",DOC_ID),{
+    [`items.${k}`]: deleteField(),
+    order: nextOrd,
+    updatedAt: serverTimestamp()
+  });
+}
+
+async function renameItem(oldK){
+  if(!(backUnlocked && canEdit)) return;
+  if(!(oldK in items)) return;
+
+  const s = prompt("Nieuwe naam:", oldK);
+  if (s===null) return;
+  const n = (s||"").trim();
+  if(!n || n===oldK) return;
+
+  const exists = (n in items);
+  const merged = !!items[oldK] || !!items[n];
+
+  let nextItems = { ...items };
+  let nextOrder = order.slice();
+
+  if (exists){
+    nextItems[n] = merged;
+    delete nextItems[oldK];
+    nextOrder = nextOrder.filter(k => k !== oldK);
+  } else {
+    nextItems[n] = !!nextItems[oldK];
+    delete nextItems[oldK];
+    nextOrder = nextOrder.map(k => k === oldK ? n : k);
+  }
+
+  items = nextItems;
+  order = nextOrder;
+  render();
+
+  await updateDoc(doc(db,"lists",DOC_ID),{
+    [`items.${oldK}`]: deleteField(),
+    [`items.${n}`]: merged,
+    order: nextOrder,
+    updatedAt: serverTimestamp()
+  });
+}
+
+/* ===== Toolbar acties ===== */
+bEdit.onclick = ()=>{
+  if (!backUnlocked){
+    alert("Open eerst Back Office met de code.");
+    return;
+  }
+  canEdit = true;
+  localStorage.setItem(LS_EDIT,"1");
+  render();
+  alert("Bewerk-modus aan ✅");
 };
 
-/* ===== Bewerk/alleen-afvinken ===== */
-btnEdit.onclick=()=>{canEdit=true;localStorage.setItem(LS_EDIT,"1");render();alert("Bewerk-modus aan ✅");}
-btnView.onclick=()=>{canEdit=false;localStorage.removeItem(LS_EDIT);render();alert("Alleen afvinken 🔒");}
+bView.onclick = ()=>{
+  if (!backUnlocked){
+    alert("Back Office is niet geopend.");
+    return;
+  }
+  canEdit = false;
+  localStorage.removeItem(LS_EDIT);
+  render();
+  alert("Alleen afvinken 🔒");
+};
 
-/* ===== Init ===== */
-if(backUnlocked) toolsBar.style.display="flex";
+bReset.onclick = ()=>{
+  if (!backUnlocked) return;
+  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
+  items = next;
+  save({ items: next });
+  render();
+};
+
+bSeed.onclick = async ()=>{
+  if(!(backUnlocked && canEdit)) return;
+  if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
+  const s = getSeed();
+  items = s.items; order = s.order;
+  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+  viewMode = "ALL";
+  render();
+};
+
+bPrio1.onclick = ()=>{
+  if (!backUnlocked) return;
+  viewMode = "BIG";
+  applyViewMode();
+};
+
+bPrio2.onclick = ()=>{
+  if (!backUnlocked) return;
+  viewMode = "FAST";
+  applyViewMode();
+};
+
+/* ===== Events ===== */
+btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
+elNew.addEventListener("keydown", e=>{
+  if(e.key==="Enter"){
+    e.preventDefault();
+    addItem(elNew.value);
+    elNew.value=""; 
+  }
+});
+
+/* sync tussen tabbladen */
+window.addEventListener("storage",(e)=>{
+  if (e.key===LS_BACK){ backUnlocked = (localStorage.getItem(LS_BACK)==="1"); updateToolsVisible(); updateUI(); render(); }
+  if (e.key===LS_EDIT){ canEdit = backUnlocked && (localStorage.getItem(LS_EDIT)==="1"); updateUI(); render(); }
+});
 </script>
 </body>
 </html>
