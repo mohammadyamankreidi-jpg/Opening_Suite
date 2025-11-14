@@ -46,7 +46,7 @@
       gap:8px;
     }
 
-    /* tools verborgen totdat Back Office open is */
+    /* tools verborgen totdat Back Office open is + bewerkmodus aan */
     .tools{
       display:none;
       gap:8px;
@@ -148,6 +148,42 @@
       font-size:12px;
       text-align:center;
     }
+
+    /* 🔐 Backoffice lock overlay */
+    .lock{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.7);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    .lock .panel{
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:14px;
+      padding:20px;
+      min-width:260px;
+      max-width:90%;
+    }
+    .lock h1{
+      margin:0 0 10px;
+      font-size:18px;
+    }
+    .lock .row{
+      display:flex;
+      gap:8px;
+      margin-top:8px;
+    }
+    .lock input{
+      flex:1;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #2a2f3a;
+      background:#0b0f18;
+      color:#eef2f8;
+    }
   </style>
 </head>
 <body>
@@ -165,6 +201,18 @@
         <div class="tools"></div>
       </div>
     </header>
+
+    <!-- 🔐 Back Office code popup -->
+    <div id="boLock" class="lock">
+      <div class="panel">
+        <h1>Back Office</h1>
+        <p class="hint">Voer de beheerderscode in.</p>
+        <div class="row">
+          <input id="boCode" type="password" placeholder="Beheerderscode" />
+          <button id="boOpen" type="button">Open</button>
+        </div>
+      </div>
+    </div>
 
     <div class="card" id="card-root">
       <div class="add">
@@ -201,7 +249,7 @@ const db  = getFirestore(app);
 
 /* ===== Config ===== */
 const DOC_ID      = "schoonmaak_klussen";
-const ADMIN_CODE  = "YamanBS1";
+const ADMIN_CODE  = "Yali313";   // ✅ zelfde code als Opslag
 const LS_BACK_KEY = "bo_schoonmaak_unlocked";
 
 /* ===== UI refs ===== */
@@ -218,6 +266,11 @@ const secBig  = document.getElementById("sec-big");
 
 const ulFast  = document.getElementById("list-fast");
 const ulBig   = document.getElementById("list-big");
+
+/* 🔐 Backoffice overlay refs */
+const boLock  = document.getElementById("boLock");
+const boCode  = document.getElementById("boCode");
+const boOpen  = document.getElementById("boOpen");
 
 /* ===== Toolbar-knoppen (alleen zichtbaar in Back Office) ===== */
 const bSeed  = document.createElement("button"); bSeed.textContent  = "Resetten";
@@ -245,7 +298,7 @@ function getSeed(){
     "Vriezer aan de voorkant schoonmaken met blauwe spons en blauwe spray": false,
     "Bovenkant milkshake & ijs apparaat afspoelen en afdrogen": false,
     "Bezorgtafel schoonmaken en de tassen legen": false,
-    "Fietsbakken legen van de bonnen en schoonmaken": false,
+    "Fietsbakken leggen van de bonnen en schoonmaken": false,
     "Vriezers in opslag met een doekje schoonmaken": false,
     "Opslag & counter bij de shake apparaat vegen en dweilen": false,
     "Deurposten schoonmaken met blauwe spons en blauwe spray": false,
@@ -304,13 +357,21 @@ function updateToolsVisible(){
 }
 updateToolsVisible();
 
-/* ===== Back Office knop ===== */
+/* ===== Back Office knop → toon popup ===== */
 btnBackoffice.onclick = () => {
-  const code = prompt("Beheerderscode:", "");
+  boCode.value = "";
+  boLock.style.display = "flex";
+  boCode.focus();
+};
+
+/* Backoffice popup: open na code */
+boOpen.onclick = () => {
+  const code = (boCode.value || "").trim();
   if (code === ADMIN_CODE){
     backUnlocked = true;
     canEdit = true; // meteen in bewerken
     localStorage.setItem(LS_BACK_KEY,"1");
+    boLock.style.display = "none";
     updateToolsVisible();
     updateUI();
     render();
@@ -319,6 +380,14 @@ btnBackoffice.onclick = () => {
     alert("Onjuiste code");
   }
 };
+
+/* Enter in password veld → zelfde als op Open klikken */
+boCode.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    boOpen.click();
+  }
+});
 
 /* ===== "Alles herstellen" – altijd beschikbaar ===== */
 btnResetAll.onclick = () => {
