@@ -34,7 +34,15 @@
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
 
     /* 🔐 Lock overlay */
-    .lock{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50}
+    .lock{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.7);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
     .lock .panel{background:#0f1320;border:1px solid #262c39;border-radius:14px;padding:20px;min-width:280px;max-width:90%}
     .lock h1{margin:0 0 10px;font-size:18px}
     .lock .row{display:flex;gap:8px}
@@ -54,7 +62,7 @@
     </header>
 
     <!-- 🔐 alles hieronder verborgen totdat code klopt -->
-    <div id="locked" class="lock" hidden>
+    <div id="locked" class="lock">
       <div class="panel">
         <h1>Toegang vereist</h1>
         <p class="hint">Voer de beheerderscode in om Opslag te openen.</p>
@@ -65,23 +73,62 @@
       </div>
     </div>
 
-    <div id="content" class="card" hidden>
+    <div id="content" class="card" style="display:none">
       <div class="add">
         <input id="newItem" type="text" placeholder="Nieuw item (komt in OVERIG)..." />
         <button id="btnAdd">Toevoegen</button>
       </div>
 
       <div class="cols">
-        <section class="section"><div class="head">PAPIER & ZAKKEN</div><div class="divider"></div><ul id="list-PAPIER"></ul></section>
-        <section class="section"><div class="head">BALIE & SERVIES</div><div class="divider"></div><ul id="list-BALIE"></ul></section>
-        <section class="section"><div class="head">SALADE & CHEEZIN</div><div class="divider"></div><ul id="list-SALADE"></ul></section>
-        <section class="section"><div class="head">SUNDAE & SHAKE</div><div class="divider"></div><ul id="list-SHAKE"></ul></section>
-        <section class="section"><div class="head">POEDERS & SIROPEN</div><div class="divider"></div><ul id="list-POEDER"></ul></section>
-        <section class="section"><div class="head">SAUZEN</div><div class="divider"></div><ul id="list-SAUZEN"></ul></section>
-        <section class="section"><div class="head">TOPPINGS</div><div class="divider"></div><ul id="list-TOPPING"></ul></section>
-        <section class="section"><div class="head">DRANKEN</div><div class="divider"></div><ul id="list-DRANK"></ul></section>
-        <section class="section"><div class="head">KEUKEN</div><div class="divider"></div><ul id="list-KEUKEN"></ul></section>
-        <section class="section"><div class="head">KINDERMENU & OVERIG</div><div class="divider"></div><ul id="list-OVERIG"></ul></section>
+        <section class="section">
+          <div class="head">PAPIER & ZAKKEN</div><div class="divider"></div>
+          <ul id="list-PAPIER"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">BALIE & SERVIES</div><div class="divider"></div>
+          <ul id="list-BALIE"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">VERPAKKING</div><div class="divider"></div>
+          <ul id="list-VERPAKKING"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">SUNDAE & SHAKE</div><div class="divider"></div>
+          <ul id="list-SHAKE"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">BUBBLE TEA</div><div class="divider"></div>
+          <ul id="list-BUBBLE"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">SAUZEN</div><div class="divider"></div>
+          <ul id="list-SAUZEN"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">IJS & SHAKE</div><div class="divider"></div>
+          <ul id="list-IJS"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">DRANKEN</div><div class="divider"></div>
+          <ul id="list-DRANK"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">KEUKEN</div><div class="divider"></div>
+          <ul id="list-KEUKEN"></ul>
+        </section>
+
+        <section class="section">
+          <div class="head">KINDERMENU & OVERIG</div><div class="divider"></div>
+          <ul id="list-OVERIG"></ul>
+        </section>
       </div>
 
       <p class="hint">Vink af of pas aantallen aan. Alles synct voor iedereen (met code).</p>
@@ -102,7 +149,6 @@ const db  = getFirestore(app);
 /* ===== Config ===== */
 const DOC_ID     = "opslag_lijst";
 const ADMIN_CODE = "Yali313";
-let canEdit = true;  // ✅ direct gedeclareerd bovenaan
 
 /* ===== Locking ===== */
 const LS_KEY_UNLOCK = "ops_unlocked";
@@ -111,23 +157,36 @@ const contentEl = document.getElementById("content");
 const codeInput = document.getElementById("codeInput");
 const btnUnlock = document.getElementById("btnUnlock");
 
-
 function updateLockUI(){
-  const unlocked = localStorage.getItem(LS_KEY_UNLOCK)==="1";
-  lockedEl.hidden  = unlocked;
-  contentEl.hidden = !unlocked;
+  const unlocked = localStorage.getItem(LS_KEY_UNLOCK) === "1";
+  if (unlocked){
+    lockedEl.style.display  = "none";
+    contentEl.style.display = "block";
+  } else {
+    lockedEl.style.display  = "flex";
+    contentEl.style.display = "none";
+  }
 }
-btnUnlock.onclick = ()=>{
-  if ((codeInput.value||"").trim()===ADMIN_CODE){
-    localStorage.setItem(LS_KEY_UNLOCK,"1");
+
+// klik op "Open"
+btnUnlock.onclick = () => {
+  const val = (codeInput.value || "").trim();
+  if (val === ADMIN_CODE){
+    localStorage.setItem(LS_KEY_UNLOCK, "1");
     updateLockUI();
   } else {
     alert("Onjuiste code.");
   }
 };
-window.addEventListener("storage", e=>{
-  if (e.key===LS_KEY_UNLOCK){ updateLockUI(); }
+
+// als localStorage verandert (andere tab)
+window.addEventListener("storage", e => {
+  if (e.key === LS_KEY_UNLOCK){
+    updateLockUI();
+  }
 });
+
+// bij laden meteen goede staat zetten
 updateLockUI();
 
 /* ===== Toolbar ===== */
@@ -137,73 +196,222 @@ const bSeed  = document.createElement("button"); bSeed.textContent  = "Herstel l
 const bLock  = document.createElement("button"); bLock.textContent  = "🔐 Vergrendel";
 tools.replaceChildren(bReset,bSeed,bLock);
 
-bReset.onclick = ()=>{ for(const k in items){ items[k]={done:false,qty:0}; } save({items}); };
-bSeed.onclick  = async ()=>{ if(!confirm("Herstel naar begin-lijst?"))return; await hardSeed(); };
-bLock.onclick  = ()=>{ localStorage.removeItem(LS_KEY_UNLOCK); updateLockUI(); };
+bReset.onclick = () => {
+  for(const k in items){
+    items[k] = { done:false, qty:0 };
+  }
+  save({ items });
+};
+bSeed.onclick  = async () => {
+  if(!confirm("Herstel naar begin-lijst?")) return;
+  await hardSeed();
+};
+bLock.onclick  = () => {
+  localStorage.removeItem(LS_KEY_UNLOCK);
+  updateLockUI();
+};
 
 /* ===== UI refs ===== */
 const elNew = document.getElementById("newItem");
 const btnAdd= document.getElementById("btnAdd");
 const lists = {
-  "PAPIER":  document.getElementById("list-PAPIER"),
-  "BALIE":   document.getElementById("list-BALIE"),
-  "SALADE":  document.getElementById("list-SALADE"),
-  "SHAKE":   document.getElementById("list-SHAKE"),
-  "POEDER":  document.getElementById("list-POEDER"),
-  "SAUZEN":  document.getElementById("list-SAUZEN"),
-  "TOPPING": document.getElementById("list-TOPPING"),
-  "DRANK":   document.getElementById("list-DRANK"),
-  "KEUKEN":  document.getElementById("list-KEUKEN"),
-  "OVERIG":  document.getElementById("list-OVERIG"),
+  "PAPIER":      document.getElementById("list-PAPIER"),
+  "BALIE":       document.getElementById("list-BALIE"),
+  "VERPAKKING":  document.getElementById("list-VERPAKKING"),
+  "SHAKE":       document.getElementById("list-SHAKE"),
+  "BUBBLE":      document.getElementById("list-BUBBLE"),
+  "SAUZEN":      document.getElementById("list-SAUZEN"),
+  "IJS":         document.getElementById("list-IJS"),
+  "DRANK":       document.getElementById("list-DRANK"),
+  "KEUKEN":      document.getElementById("list-KEUKEN"),
+  "OVERIG":      document.getElementById("list-OVERIG"),
 };
 
-/* ===== Seed ===== */
+/* ===== Seed (jouw aangepaste indeling) ===== */
 function baseCats(){return{
-"PAPIER":["Inpakpapier","Junior papier","Dresspapier","Inpakkzakken groot","Inpakzakken medium","Inpakzakken klein","Servetten","Tork"],
-"BALIE":["Rietjes","Houdertjes 2&4"],
-"SALADE":["Saladedeksel en Saladebakken 500&1000mm","Cheezin bakjes","Cheezin vorkjes"],
-"SHAKE":["Sundae lepels","Sundae bekers","Sundae deksels","Shuffel lepels","Milkshake bekers 500","Milkshake bekers 400","Milkshake bekers 300","Milkshake deksels"],
-"POEDER":["Matcha & ice coffee","Popping&siropen","Kleine sauzen bakjes"],
-"SAUZEN":["Piñata","Jalapeños","Honeymosterd","Caesar","Yoghurt"],
-"TOPPING":["Aardbei topping","Chocolate topping","Kinderbueno topping"],
-"DRANK":["Cola","Cola zero","Fanta","Fanta zero","Sprite","Fernandez groen","Fernandez rood","Ice tea sparkling","Ice tea peach","Ice tea green","Chocomel","Fristi","Cassis","Appelsap","Sinaasappelsap","Caprisun","Water","Chocomel pakjes","Fristi pakjes"],
-"KEUKEN":["Levo vet"],
-"OVERIG":["Kinderspeelgoed"]
+  "PAPIER":[
+    "Inpakpapier","Junior papier","Dresspapier",
+    "Inpakkzakken groot","Inpakzakken medium","Inpakzakken klein",
+    "Servetten","Tork"
+  ],
+  "BALIE":[
+    "Rietjes klein","Rietjes groot",
+    "Houdertjes 2","Houdertjes 4"
+  ],
+  "VERPAKKING":[
+    "Saladedeksel 500ml","Saladedeksel 1000ml",
+    "Saladebakken 500ml","Saladebakken 1000ml",
+    "Cheezin bakjes","Cheezin vorkjes",
+    "Zakjes 23","Zakjes 25","Zakjes 27","Zakjes 28"
+  ],
+  "SHAKE":[
+    "Sundae lepels","Sundae bekers","Sundae deksels","Shuffel lepels",
+    "Milkshake bekers 500","Milkshake bekers 400","Milkshake bekers 300",
+    "Milkshake deksels"
+  ],
+  "BUBBLE":[
+    "Matcha","Ice coffee","Thee"
+  ],
+  "SAUZEN":[
+    "Piñata","Honeymosterd","Caesar","Yoghurt"
+  ],
+  "IJS":[
+    "Aardbei topping","Chocolate topping","Kinderbueno topping",
+    "Ijsmix","Shakemix",
+    "Aardbei siroop","Banaan siroop","Chocolade siroop","Mango siroop"
+  ],
+  "DRANK":[
+    "Cola","Cola zero","Fanta","Fanta zero","Sprite",
+    "Fernandez groen","Fernandez rood",
+    "Ice tea sparkling","Ice tea peach","Ice tea green",
+    "Chocomel","Fristi","Cassis","Appelsap","Sinaasappelsap",
+    "Caprisun","Water","Chocomel pakjes","Fristi pakjes"
+  ],
+  "KEUKEN":[
+    "Levo vet"
+  ],
+  "OVERIG":[
+    "Kleine sauzen bakjes","Jalapeños","Kinderspeelgoed"
+  ]
 };}
-function getSeed(){const cats=baseCats();const items={};Object.values(cats).flat().forEach(k=>items[k]={done:false,qty:0});const orderPerCat={};Object.keys(cats).forEach(cat=>orderPerCat[cat]=cats[cat].slice());return{items,orderPerCat};}
+
+function getSeed(){
+  const cats = baseCats();
+  const items = {};
+  Object.values(cats).flat().forEach(k => items[k] = { done:false, qty:0 });
+  const orderPerCat = {};
+  Object.keys(cats).forEach(cat => orderPerCat[cat] = cats[cat].slice());
+  return { items, orderPerCat };
+}
 
 /* ===== Firestore state ===== */
-let items={},orderPerCat={};
-onSnapshot(doc(db,"lists",DOC_ID),async s=>{if(s.exists()){const d=s.data();items=d.items||{};orderPerCat=d.orderPerCat||{};}else{await hardSeed();}render();});
-async function save(p){await setDoc(doc(db,"lists",DOC_ID),{...(p||{}),updatedAt:serverTimestamp()},{merge:true});}
-async function hardSeed(){const s=getSeed();items=s.items;orderPerCat=s.orderPerCat;await setDoc(doc(db,"lists",DOC_ID),{items,orderPerCat,updatedAt:serverTimestamp()},{merge:false});}
+let items = {}, orderPerCat = {};
+onSnapshot(doc(db,"lists",DOC_ID), async s => {
+  if (s.exists()){
+    const d = s.data();
+    items       = d.items || {};
+    orderPerCat = d.orderPerCat || {};
+  } else {
+    await hardSeed();
+  }
+  render();
+});
+
+async function save(p){
+  await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt:serverTimestamp() }, { merge:true });
+}
+async function hardSeed(){
+  const s = getSeed();
+  items       = s.items;
+  orderPerCat = s.orderPerCat;
+  await setDoc(doc(db,"lists",DOC_ID), { items, orderPerCat, updatedAt:serverTimestamp() }, { merge:false });
+}
 
 /* ===== Helpers ===== */
-function catOf(lbl){for(const[c,a]of Object.entries(orderPerCat)){if(a.includes(lbl))return c;}return"OVERIG";}
-function makeBtn(t,tt,fn){const b=document.createElement("button");b.className="btn";b.textContent=t;b.title=tt;b.onclick=e=>{e.stopPropagation();fn();};return b;}
+function catOf(lbl){
+  for (const [c,a] of Object.entries(orderPerCat)){
+    if (a.includes(lbl)) return c;
+  }
+  return "OVERIG";
+}
+function makeBtn(t,tt,fn){
+  const b=document.createElement("button");
+  b.className="btn"; b.textContent=t; b.title=tt;
+  b.onclick=e=>{ e.stopPropagation(); fn(); };
+  return b;
+}
 
 /* ===== Render ===== */
-function render(){Object.values(lists).forEach(ul=>ul.innerHTML="");
-for(const[cat,ul]of Object.entries(lists)){
-const keys=(orderPerCat[cat]||[]).filter(k=>k in items);
-keys.forEach((k,idx)=>{
-const st=items[k]||{done:false,qty:0};
-const li=document.createElement("li");li.className="item"+(st.done?" done":"");
-const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!st.done;cb.onchange=()=>{st.done=!st.done;save({items});};
-const label=document.createElement("div");label.className="label";label.textContent=k;
-const qwrap=document.createElement("div");qwrap.className="qtywrap";
-const minus=makeBtn("−","Aantal -1",()=>{if(st.qty>0){st.qty--;save({items});render();}});
-const input=document.createElement("input");input.type="number";input.min="0";input.value=st.qty;input.onchange=()=>{st.qty=Math.max(0,parseInt(input.value)||0);save({items});};
-const plus=makeBtn("+","Aantal +1",()=>{st.qty++;save({items});render();});
-qwrap.append(minus,input,plus);
-const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
-const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
-li.append(cb,label,qwrap,pen,del);ul.appendChild(li);});
-}}
-async function renameItem(oldK){const s=prompt("Nieuwe naam:",oldK);if(!s)return;const n=s.trim();if(!n)return;const c=catOf(oldK);items[n]=items[oldK];delete items[oldK];orderPerCat[c]=orderPerCat[c].map(x=>x===oldK?n:x);save({items,orderPerCat});render();}
-async function removeItemConfirm(k){if(!confirm(`Verwijder "${k}"?`))return;const c=catOf(k);delete items[k];orderPerCat[c]=orderPerCat[c].filter(x=>x!==k);save({items,orderPerCat});render();}
-btnAdd.onclick=()=>{const x=elNew.value.trim();if(!x)return;if(items[x])return alert("Bestaat al");items[x]={done:false,qty:0};orderPerCat.OVERIG.push(x);save({items,orderPerCat});render();elNew.value="";};
-elNew.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();btnAdd.click();}});
+function render(){
+  Object.values(lists).forEach(ul => ul.innerHTML="");
+  for (const [cat,ul] of Object.entries(lists)){
+    const keys = (orderPerCat[cat] || []).filter(k => k in items);
+    keys.forEach((k,idx)=>{
+      const st = items[k] || { done:false, qty:0 };
+
+      const li = document.createElement("li");
+      li.className = "item" + (st.done ? " done" : "");
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!st.done;
+      cb.onchange = ()=>{ st.done = !st.done; save({ items }); };
+
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = k;
+
+      const qwrap = document.createElement("div");
+      qwrap.className = "qtywrap";
+
+      const minus = makeBtn("−","Aantal -1",()=>{
+        if (st.qty > 0){ st.qty--; save({ items }); render(); }
+      });
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min  = "0";
+      input.value = st.qty ?? 0;
+      input.onchange = ()=>{
+        st.qty = Math.max(0, parseInt(input.value)||0);
+        save({ items });
+      };
+      const plus = makeBtn("+","Aantal +1",()=>{
+        st.qty = (st.qty||0) + 1;
+        save({ items }); render();
+      });
+      qwrap.append(minus,input,plus);
+
+      const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
+      const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+
+      li.append(cb,label,qwrap,pen,del);
+      ul.appendChild(li);
+    });
+  }
+}
+
+/* ===== Acties ===== */
+async function renameItem(oldK){
+  const s = prompt("Nieuwe naam:", oldK);
+  if (!s) return;
+  const n = s.trim();
+  if (!n) return;
+  if (n === oldK) return;
+
+  const c = catOf(oldK);
+  items[n] = items[oldK];
+  delete items[oldK];
+  orderPerCat[c] = (orderPerCat[c] || []).map(x => x === oldK ? n : x);
+  await save({ items, orderPerCat });
+  render();
+}
+
+async function removeItemConfirm(k){
+  if (!confirm(`Verwijder "${k}"?`)) return;
+  const c = catOf(k);
+  delete items[k];
+  orderPerCat[c] = (orderPerCat[c] || []).filter(x => x !== k);
+  await save({ items, orderPerCat });
+  render();
+}
+
+btnAdd.onclick = () => {
+  const x = (elNew.value || "").trim();
+  if (!x) return;
+  if (items[x]) return alert("Bestaat al");
+  items[x] = { done:false, qty:0 };
+  if (!Array.isArray(orderPerCat.OVERIG)) orderPerCat.OVERIG = [];
+  orderPerCat.OVERIG.push(x);
+  save({ items, orderPerCat });
+  render();
+  elNew.value = "";
+};
+elNew.addEventListener("keydown",e=>{
+  if (e.key==="Enter"){
+    e.preventDefault();
+    btnAdd.click();
+  }
+});
 </script>
 </body>
 </html>
