@@ -46,7 +46,7 @@
       gap:8px;
     }
 
-    /* tools zijn standaard onzichtbaar: alleen Back Office is te zien */
+    /* tools verborgen totdat Back Office open is */
     .tools{
       display:none;
       gap:8px;
@@ -148,42 +148,6 @@
       font-size:12px;
       text-align:center;
     }
-
-    /* Back Office overlay met password (sterretjes) */
-    .bo-overlay{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.6);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:50;
-    }
-    .bo-overlay .panel{
-      background:#0f1320;
-      border:1px solid #262c39;
-      border-radius:14px;
-      padding:16px 18px;
-      max-width:320px;
-      width:90%;
-    }
-    .bo-overlay h1{
-      margin:0 0 8px;
-      font-size:16px;
-    }
-    .bo-overlay .row{
-      display:flex;
-      gap:8px;
-      margin-top:10px;
-    }
-    .bo-overlay input{
-      flex:1;
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid #2a2f3a;
-      background:#0b0f18;
-      color:#eef2f8;
-    }
   </style>
 </head>
 <body>
@@ -196,23 +160,11 @@
         <div class="s">Schoonmaakklussen</div>
       </div>
       <div class="header-right">
-  <button id="btnBackoffice" type="button">Back Office</button>
-  <button id="btnResetAll" type="button">Alles herstellen</button>
-  <div class="tools"></div>
-</div>
-    </header>
-
-    <!-- Back Office overlay met password -->
-    <div id="boOverlay" class="bo-overlay">
-      <div class="panel">
-        <h1>Back Office</h1>
-        <p class="hint">Voer de beheerderscode in.</p>
-        <div class="row">
-          <input id="boCode" type="password" placeholder="Beheerderscode" />
-          <button id="boOk" type="button">Open</button>
-        </div>
+        <button id="btnBackoffice" type="button">Back Office</button>
+        <button id="btnResetAll" type="button">Alles herstellen</button>
+        <div class="tools"></div>
       </div>
-    </div>
+    </header>
 
     <div class="card" id="card-root">
       <div class="add">
@@ -248,22 +200,14 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ===== Config ===== */
-const DOC_ID     = "schoonmaak_klussen";
-const ADMIN_CODE = "Yali313";
+const DOC_ID      = "schoonmaak_klussen";
+const ADMIN_CODE  = "YamanBS1";
+const LS_BACK_KEY = "bo_schoonmaak_unlocked";
 
 /* ===== UI refs ===== */
 const toolsBar      = document.querySelector(".tools");
 const btnBackoffice = document.getElementById("btnBackoffice");
-const btnResetAll   = document.getElementById("btnResetAll"); // ← nieuw
-// Alles herstellen = alle vinkjes leegmaken
-btnResetAll.onclick = () => {
-  const next = Object.fromEntries(Object.keys(items).map(k => [k, false]));
-  items = next;
-  save({ items: next });
-};
-const boOverlay = document.getElementById("boOverlay");
-const boCode    = document.getElementById("boCode");
-const boOk      = document.getElementById("boOk");
+const btnResetAll   = document.getElementById("btnResetAll");
 
 const elRoot  = document.getElementById("card-root");
 const elNew   = document.getElementById("newItem");
@@ -275,16 +219,17 @@ const secBig  = document.getElementById("sec-big");
 const ulFast  = document.getElementById("list-fast");
 const ulBig   = document.getElementById("list-big");
 
-/* ===== Toolbar-knoppen ===== */
+/* ===== Toolbar-knoppen (alleen zichtbaar in Back Office) ===== */
 const bSeed  = document.createElement("button"); bSeed.textContent  = "Resetten";
 const bPrio1 = document.createElement("button"); bPrio1.textContent = "Prioriteit 1";
 const bPrio2 = document.createElement("button"); bPrio2.textContent = "Prioriteit 2";
-const btnView= document.createElement("button"); btnView.textContent = "Alleen afvinken";
+const bView  = document.createElement("button"); bView.textContent  = "Alleen afvinken";
+toolsBar.replaceChildren(bSeed, bPrio1, bPrio2, bView);
 
 /* ===== State ===== */
-let backUnlocked = false;                           // ⬅️ NIET meer onthouden
-let canEdit      = false;
-let viewMode     = "ALL";     // ALL | FAST | BIG
+let backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1"); // of Back Office ooit is geopend
+let canEdit      = false;                                    // of we nu in edit-modus zijn
+let viewMode     = "ALL";                                    // ALL | FAST | BIG
 
 let items = {};
 let order = [];
@@ -331,7 +276,7 @@ function getSeed(){
   return { items, order };
 }
 
-/* ===== Snelle vs grote klussen ===== */
+/* ===== Snelle vs grote klussen bepalen ===== */
 const FAST_PREFIXES = [
   "Dresstafel",
   "Counterblad",
@@ -352,83 +297,44 @@ function isFast(label){
   return FAST_PREFIXES.some(p => label.startsWith(p));
 }
 
-/* ===== Tools zichtbaarheid ===== */
-function updateToolsBar(){
-  toolsBar.style.display = backUnlocked ? "flex" : "none";
+/* ===== Back Office zichtbaarheid ===== */
+function updateToolsVisible(){
+  // tools alleen tonen als Back Office open én in bewerk-modus
+  toolsBar.style.display = (backUnlocked && canEdit) ? "flex" : "none";
 }
-function rebuildTools(){
-  toolsBar.innerHTML = "";
-  if (backUnlocked){
-    toolsBar.appendChild(bSeed);
-    toolsBar.appendChild(bPrio1);
-    toolsBar.appendChild(bPrio2);
-    toolsBar.appendChild(btnView);
-  }
-  toolsBar.style.display = backUnlocked ? "flex" : "none";
-}
-rebuildTools();
+updateToolsVisible();
 
-/* ===== Back Office overlay behaviour (met sterretjes) ===== */
-function openBackofficeOverlay(){
-  boCode.value = "";
-  boOverlay.style.display = "flex";
-  boCode.focus();
-}
-function closeBackofficeOverlay(){
-  boOverlay.style.display = "none";
-}
-
+/* ===== Back Office knop ===== */
 btnBackoffice.onclick = () => {
-  openBackofficeOverlay();
-};
-
-boOk.onclick = () => {
-  const code = boCode.value.trim();
+  const code = prompt("Beheerderscode:", "");
   if (code === ADMIN_CODE){
     backUnlocked = true;
-    canEdit      = true;
-    // alleen editMode onthouden voor andere tabs
-    localStorage.setItem("editMode","1");
-    rebuildTools();
+    canEdit = true; // meteen in bewerken
+    localStorage.setItem(LS_BACK_KEY,"1");
+    updateToolsVisible();
     updateUI();
     render();
-    closeBackofficeOverlay();
     alert("Back Office geopend ✅");
   } else {
     alert("Onjuiste code");
-    boCode.focus();
   }
 };
 
-boCode.addEventListener("keydown", e=>{
-  if (e.key === "Enter"){
-    e.preventDefault();
-    boOk.click();
-  } else if (e.key === "Escape"){
-    e.preventDefault();
-    closeBackofficeOverlay();
-  }
-});
+/* ===== "Alles herstellen" – altijd beschikbaar ===== */
+btnResetAll.onclick = () => {
+  const next = Object.fromEntries(Object.keys(items).map(k => [k, false]));
+  items = next;
+  save({ items: next });
+};
 
-/* ===== Alleen afvinken knop ===== */
-btnView.onclick = () => {
-  canEdit      = false;
-  backUnlocked = false;           // ⬅️ Back Office-tools weer dicht
-  localStorage.removeItem("editMode");
-  rebuildTools();                 // tools-balk leeg + verborgen
+/* ===== "Alleen afvinken" ===== */
+bView.onclick = () => {
+  canEdit = false;
+  updateToolsVisible();
   updateUI();
   render();
   alert("Alleen afvinken 🔒");
 };
-
-/* ===== Storage sync (alleen editMode) ===== */
-window.addEventListener("storage", e=>{
-  if (e.key === "editMode"){
-    canEdit = (localStorage.getItem("editMode")==="1");
-    updateUI();
-    render();
-  }
-});
 
 /* ===== Firestore sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
@@ -469,20 +375,6 @@ function updateUI(){
   });
 }
 
-/* ===== View filters (Prioriteit 1/2) ===== */
-function applyView(){
-  if (viewMode === "BIG"){
-    secBig.style.display  = "";
-    secFast.style.display = "none";
-  } else if (viewMode === "FAST"){
-    secFast.style.display = "";
-    secBig.style.display  = "none";
-  } else {
-    secFast.style.display = "";
-    secBig.style.display  = "";
-  }
-}
-
 /* ===== Render + drag & drop ===== */
 function render(){
   ulFast.innerHTML = "";
@@ -513,7 +405,7 @@ function render(){
       if (!canEdit) span.onclick = ()=> toggle(k);
 
       if (backUnlocked && canEdit){
-        // drag alleen in bewerkmodus
+        // drag alleen in bewerk-modus
         li.draggable = true;
         li.addEventListener("dragstart", e=>{
           li.classList.add("dragging");
@@ -529,6 +421,7 @@ function render(){
           const to   = Number(li.dataset.idx);
           if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return;
 
+          // lokale kopie van groep herschikken
           let gArr = group === "FAST" ? fastKeys.slice() : bigKeys.slice();
           const [moved] = gArr.splice(from,1);
           gArr.splice(to,0,moved);
@@ -536,6 +429,7 @@ function render(){
           if (group === "FAST") fastKeys = gArr;
           else                  bigKeys  = gArr;
 
+          // nieuwe globale volgorde
           const nextOrder = fastKeys.concat(bigKeys);
           order = nextOrder;
           save({ order: nextOrder });
@@ -553,6 +447,7 @@ function render(){
     });
   };
 
+  // secties vullen
   renderList(fastKeys, ulFast, "FAST");
   renderList(bigKeys,  ulBig,  "BIG");
 
@@ -560,14 +455,21 @@ function render(){
   updateUI();
 }
 
-/* ===== Actie-knoppen ===== */
-bReset.onclick = ()=>{
-  // alleen alle vinkjes uit
-  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
-  items = next;
-  save({ items: next });
-};
+/* ===== View filters (Prioriteit 1/2) ===== */
+function applyView(){
+  if (viewMode === "BIG"){
+    secBig.style.display  = "";
+    secFast.style.display = "none";
+  } else if (viewMode === "FAST"){
+    secFast.style.display = "";
+    secBig.style.display  = "none";
+  } else {
+    secFast.style.display = "";
+    secBig.style.display  = "";
+  }
+}
 
+/* ===== Actie-knoppen toolbar ===== */
 bSeed.onclick = async ()=>{
   if (!backUnlocked || !canEdit) return;
   if (!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
@@ -579,7 +481,7 @@ bSeed.onclick = async ()=>{
 };
 
 bPrio1.onclick = ()=>{
-  // Prioriteit 1 = alleen GROTE klussen
+  // Prioriteit 1 = alleen GROTE SCHOONMAAKKLUSSEN
   viewMode = (viewMode === "BIG") ? "ALL" : "BIG";
   applyView();
 };
