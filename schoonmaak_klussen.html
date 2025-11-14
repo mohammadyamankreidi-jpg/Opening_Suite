@@ -247,9 +247,8 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ===== Config ===== */
-const DOC_ID      = "schoonmaak_klussen";
-const ADMIN_CODE  = "YamanBS1";
-const LS_BACK_KEY = "bo_schoonmaak_unlocked";
+const DOC_ID     = "schoonmaak_klussen";
+const ADMIN_CODE = "YamanBS1";
 
 /* ===== UI refs ===== */
 const toolsBar      = document.querySelector(".tools");
@@ -277,8 +276,8 @@ const bPrio2 = document.createElement("button"); bPrio2.textContent = "Prioritei
 const btnView= document.createElement("button"); btnView.textContent = "Alleen afvinken";
 
 /* ===== State ===== */
-let backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
-let canEdit      = (localStorage.getItem("editMode")==="1");
+let backUnlocked = false;                           // ⬅️ NIET meer onthouden
+let canEdit      = false;
 let viewMode     = "ALL";     // ALL | FAST | BIG
 
 let items = {};
@@ -364,7 +363,7 @@ function rebuildTools(){
 }
 rebuildTools();
 
-/* ===== Back Office overlay behaviour ===== */
+/* ===== Back Office overlay behaviour (met sterretjes) ===== */
 function openBackofficeOverlay(){
   boCode.value = "";
   boOverlay.style.display = "flex";
@@ -383,7 +382,7 @@ boOk.onclick = () => {
   if (code === ADMIN_CODE){
     backUnlocked = true;
     canEdit      = true;
-    localStorage.setItem(LS_BACK_KEY,"1");
+    // alleen editMode onthouden voor andere tabs
     localStorage.setItem("editMode","1");
     rebuildTools();
     updateUI();
@@ -406,7 +405,7 @@ boCode.addEventListener("keydown", e=>{
   }
 });
 
-/* ===== Alleen afvinken ===== */
+/* ===== Alleen afvinken knop ===== */
 btnView.onclick = () => {
   canEdit = false;
   localStorage.removeItem("editMode");
@@ -415,16 +414,11 @@ btnView.onclick = () => {
   alert("Alleen afvinken 🔒");
 };
 
-/* ===== Storage sync (andere tabbladen) ===== */
+/* ===== Storage sync (alleen editMode) ===== */
 window.addEventListener("storage", e=>{
   if (e.key === "editMode"){
     canEdit = (localStorage.getItem("editMode")==="1");
     updateUI();
-    render();
-  }
-  if (e.key === LS_BACK_KEY){
-    backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
-    rebuildTools();
     render();
   }
 });
@@ -578,7 +572,7 @@ bSeed.onclick = async ()=>{
 };
 
 bPrio1.onclick = ()=>{
-  // Prioriteit 1 = alleen GROTE SCHOONMAAKKLUSSEN
+  // Prioriteit 1 = alleen GROTE klussen
   viewMode = (viewMode === "BIG") ? "ALL" : "BIG";
   applyView();
 };
