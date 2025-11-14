@@ -196,9 +196,10 @@
         <div class="s">Schoonmaakklussen</div>
       </div>
       <div class="header-right">
-        <button id="btnBackoffice" type="button">Back Office</button>
-        <div class="tools"></div>
-      </div>
+  <button id="btnBackoffice" type="button">Back Office</button>
+  <button id="btnResetAll" type="button">Alles herstellen</button>
+  <div class="tools"></div>
+</div>
     </header>
 
     <!-- Back Office overlay met password -->
@@ -253,7 +254,13 @@ const ADMIN_CODE = "YamanBS1";
 /* ===== UI refs ===== */
 const toolsBar      = document.querySelector(".tools");
 const btnBackoffice = document.getElementById("btnBackoffice");
-
+const btnResetAll   = document.getElementById("btnResetAll"); // ← nieuw
+// Alles herstellen = alle vinkjes leegmaken
+btnResetAll.onclick = () => {
+  const next = Object.fromEntries(Object.keys(items).map(k => [k, false]));
+  items = next;
+  save({ items: next });
+};
 const boOverlay = document.getElementById("boOverlay");
 const boCode    = document.getElementById("boCode");
 const boOk      = document.getElementById("boOk");
@@ -269,7 +276,6 @@ const ulFast  = document.getElementById("list-fast");
 const ulBig   = document.getElementById("list-big");
 
 /* ===== Toolbar-knoppen ===== */
-const bReset = document.createElement("button"); bReset.textContent = "Alles herstellen";
 const bSeed  = document.createElement("button"); bSeed.textContent  = "Resetten";
 const bPrio1 = document.createElement("button"); bPrio1.textContent = "Prioriteit 1";
 const bPrio2 = document.createElement("button"); bPrio2.textContent = "Prioriteit 2";
@@ -353,13 +359,12 @@ function updateToolsBar(){
 function rebuildTools(){
   toolsBar.innerHTML = "";
   if (backUnlocked){
-    toolsBar.appendChild(bReset);
     toolsBar.appendChild(bSeed);
     toolsBar.appendChild(bPrio1);
     toolsBar.appendChild(bPrio2);
     toolsBar.appendChild(btnView);
   }
-  updateToolsBar();
+  toolsBar.style.display = backUnlocked ? "flex" : "none";
 }
 rebuildTools();
 
@@ -407,8 +412,10 @@ boCode.addEventListener("keydown", e=>{
 
 /* ===== Alleen afvinken knop ===== */
 btnView.onclick = () => {
-  canEdit = false;
+  canEdit      = false;
+  backUnlocked = false;           // ⬅️ Back Office-tools weer dicht
   localStorage.removeItem("editMode");
+  rebuildTools();                 // tools-balk leeg + verborgen
   updateUI();
   render();
   alert("Alleen afvinken 🔒");
