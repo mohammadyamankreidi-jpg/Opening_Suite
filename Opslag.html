@@ -60,7 +60,7 @@
     .divider{height:1px;background:rgba(255,255,255,.15);margin:8px 0 10px;border-radius:1px}
     .add{
       display:grid;
-      grid-template-columns:1fr auto auto; /* tekst + categorie + knop */
+      grid-template-columns:1fr auto auto;
       gap:10px;
       margin:8px 0 4px;
     }
@@ -73,6 +73,17 @@
       color:var(--text);
     }
     select{min-width:140px}
+    .search{
+      margin:4px 0 8px;
+    }
+    .search input{
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0b0f18;
+      color:#eef2f8;
+    }
     ul{
       list-style:none;
       padding:0;
@@ -175,7 +186,7 @@
       <div class="tools"></div>
     </header>
 
-    <!-- 🔐 Lock overlay (standaard AAN, JS schakelt) -->
+    <!-- 🔐 Lock overlay -->
     <div id="locked" class="lock">
       <div class="panel">
         <h1>Toegang vereist</h1>
@@ -188,6 +199,10 @@
     </div>
 
     <div id="content" class="card" style="display:none">
+      <div class="search">
+        <input id="search" type="text" placeholder="Zoeken in alle items..." />
+      </div>
+
       <div class="add">
         <input id="newItem" type="text" placeholder="Nieuw item..." />
         <select id="newCat">
@@ -324,7 +339,6 @@ const bLock  = document.createElement("button"); bLock.textContent  = "🔐 Verg
 tools.replaceChildren(bReset,bSeed,bLock);
 
 bReset.onclick = () => {
-  // alleen alle vinkjes uit + aantallen op 0
   for (const k in items){
     if (!items[k]) continue;
     items[k].done = false;
@@ -340,15 +354,16 @@ bSeed.onclick  = async () => {
 };
 
 bLock.onclick  = () => {
-  // direct vergrendelen en terug naar start
   localStorage.removeItem(LS_KEY_UNLOCK);
   window.location.href = "index.html";
 };
 
 /* ===== UI refs ===== */
-const elNew   = document.getElementById("newItem");
-const elCat   = document.getElementById("newCat");
-const btnAdd  = document.getElementById("btnAdd");
+const elNew    = document.getElementById("newItem");
+const elCat    = document.getElementById("newCat");
+const btnAdd   = document.getElementById("btnAdd");
+const elSearch = document.getElementById("search");
+
 const lists   = {
   "PAPIER":     document.getElementById("list-PAPIER"),
   "BALIE":      document.getElementById("list-BALIE"),
@@ -376,11 +391,11 @@ function baseCats(){
       "Groot frietdoos","Medium frietdoos",
       "HB bak rood/grijs","HB bak geel/bruin",
       "Zakjes 23","Zakjes 25","Zakjes 27","Zakjes 28",
-      "Saladedeksel","Saladebakken",
+      "Saladedeksel",
+      "Saladebakken 1000mm","Saladebakken 500mm",
       "Cheezin bakjes","Cheezin vorkjes"
     ],
     BUBBLETEA: [
-      // placeholder, later aan te passen
       "Matcha","Ice coffee","Thee"
     ],
     SAUZEN: [
@@ -397,7 +412,7 @@ function baseCats(){
       "Sundae bekers","Sundae lepels","Sundae deksels",
       "Milkshake bekers 500","Milkshake bekers 400","Milkshake bekers 300","Milkshake deksels",
       "Shuffel lepels","Rietjes klein","Rietjes groot",
-      "IJshoorntjes","Kleine zwarte ijsbekers"
+      "IJshoorntjes","Kleine zwart ijsbekers"
     ],
     DRANK: [
       "Cola","Cola zero","Fanta","Fanta zero","Sprite",
@@ -430,6 +445,13 @@ function getSeed(){
 /* ===== Firestore state ===== */
 let items = {};
 let orderPerCat = {};
+let searchTerm = "";
+
+/* live search */
+elSearch.addEventListener("input", () => {
+  searchTerm = (elSearch.value || "").toLowerCase().trim();
+  render();
+});
 
 onSnapshot(doc(db,"lists",DOC_ID), async s => {
   if (s.exists()){
@@ -443,7 +465,8 @@ onSnapshot(doc(db,"lists",DOC_ID), async s => {
 });
 
 async function save(p){
-  await setDoc(doc(db,"lists",DOC_ID),
+  await setDoc(
+    doc(db,"lists",DOC_ID),
     { ...(p || {}), updatedAt: serverTimestamp() },
     { merge:true }
   );
@@ -453,7 +476,8 @@ async function hardSeed(){
   const s = getSeed();
   items       = s.items;
   orderPerCat = s.orderPerCat;
-  await setDoc(doc(db,"lists",DOC_ID),
+  await setDoc(
+    doc(db,"lists",DOC_ID),
     { items, orderPerCat, updatedAt: serverTimestamp() },
     { merge:false }
   );
@@ -481,10 +505,11 @@ function makeBtn(txt,title,onClick){
   return b;
 }
 
-/* ===== Render (met drag & drop per categorie) ===== */
+/* ===== Render (met drag & drop & zoeken) ===== */
 function render(){
-  // leeg alle ULs
   Object.values(lists).forEach(ul => { if (ul) ul.innerHTML = ""; });
+
+  const hasSearch = !!searchTerm;
 
   for (const [cat, ul] of Object.entries(lists)){
     if (!ul) continue;
@@ -492,6 +517,9 @@ function render(){
 
     keys.forEach((k, idx) => {
       const st = items[k] || { done:false, qty:0 };
+
+      // filter op zoekterm
+      if (hasSearch && !k.toLowerCase().includes(searchTerm)) return;
 
       const li = document.createElement("li");
       li.className   = "item" + (st.done ? " done" : "");
@@ -541,40 +569,42 @@ function render(){
       const pen = makeBtn("✏️","Naam aanpassen", () => renameItem(k));
       const del = makeBtn("🗑️","Verwijderen",   () => removeItemConfirm(k));
 
-      // drag & drop binnen dezelfde categorie
-      li.draggable = true;
-      li.addEventListener("dragstart", e => {
-        li.classList.add("dragging");
-        e.dataTransfer.setData("text/plain",
-          JSON.stringify({ cat, from: idx })
-        );
-      });
-      li.addEventListener("dragend", () => {
-        li.classList.remove("dragging");
-      });
-      li.addEventListener("dragover", e => {
-        e.preventDefault();
-      });
-      li.addEventListener("drop", e => {
-        e.preventDefault();
-        let data;
-        try {
-          data = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
-        } catch {
-          data = null;
-        }
-        if (!data || data.cat !== cat) return;
-        const from = data.from;
-        const to   = Number(li.dataset.idx);
-        if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return;
+      // drag & drop alleen als er NIET gezocht wordt (anders wordt het chaotisch)
+      if (!hasSearch){
+        li.draggable = true;
+        li.addEventListener("dragstart", e => {
+          li.classList.add("dragging");
+          e.dataTransfer.setData("text/plain",
+            JSON.stringify({ cat, from: idx })
+          );
+        });
+        li.addEventListener("dragend", () => {
+          li.classList.remove("dragging");
+        });
+        li.addEventListener("dragover", e => {
+          e.preventDefault();
+        });
+        li.addEventListener("drop", e => {
+          e.preventDefault();
+          let data;
+          try {
+            data = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
+          } catch {
+            data = null;
+          }
+          if (!data || data.cat !== cat) return;
+          const from = data.from;
+          const to   = Number(li.dataset.idx);
+          if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return;
 
-        const arr = (orderPerCat[cat] || []).slice();
-        const [moved] = arr.splice(from, 1);
-        arr.splice(to, 0, moved);
-        orderPerCat[cat] = arr;
-        save({ orderPerCat });
-        render();
-      });
+          const arr = (orderPerCat[cat] || []).slice();
+          const [moved] = arr.splice(from, 1);
+          arr.splice(to, 0, moved);
+          orderPerCat[cat] = arr;
+          save({ orderPerCat });
+          render();
+        });
+      }
 
       li.append(cb, label, qwrap, pen, del);
       ul.appendChild(li);
