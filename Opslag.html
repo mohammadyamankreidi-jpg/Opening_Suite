@@ -193,7 +193,6 @@
         <select id="newCat">
           <option value="PAPIER">Papier & Zak</option>
           <option value="BALIE">Balie & Servies</option>
-          <option value="SALADE">Salade & Cheezin</option>
           <option value="VERPAKKING">Verpakking</option>
           <option value="BUBBLETEA">Bubble tea</option>
           <option value="SAUZEN">Sauzen</option>
@@ -215,12 +214,6 @@
           <div class="head">BALIE & SERVIES</div>
           <div class="divider"></div>
           <ul id="list-BALIE"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">SALADE & CHEEZIN</div>
-          <div class="divider"></div>
-          <ul id="list-SALADE"></ul>
         </section>
 
         <section class="section">
@@ -279,7 +272,7 @@ const db  = getFirestore(app);
 
 /* ===== Config ===== */
 const DOC_ID     = "opslag_lijst";
-const ADMIN_CODE = "Yali313";     // jouw code
+const ADMIN_CODE = "Yali313";
 
 /* ===== Locking ===== */
 const LS_KEY_UNLOCK = "ops_unlocked";
@@ -343,12 +336,13 @@ bReset.onclick = () => {
 bSeed.onclick  = async () => {
   if(!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
   await hardSeed();
+  render();
 };
 
 bLock.onclick  = () => {
-  // direct vergrendelen, geen code vragen
+  // direct vergrendelen en terug naar start
   localStorage.removeItem(LS_KEY_UNLOCK);
-  updateLockUI();
+  window.location.href = "index.html";
 };
 
 /* ===== UI refs ===== */
@@ -358,7 +352,6 @@ const btnAdd  = document.getElementById("btnAdd");
 const lists   = {
   "PAPIER":     document.getElementById("list-PAPIER"),
   "BALIE":      document.getElementById("list-BALIE"),
-  "SALADE":     document.getElementById("list-SALADE"),
   "VERPAKKING": document.getElementById("list-VERPAKKING"),
   "BUBBLETEA":  document.getElementById("list-BUBBLETEA"),
   "SAUZEN":     document.getElementById("list-SAUZEN"),
@@ -378,15 +371,13 @@ function baseCats(){
     BALIE: [
       "Houdertjes 2","Houdertjes 4"
     ],
-    SALADE: [
-      "Saladedeksel","Saladebakken",
-      "Cheezin bakjes","Cheezin vorkjes"
-    ],
     VERPAKKING: [
       "Dunnerbox klein","Dunnerbox medium","Dunnerbox groot",
       "Groot frietdoos","Medium frietdoos",
       "HB bak rood/grijs","HB bak geel/bruin",
-      "Zakjes 23","Zakjes 25","Zakjes 27","Zakjes 28"
+      "Zakjes 23","Zakjes 25","Zakjes 27","Zakjes 28",
+      "Saladedeksel","Saladebakken",
+      "Cheezin bakjes","Cheezin vorkjes"
     ],
     BUBBLETEA: [
       // placeholder, later aan te passen
@@ -603,7 +594,6 @@ async function renameItem(oldK){
 
   const exists = !!items[n];
   if (exists){
-    // samenvoegen: vinkjes/aantallen bij elkaar optellen kan later; nu: overschrijven
     items[n] = items[oldK];
   } else {
     items[n] = items[oldK];
