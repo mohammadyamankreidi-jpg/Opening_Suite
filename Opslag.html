@@ -22,13 +22,13 @@
     .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
     input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
     ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;min-height:8px}
-    li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
+    li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px;cursor:grab}
     li.item.done{opacity:.6;text-decoration:line-through}
     .label{flex:1;cursor:pointer}
     .btn{display:inline-flex;align-items:center;justify-content:center;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95;padding:0 8px}
     .qtywrap{display:flex;align-items:center;gap:6px}
     .qtywrap input{width:64px;text-align:center;padding:6px 8px;border-radius:8px;border:1px solid #444;background:#0b0f18;color:#eef2f8}
-    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
+    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff;cursor:grabbing}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
     .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
@@ -80,58 +80,19 @@
       </div>
 
       <div class="cols">
-        <section class="section">
-          <div class="head">PAPIER & ZAKKEN</div><div class="divider"></div>
-          <ul id="list-PAPIER"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">BALIE & SERVIES</div><div class="divider"></div>
-          <ul id="list-BALIE"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">VERPAKKING</div><div class="divider"></div>
-          <ul id="list-VERPAKKING"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">SUNDAE & SHAKE</div><div class="divider"></div>
-          <ul id="list-SHAKE"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">BUBBLE TEA</div><div class="divider"></div>
-          <ul id="list-BUBBLE"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">SAUZEN</div><div class="divider"></div>
-          <ul id="list-SAUZEN"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">IJS & SHAKE</div><div class="divider"></div>
-          <ul id="list-IJS"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">DRANKEN</div><div class="divider"></div>
-          <ul id="list-DRANK"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head">KEUKEN</div><div class="divider"></div>
-          <ul id="list-KEUKEN"></ul>
-        </section>
-
-        <section class="section">
-          <div class="head"> OVERIG</div><div class="divider"></div>
-          <ul id="list-OVERIG"></ul>
-        </section>
+        <section class="section"><div class="head">PAPIER & ZAKKEN</div><div class="divider"></div><ul id="list-PAPIER"></ul></section>
+        <section class="section"><div class="head">BALIE & SERVIES</div><div class="divider"></div><ul id="list-BALIE"></ul></section>
+        <section class="section"><div class="head">VERPAKKING</div><div class="divider"></div><ul id="list-VERPAKKING"></ul></section>
+        <section class="section"><div class="head">SHAKE & SUNDAE</div><div class="divider"></div><ul id="list-SHAKE"></ul></section>
+        <section class="section"><div class="head">BUBBLE TEA</div><div class="divider"></div><ul id="list-BUBBLETEA"></ul></section>
+        <section class="section"><div class="head">SAUZEN</div><div class="divider"></div><ul id="list-SAUZEN"></ul></section>
+        <section class="section"><div class="head">IJS & SHAKE</div><div class="divider"></div><ul id="list-IJSSHAKE"></ul></section>
+        <section class="section"><div class="head">DRANKEN</div><div class="divider"></div><ul id="list-DRANK"></ul></section>
+        <section class="section"><div class="head">KEUKEN</div><div class="divider"></div><ul id="list-KEUKEN"></ul></section>
+        <section class="section"><div class="head">KINDERMENU & OVERIG</div><div class="divider"></div><ul id="list-OVERIG"></ul></section>
       </div>
 
-      <p class="hint">Vink af of pas aantallen aan. Alles synct voor iedereen (met code).</p>
+      <p class="hint">Vink af, pas aantallen aan of schuif items. Alles synct voor iedereen (met code).</p>
     </div>
 
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
@@ -179,15 +140,13 @@ btnUnlock.onclick = () => {
   }
 };
 
-// als localStorage verandert (andere tab)
-window.addEventListener("storage", e => {
-  if (e.key === LS_KEY_UNLOCK){
-    updateLockUI();
-  }
-});
-
 // bij laden meteen goede staat zetten
 updateLockUI();
+
+// als je de pagina verlaat → lock weer dicht
+window.addEventListener("beforeunload", () => {
+  localStorage.removeItem(LS_KEY_UNLOCK);
+});
 
 /* ===== Toolbar ===== */
 let tools = document.querySelector(".tools");
@@ -215,62 +174,107 @@ bLock.onclick  = () => {
 const elNew = document.getElementById("newItem");
 const btnAdd= document.getElementById("btnAdd");
 const lists = {
-  "PAPIER":      document.getElementById("list-PAPIER"),
-  "BALIE":       document.getElementById("list-BALIE"),
-  "VERPAKKING":  document.getElementById("list-VERPAKKING"),
-  "SHAKE":       document.getElementById("list-SHAKE"),
-  "BUBBLE":      document.getElementById("list-BUBBLE"),
-  "SAUZEN":      document.getElementById("list-SAUZEN"),
-  "IJS":         document.getElementById("list-IJS"),
-  "DRANK":       document.getElementById("list-DRANK"),
-  "OVERIG":      document.getElementById("list-OVERIG"),
+  "PAPIER":     document.getElementById("list-PAPIER"),
+  "BALIE":      document.getElementById("list-BALIE"),
+  "VERPAKKING": document.getElementById("list-VERPAKKING"),
+  "SHAKE":      document.getElementById("list-SHAKE"),
+  "BUBBLE TEA": document.getElementById("list-BUBBLETEA"),
+  "SAUZEN":     document.getElementById("list-SAUZEN"),
+  "IJS&SHAKE":  document.getElementById("list-IJSSHAKE"),
+  "DRANK":      document.getElementById("list-DRANK"),
+  "KEUKEN":     document.getElementById("list-KEUKEN"),
+  "OVERIG":     document.getElementById("list-OVERIG"),
 };
 
-/* ===== Seed (jouw aangepaste indeling) ===== */
-function baseCats(){return{
-  "PAPIER":[
-    "Inpakpapier","Junior papier","Dresspapier",
-    "Inpakkzakken groot","Inpakzakken medium","Inpakzakken klein",
-    "Servetten","Tork"
-  ],
-  "BALIE":[
-    "Rietjes klein","Rietjes groot",
-    "Houdertjes 2","Houdertjes 4"
-  ],
-  "VERPAKKING":[
-    "Saladedeksel 500ml","Saladedeksel 1000ml",
-    "Saladebakken 500ml","Saladebakken 1000ml",
-    "Cheezin bakjes","Cheezin vorkjes",
-    "Zakjes 23","Zakjes 25","Zakjes 27","Zakjes 28"
-  ],
-  "SHAKE":[
-    "Sundae lepels","Sundae bekers","Sundae deksels","Shuffel lepels",
-    "Milkshake bekers 500","Milkshake bekers 400","Milkshake bekers 300",
-    "Milkshake deksels"
-  ],
-  "BUBBLE":[
-    "Matcha","Ice coffee","Thee"
-  ],
-  "SAUZEN":[
-    "Piñata","Honeymosterd","Caesar","Yoghurt"
-  ],
-  "IJS":[
-    "Aardbei topping","Chocolate topping","Kinderbueno topping",
-    "Ijsmix","Shakemix",
-    "Aardbei siroop","Banaan siroop","Chocolade siroop","Mango siroop"
-  ],
-  "DRANK":[
-    "Cola","Cola zero","Fanta","Fanta zero","Sprite",
-    "Fernandez groen","Fernandez rood",
-    "Ice tea sparkling","Ice tea peach","Ice tea green",
-    "Chocomel","Fristi","Cassis","Appelsap","Sinaasappelsap",
-    "Caprisun","Water","Chocomel pakjes","Fristi pakjes"
-  ],
-  ],
-  "OVERIG":[
-    "Kleine sauzen bakjes","Jalapeños","Kinderspeelgoed","Levo vet"
-  ]
-};}
+/* ===== Seed ===== */
+function baseCats(){
+  return {
+    "PAPIER": [
+      "Inpakpapier",
+      "Junior papier",
+      "Dresspapier",
+      "Inpakkzakken groot",
+      "Inpakzakken medium",
+      "Inpakzakken klein",
+      "Servetten",
+      "Tork"
+    ],
+    "BALIE": [
+      "Rietjes klein",
+      "Rietjes groot",
+      "Houdertjes 2",
+      "Houdertjes 4"
+    ],
+    "VERPAKKING": [
+      "Saladedeksel en Saladebakken 500&1000mm",
+      "Cheezin bakjes",
+      "Cheezin vorkjes",
+      "Zakjes 23",
+      "Zakjes 25",
+      "Zakjes 27",
+      "Zakjes 28"
+    ],
+    "SHAKE": [
+      "Sundae lepels",
+      "Sundae bekers",
+      "Sundae deksels",
+      "Shuffel lepels",
+      "Milkshake bekers 500",
+      "Milkshake bekers 400",
+      "Milkshake bekers 300",
+      "Milkshake deksels"
+    ],
+    "BUBBLE TEA": [
+      "Matcha",
+      "Ice coffee",
+      "Thee"
+    ],
+    "SAUZEN": [
+      "Piñata",
+      "Honeymosterd",
+      "Caesar",
+      "Yoghurt"
+    ],
+    "IJS&SHAKE": [
+      "Aardbei topping",
+      "Chocolate topping",
+      "Kinderbueno topping",
+      "Ijsmix",
+      "Shakemix",
+      "Aardbei siroop",
+      "Banaan siroop",
+      "Chocolade siroop",
+      "Mango siroop"
+    ],
+    "DRANK": [
+      "Cola",
+      "Cola zero",
+      "Fanta",
+      "Fanta zero",
+      "Sprite",
+      "Fernandez groen",
+      "Fernandez rood",
+      "Ice tea sparkling",
+      "Ice tea peach",
+      "Ice tea green",
+      "Chocomel",
+      "Fristi",
+      "Cassis",
+      "Appelsap",
+      "Sinaasappelsap",
+      "Caprisun",
+      "Water",
+      "Chocomel pakjes",
+      "Fristi pakjes"
+    ],
+    "OVERIG": [
+      "Kleine sauzen bakjes",
+      "Jalapeños",
+      "Kinderspeelgoed",
+      "Levo vet"
+    ]
+  };
+}
 
 function getSeed(){
   const cats = baseCats();
@@ -318,32 +322,75 @@ function makeBtn(t,tt,fn){
   return b;
 }
 
-/* ===== Render ===== */
+/* ===== Render (incl. schuiven) ===== */
 function render(){
   Object.values(lists).forEach(ul => ul.innerHTML="");
+
   for (const [cat,ul] of Object.entries(lists)){
     const keys = (orderPerCat[cat] || []).filter(k => k in items);
+
     keys.forEach((k,idx)=>{
       const st = items[k] || { done:false, qty:0 };
 
       const li = document.createElement("li");
       li.className = "item" + (st.done ? " done" : "");
+      li.dataset.cat  = cat;
+      li.dataset.index = String(idx);
+
+      // ✅ drag & drop
+      li.draggable = true;
+      li.addEventListener("dragstart", e=>{
+        li.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", JSON.stringify({ cat, from: idx }));
+      });
+      li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
+      li.addEventListener("dragover", e=> e.preventDefault());
+      li.addEventListener("drop", e=>{
+        e.preventDefault();
+        const data = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
+        if (!data || data.cat !== cat) return;
+        const from = data.from;
+        const to   = idx;
+        if (!Number.isFinite(from) || from === to) return;
+
+        const arr = (orderPerCat[cat] || []).slice();
+        const [moved] = arr.splice(from,1);
+        arr.splice(to,0,moved);
+        orderPerCat[cat] = arr;
+        save({ orderPerCat });
+        render();
+      });
 
       const cb = document.createElement("input");
       cb.type = "checkbox";
       cb.checked = !!st.done;
-      cb.onchange = ()=>{ st.done = !st.done; save({ items }); };
+      cb.onchange = ()=>{
+        st.done = !st.done;
+        save({ items });
+        render();
+      };
 
       const label = document.createElement("div");
       label.className = "label";
       label.textContent = k;
+      label.onclick = ()=>{
+        cb.checked = !cb.checked;
+        st.done = cb.checked;
+        save({ items });
+        render();
+      };
 
       const qwrap = document.createElement("div");
       qwrap.className = "qtywrap";
 
       const minus = makeBtn("−","Aantal -1",()=>{
-        if (st.qty > 0){ st.qty--; save({ items }); render(); }
+        if (st.qty > 0){
+          st.qty--;
+          save({ items });
+          render();
+        }
       });
+
       const input = document.createElement("input");
       input.type = "number";
       input.min  = "0";
@@ -352,10 +399,13 @@ function render(){
         st.qty = Math.max(0, parseInt(input.value)||0);
         save({ items });
       };
+
       const plus = makeBtn("+","Aantal +1",()=>{
         st.qty = (st.qty||0) + 1;
-        save({ items }); render();
+        save({ items });
+        render();
       });
+
       qwrap.append(minus,input,plus);
 
       const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
@@ -372,8 +422,7 @@ async function renameItem(oldK){
   const s = prompt("Nieuwe naam:", oldK);
   if (!s) return;
   const n = s.trim();
-  if (!n) return;
-  if (n === oldK) return;
+  if (!n || n === oldK) return;
 
   const c = catOf(oldK);
   items[n] = items[oldK];
