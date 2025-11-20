@@ -3,58 +3,165 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ShiftStart – Prioriteit</title>
+  <title>ShiftStart – Voorraad & Checks</title>
   <link rel="icon" href="data:,">
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    body{
+      margin:0;
+      background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    }
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
-    .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-    .tools{display:flex;gap:8px;flex-wrap:wrap}
-    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
-    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
-    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
-    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
-    li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
-    li.item.done{opacity:.6;text-decoration:line-through}
-    .label{flex:1;cursor:pointer}
-    .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
-    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
-    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:20px;
+      backdrop-filter:blur(6px);
+    }
+    header.panel{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:14px 16px;
+      margin-bottom:12px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px;
+    }
+    .brand{display:flex;flex-direction:column;gap:2px}
+    .brand .h{font-weight:800;font-size:18px}
+    .brand .s{color:var(--muted);font-size:12px}
+
+    .header-right{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    /* Tools alleen zichtbaar in Back Office + bewerkmodus */
+    .tools{
+      display:none;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    button{
+      background:#101624;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+
+    .add{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      margin:8px 0 4px;
+    }
+    input[type="text"]{
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0b0f18;
+      color:var(--text);
+    }
+
+    ul{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    li.item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:12px;
+      padding:12px 14px;
+      cursor:default;
+    }
+    li.item.done{
+      opacity:.6;
+      text-decoration:line-through;
+    }
+    li.item.dragging{
+      opacity:.6;
+      outline:1px dashed #6aa0ff;
+      cursor:grabbing;
+    }
+
+    .label{
+      flex:1;
+      cursor:pointer;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:28px;
+      height:28px;
+      border:1px solid #444;
+      border-radius:6px;
+      background:#151a23;
+      cursor:pointer;
+      opacity:.95;
+    }
+
+    .nav{display:flex;gap:10px;margin-bottom:12px}
+    .nav a{color:#d8e6ff}
+
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
-    footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
-    .divider{height:1px;background:#2a2f3a;margin:12px 0}
-    .day-head {
-  font-weight: 800;
-  opacity: .95;
-  margin: 0 0 8px;
-  color: #ffc107; /* wit */
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
 
-.wk-head {
-  font-weight: 800;
-  opacity: .95;
-  margin: 16px 0 8px;
-  color: #ffc107; /* wit */
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+    footer.note{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+    }
 
-/* subtiele scheidingslijn tussen doordeweeks en weekend */
-.divider {
-  height: 1px;
-  background: rgba(255,255,255,0.15);
-  margin: 16px 0;
-  border-radius: 1px;
-}
-    .notes{margin-top:14px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
-    .notes .h{font-weight:800;margin-bottom:6px}
-    .notes .row{opacity:.9}
+    /* 🔐 Back Office lock overlay (wachtwoord met sterretjes) */
+    .lock{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.7);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    .lock .panel{
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:14px;
+      padding:20px;
+      min-width:280px;
+      max-width:90%;
+    }
+    .lock h1{margin:0 0 8px;font-size:18px}
+    .lock .row{display:flex;gap:8px;margin-top:8px}
+    .lock input{
+      flex:1;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #2a2f3a;
+      background:#0b0f18;
+      color:#eef2f8;
+    }
   </style>
 </head>
 <body>
@@ -62,40 +169,36 @@
     <nav class="nav"><a href="index.html">← Terug</a></nav>
 
     <header class="panel card">
-      <div class="brand"><div class="h">ShiftStart</div><div class="s">Prioriteit</div></div>
-      <div class="tools"></div>
+      <div class="brand">
+        <div class="h">ShiftStart</div>
+        <div class="s">Voorraad & Checks</div>
+      </div>
+      <div class="header-right">
+        <button id="btnBackoffice" type="button">Back Office</button>
+        <button id="btnResetAll" type="button">Alles herstellen</button>
+        <div class="tools"></div>
+      </div>
     </header>
+
+    <!-- 🔐 Back Office overlay -->
+    <div id="boLock" class="lock">
+      <div class="panel">
+        <h1>Back Office</h1>
+        <p class="hint">Voer de beheerderscode in om bewerk-modus te openen.</p>
+        <div class="row">
+          <input id="boCode" type="password" placeholder="Beheerderscode" />
+          <button id="boOk" type="button">Open</button>
+        </div>
+      </div>
+    </div>
 
     <div class="card">
       <div class="add">
-        <input id="newItem" type="text" placeholder="Nieuw item toevoegen..." />
+        <input id="newItem" type="text" placeholder="Nieuw voorraad/check item..." />
         <button id="btnAdd">Toevoegen</button>
       </div>
-
-   <!-- lijsten -->
-<div id="day-head" class="day-head">LET OP! DOORDEWEEKS</div>
-<ul id="list-day"></ul>
-
-<div id="wk-divider" class="divider" style="display:none"></div>
-
-<div id="wk-head" class="wk-head" style="display:none">TIJDEN VOOR WEEKEND</div>
-<ul id="list-weekend"></ul>
-      <!-- vaste notities onderaan (niet in Firestore) -->
-      <div class="notes">
-        <div class="h">Aantal brood</div>
-        <div class="row">5/6 zakken 12CM</div>
-        <div class="row">1/2 zak 10 CM</div>
-        <div class="row">1/2 zak DD</div>
-        <div class="divider" style="margin:10px 0"></div>
-        <div class="h">Weekend (brood)</div>
-        <div class="row">6/7 zakken 12CM</div>
-        <div class="row">1/2 zak 10 CM</div>
-        <div class="row">1/2 zakken DD</div>
-        <div class="divider" style="margin:10px 0"></div>
-        <div class="row"><em>Bacon altijd 1 op voorraad in de koelkast houden, en één voor in de bak.</em></div>
-      </div>
-
-      <p class="hint">Klik op de tekst of het vinkje om af te strepen. Synchroniseert voor iedereen.</p>
+      <ul id="list"></ul>
+      <p class="hint">Klik op de tekst of het vinkje om af te strepen. In Back Office kun je toevoegen, hernoemen, verwijderen en slepen.</p>
     </div>
 
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
@@ -110,333 +213,329 @@ import { firebaseConfig } from "./firebase-config.js?v=15";
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-  // Helpers om weekend-items te herkennen en tekst netjes te tonen
-const isWeekendKey = k => /\(weekend\)\s*$/i.test(k);           // herkent of het eindigt op "(weekend)"
-const viewLabel    = key => (key || "").replace(/\s*\(weekend\)\s*$/i, ""); // toont de tekst zonder "(weekend)"
 /* ===== Config ===== */
-const DOC_ID     = "shiftstart_prioriteit";
-const ADMIN_CODE = "Yali313";
+const DOC_ID      = "voorraad_checks";
+const ADMIN_CODE  = "YamanBS1";
+const LS_BACK_KEY = "bo_voorraad_unlocked";
 
 /* ===== UI refs ===== */
-const ulDay     = document.getElementById("list-day");
-const ulWeekend = document.getElementById("list-weekend");
-const wkDivider = document.getElementById("wk-divider");
-const wkHead    = document.getElementById("wk-head");
-const elNew     = document.getElementById("newItem");
-const btnAdd    = document.getElementById("btnAdd");
+const elList        = document.getElementById("list");
+const elNew         = document.getElementById("newItem");
+const btnAdd        = document.getElementById("btnAdd");
+const btnBackoffice = document.getElementById("btnBackoffice");
+const btnResetAll   = document.getElementById("btnResetAll");
+const toolsBar      = document.querySelector(".tools");
 
-/* ===== Toolbar / slot ===== */
-let toolsBar = document.querySelector(".tools");
-if (!toolsBar) {
-  toolsBar = document.createElement("div");
-  toolsBar.className = "tools";
-  (document.querySelector("header.panel") || document.body).appendChild(toolsBar);
-}
-const btnEdit  = document.createElement("button"); btnEdit.textContent  = "🔓 Bewerk-modus"; btnEdit.type="button";
-const btnView  = document.createElement("button"); btnView.textContent  = "🔒 Alleen afvinken"; btnView.type="button";
-const btnReset = document.createElement("button"); btnReset.textContent = "Alles herstellen"; btnReset.type="button";
-const btnSeed  = document.createElement("button"); btnSeed.textContent  = "Herstel lijst";   btnSeed.type="button";
-toolsBar.replaceChildren(btnEdit, btnView, btnReset, btnSeed);
+/* Back Office overlay refs */
+const boLock  = document.getElementById("boLock");
+const boCode  = document.getElementById("boCode");
+const boOk    = document.getElementById("boOk");
 
-let canEdit = (localStorage.getItem("editMode")==="1");
-btnEdit.onclick = () => {
-  const code = prompt("Beheerderscode:");
-  if (code === ADMIN_CODE) { canEdit = true; localStorage.setItem("editMode","1"); updateUI(); render(); alert("Bewerk-modus aan ✅"); }
-  else alert("Onjuiste code");
-};
-btnView.onclick = () => { canEdit = false; localStorage.removeItem("editMode"); updateUI(); render(); alert("Alleen afvinken 🔒"); };
-window.addEventListener("storage", (e)=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
+/* ===== Toolbar-knoppen (alleen in Back Office) ===== */
+const bSeed = document.createElement("button");
+bSeed.type = "button";
+bSeed.textContent = "Resetten (beginlijst)";
 
+const bView = document.createElement("button");
+bView.type = "button";
+bView.textContent = "Alleen afvinken";
 
+toolsBar.replaceChildren(bSeed, bView);
 
-/* ===== Seed (dag + weekend) ===== */
+/* ===== State ===== */
+let backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+let canEdit      = false;
+
+let items = {};
+let order = [];
+
+/* ===== Seed – beginlijst voor Voorraad & Checks =====
+   (als er dingen missen, kun je ze later in Back Office bijvoegen)
+*/
 function getSeed(){
   const items = {
-    // Dag
-    "15:15 Afzuiging aan": false,
-    "15:15 Fietsen buiten en Dweilen": false,
-    "15:20 PC aan": false,
-    "15:20 brood/ bacon uithalen (check aantal onderaan de pagina)": false,
-    "15:25 Dresstafel klaarmaken": false,
-    "15:25 Bin aan inclusief verwarming aan de achterkant": false,
-    "15:30 Grill aan": false,
-    "15:40 Broodtoaster aan": false,
-    "15:50 Friteuse 1/3 aan": false,
-    "15:50 Kassatellen,check of er genoeg wisselgeld is": false,
-    "15:55 Tv’s aanzetten": false,
-    "16:00 Friteuse 2/4 aan": false,
-    "16:00 Wraps Toaster aan op 50 graden": false,
-    "16:00 Bord omdraaien naar geopend!": false,
-    "16:15 Dresstafel aan -indien nodig-":false,
-    // Weekend (met tag in data, niet zichtbaar in UI)
-    "15:15 Afzuiging aan (weekend)": false,
-    "15:15 Fietsen buiten en Dweilen (weekend)": false,
-    "15:20 PC aan (weekend)": false,
-    "15:20 brood/ bacon uithalen (weekend)": false,
-    "15:20 Grill aan (weekend)": false,
-    "15:25 Dresstafel klaarmaken (weekend)": false,
-    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)": false,
-    "15:30 Broodtoaster aan (weekend)": false,
-    "15:35 Friteuse 1/3 aan (weekend)": false,
-    "15:50 Kassatellen check of er genoeg wisselgeld is (weekend)": false,
-    "15:55 Tv’s aanzetten (weekend)": false,
-    "16:00 Friteuse 2/4 aan (weekend)": false,
-    "16:00 Wraps Toaster aan op 50 graden (weekend)": false,
-    "16:00 Bord omdraaien naar geopend! (weekend)": false,
-    "16:15 Dresstafel aan -indien nodig-":false,
-  };
+    // Koelingen & dranken
+    "Frisdrankkoeling bijgevuld (blik/fles)": false,
+    "Melk / Chocomel / Fristi aangevuld": false,
+    "Water & Caprisun bijgevuld": false,
 
-  const order = [
-    // dag eerst
-    "15:15 Afzuiging aan",
-    "15:15 Fietsen buiten en Dweilen",
-    "15:20 PC aan",
-    "15:20 brood/ bacon uithalen (check aantal onderaan de pagina)",
-    "15:25 Dresstafel klaarmaken",
-    "15:25 Bin aan inclusief verwarming aan de achterkant",
-    "15:30 Grill aan",
-    "15:40 Broodtoaster aan",
-    "15:50 Friteuse 1/3 aan",
-    "15:50 Kassatellen check of er genoeg wisselgeld is",
-    "15:55 Tv’s aanzetten",
-    "16:00 Friteuse 2/4 aan",
-    "16:00 Wraps Toaster aan op 50 graden",
-    "16:00 Bord omdraaien naar geopend!",
-    "16:15 Dresstafel aan -indien nodig-",
-    // dan weekend
-    "15:15 Afzuiging aan (weekend)",
-    "15:15 Fietsen buiten en Dweilen (weekend)",
-    "15:20 PC aan (weekend)",
-    "15:20 brood/ bacon uithalen (weekend)",
-    "15:20 Grill aan (weekend)",
-    "15:25 Dresstafel klaarmaken (weekend)",
-    "15:25 Bin aan inclusief verwarming aan de achterkant (weekend)",
-    "15:30 Broodtoaster aan (weekend)",
-    "15:35 Friteuse 1/3 aan (weekend)",
-    "15:50 Kassatellen check of er genoeg wisselgeld is (weekend)",
-    "15:55 Tv’s aanzetten (weekend)",
-    "16:00 Friteuse 2/4 aan (weekend)",
-    "16:00 Wraps Toaster aan op 50 graden (weekend)",
-    "16:00 Bord omdraaien naar geopend! (weekend)",
-    "16:15 Dresstafel aan -indien nodig-",
-  ];
+    // Saus & verpakkingen
+    "Sauzenstation bijgevuld (knoflook/curry/tartaar/etc.)": false,
+    "Kleine sausbakjes gecontroleerd en aangevuld": false,
+    "Verpakkingen burgers & friet aangevuld": false,
+    "Saladebakken 500ml / 1000ml op voorraad": false,
+
+    // IJs & shakes
+    "Shakemix en IJsmix niveau checken": false,
+    "Sundae bekers / lepels / deksels op voorraad": false,
+    "Milkshake bekers 300 / 400 / 500 + deksels genoeg": false,
+
+    // Keuken & droogvoorraad
+    "Levo vet / olie voorraad checken": false,
+    "Wraps / tortilla's op voorraad": false,
+    "Kinderbox / speelgoed voorraad": false,
+
+    // Algemene checks
+    "Houdbaarheid & datumstickers gecontroleerd": false,
+    "Vuilniszakken & schoonmaakmiddelen voldoende": false,
+    "Aan het eind: alles aangevuld voor volgende shift": false
+  };
+  const order = Object.keys(items);
   return { items, order };
 }
 
-/* ===== State + realtime ===== */
-let dataMap = {};
-let order   = [];
-onSnapshot(doc(db,"lists",DOC_ID), snap=>{
-  if (snap.exists()){
-    const d=snap.data();
-    dataMap=d.items||{};
-    order=Array.isArray(d.order)? d.order.filter(k=>k in dataMap) : Object.keys(dataMap);
-    Object.keys(dataMap).forEach(k=>{ if(!order.includes(k)) order.push(k); });
+/* ===== Back Office zichtbaarheid ===== */
+function updateToolsVisible(){
+  toolsBar.style.display = (backUnlocked && canEdit) ? "flex" : "none";
+}
+updateToolsVisible();
+
+/* ===== UI enable/disable ===== */
+function updateUI(){
+  const canType = backUnlocked && canEdit;
+  [elNew, btnAdd].forEach(el=>{
+    if (!el) return;
+    el.disabled = !canType;
+    el.style.opacity = canType ? 1 : .6;
+    el.style.pointerEvents = canType ? "auto" : "none";
+  });
+}
+
+/* ===== Back Office openen (met sterretjes) ===== */
+btnBackoffice.onclick = () => {
+  boCode.value = "";
+  boLock.style.display = "flex";
+  boCode.focus();
+};
+
+boOk.onclick = () => {
+  const val = (boCode.value || "").trim();
+  if (val === ADMIN_CODE){
+    backUnlocked = true;
+    canEdit      = true;
+    localStorage.setItem(LS_BACK_KEY,"1");
+    boLock.style.display = "none";
+    updateToolsVisible();
+    updateUI();
+    render();
+    alert("Back Office geopend ✅");
   } else {
-    const s=getSeed();
-    dataMap=s.items; order=s.order;
-    setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+    alert("Onjuiste code");
+  }
+};
+
+boCode.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    boOk.click();
+  }
+});
+
+/* ===== Alles herstellen – ALTJD zichtbaar (alle vinkjes uit) ===== */
+btnResetAll.onclick = () => {
+  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
+  items = next;
+  save({ items: next });
+};
+
+/* ===== Alleen afvinken ===== */
+bView.onclick = () => {
+  canEdit = false;
+  updateToolsVisible();
+  updateUI();
+  render();
+  alert("Alleen afvinken 🔒");
+};
+
+/* ===== Firestore sync ===== */
+onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
+  if (snap.exists()){
+    const d = snap.data();
+    items = d.items || {};
+    order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
+    Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
+  } else {
+    const s = getSeed();
+    items = s.items;
+    order = s.order;
+    await setDoc(doc(db,"lists",DOC_ID), { items, order, updatedAt: serverTimestamp() }, { merge:false });
   }
   render();
 });
 
-/* ===== Persist helpers ===== */
-async function save(p){ await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true }); }
+/* ===== Save helper ===== */
+async function save(p){
+  await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
+}
 
-/* ===== Buttons helper ===== */
-function makeBtn(txt, title, onClick){
-  const b = document.createElement("button");
-  b.className = "btn";
-  b.type = "button";
-  b.title = title;
-  b.textContent = txt;
-  b.addEventListener("click", (e) => {
-    e.preventDefault(); e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+/* ===== Button helper ===== */
+function makeBtn(txt,title,onClick){
+  const b=document.createElement("button");
+  b.className="btn";
+  b.textContent=txt;
+  b.title=title;
+  b.type="button";
+  b.addEventListener("click",(e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation?.();
     onClick();
-  }, {capture:true});
+  },{capture:true});
   return b;
 }
 
-/* ===== Render ===== */
+/* ===== Render + drag ===== */
 function render(){
-  ulDay.innerHTML=""; ulWeekend.innerHTML="";
-  const firstW = order.findIndex(isWeekendKey);
-  const dayKeys = (firstW === -1) ? order.slice() : order.slice(0, firstW);
-  const wkKeys  = (firstW === -1) ? [] : order.slice(firstW);
+  elList.innerHTML = "";
 
-  const hasWeekend = wkKeys.some(k=>k in dataMap);
-  wkDivider.style.display = hasWeekend ? "" : "none";
-  wkHead.style.display    = hasWeekend ? "" : "none";
+  const labels = order.length ? order.slice() : Object.keys(items);
 
-  const renderList = (keys, ul) => {
-    keys.forEach((key)=>{
-      if (!(key in dataMap)) return;
-      const idx = order.indexOf(key);
-      const li=document.createElement("li");
-      li.className="item"+(dataMap[key]?" done":"");
-      li.dataset.index=String(idx);
+  labels.forEach((k,idx)=>{
+    if (!(k in items)) return;
 
-      const cb=document.createElement("input");
-      cb.type="checkbox"; cb.checked=!!dataMap[key];
-      cb.onchange = ()=> toggle(key);
+    const li = document.createElement("li");
+    li.className = "item" + (items[k] ? " done" : "");
+    li.dataset.index = String(idx);
 
-      const span=document.createElement("div");
-      span.className = "label";
-      span.textContent = viewLabel(key);  // toon zonder “(weekend)”
-      if (!canEdit) span.onclick = () => toggle(key);
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!items[k];
+    cb.onchange = ()=> toggle(k);
 
-      if (canEdit){
-        const pen  = makeBtn("✏️","Naam aanpassen",()=>renameItem(key));
-        const del  = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(key));
+    const span = document.createElement("div");
+    span.className = "label";
+    span.textContent = k;
+    if (!canEdit) span.onclick = ()=> toggle(k);
 
-        // drag
-        li.draggable = true;
-        li.addEventListener("dragstart", e=>{
-          li.classList.add("dragging");
-          e.dataTransfer.setData("text/plain", String(idx));
-        });
-        li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
-        li.addEventListener("dragover", e=> e.preventDefault());
-        li.addEventListener("drop", e=>{
-          e.preventDefault();
-          const from = Number(e.dataTransfer.getData("text/plain"));
-          const to   = Number(li.dataset.index);
-          if(Number.isFinite(from)&&Number.isFinite(to)&&from!==to){
-            const next = order.slice();
-            const [m] = next.splice(from,1);
-            next.splice(to,0,m);
-            order = next;
-            save({order}); render();
-          }
-        });
+    if (backUnlocked && canEdit){
+      // drag & drop
+      li.draggable = true;
+      li.addEventListener("dragstart", e=>{
+        li.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", String(idx));
+      });
+      li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
+      li.addEventListener("dragover", e=> e.preventDefault());
+      li.addEventListener("drop", e=>{
+        e.preventDefault();
+        const from = Number(e.dataTransfer.getData("text/plain"));
+        const to   = Number(li.dataset.index);
+        if (!Number.isFinite(from) || !Number.isFinite(to) || from===to) return;
+        const next = order.slice();
+        const [moved] = next.splice(from,1);
+        next.splice(to,0,moved);
+        order = next;
+        save({ order: next });
+        render();
+      });
 
-        li.append(cb, span, pen, del);
-      } else {
-        li.append(cb, span);
-      }
-      ul.appendChild(li);
-    });
-  };
+      const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
+      const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+      li.append(cb,span,pen,del);
+    } else {
+      li.append(cb,span);
+    }
 
-  renderList(dayKeys, ulDay);
-  renderList(wkKeys,  ulWeekend);
+    elList.appendChild(li);
+  });
+
   updateUI();
 }
 
+/* ===== Reset naar beginlijst ===== */
+bSeed.onclick = async () => {
+  if (!backUnlocked || !canEdit) return;
+  if (!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
+  const s = getSeed();
+  items = s.items;
+  order = s.order;
+  await setDoc(doc(db,"lists",DOC_ID), { items, order, updatedAt: serverTimestamp() }, { merge:false });
+  render();
+};
+
 /* ===== Actions ===== */
-function toggle(key){
-  const next = { ...dataMap, [key]: !dataMap[key] };
-  dataMap = next;
+function toggle(k){
+  const next = { ...items, [k]: !items[k] };
+  items = next;
   save({ items: next });
 }
 
-function addItem(t){
-  if(!canEdit) return;
-  const x=(t||"").trim(); if(!x) return;
-  if(x in dataMap){ alert("Bestaat al."); return; }
-  const nextMap = { ...dataMap, [x]: false };
-  const nextOrd = order.concat(x);
-  dataMap = nextMap; order = nextOrd;
-  render(); save({ items: nextMap, order: nextOrd });
-}
+btnAdd.onclick = ()=>{
+  if (!backUnlocked || !canEdit) return;
+  const x = (elNew.value || "").trim();
+  if (!x) return;
+  if (x in items){ alert("Bestaat al."); return; }
 
-async function removeItemConfirm(key){
-  if(!canEdit) return;
-  if(!(key in dataMap)) return;
-  if(!confirm(`Verwijder "${key}"?`)) return;
-
-  const nextMap = { ...dataMap }; 
-  delete nextMap[key];
-  const nextOrd = order.filter(k=>k!==key);
-  dataMap = nextMap; order = nextOrd;
+  const nextItems = { ...items, [x]: false };
+  const nextOrder = order.concat(x);
+  items = nextItems;
+  order = nextOrder;
+  elNew.value = "";
+  elNew.focus();
+  save({ items: nextItems, order: nextOrder });
   render();
+};
 
-  await updateDoc(doc(db,"lists",DOC_ID), {
-    [`items.${key}`]: deleteField(),
-    order: nextOrd,
-    updatedAt: serverTimestamp()
-  });
-}
-
-async function renameItem(oldKey){
-  if (!canEdit || !(oldKey in dataMap)) return;
-
-  // Laat de gebruiker de 'schone' tekst bewerken (zonder "(weekend)")
-  const currentBase = viewLabel(oldKey);
-  const input = prompt("Nieuwe naam:", currentBase);
-  if (input === null) return;              // gebruiker annuleert
-  const clean = (input || "").trim();
-  if (!clean) return;                      // lege naam: stop
-
-  // Weekend-tag behouden in de data-sleutel (maar niet zichtbaar in UI)
-  const newKey = isWeekendKey(oldKey) ? `${clean} (weekend)` : clean;
-
-  // Niks te doen als identiek
-  if (newKey === oldKey) return;
-
-  // Als de nieuwe key al bestaat: we voegen samen (vinkje blijft aan als één van beide aan stond)
-  const mergedValue = !!dataMap[oldKey] || !!dataMap[newKey];
-
-  // --- Lokaal updaten ---
-  const nextItems = { ...dataMap };
-  delete nextItems[oldKey];
-  nextItems[newKey] = mergedValue;
-
-  // order bijwerken:
-  let nextOrder = order.slice();
-
-  if (nextOrder.includes(newKey)) {
-    // Bestond al: verwijder alleen de oude positie (positie van bestaande newKey blijft leidend)
-    nextOrder = nextOrder.filter(k => k !== oldKey);
-  } else {
-    // Bestond niet: vervang oude key door nieuwe op dezelfde plek
-    nextOrder = nextOrder.map(k => (k === oldKey ? newKey : k));
+elNew.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    btnAdd.click();
   }
+});
 
-  // In geheugen bijwerken en UI verversen
-  dataMap = nextItems;
-  order   = nextOrder;
+async function removeItemConfirm(k){
+  if (!backUnlocked || !canEdit) return;
+  if (!(k in items)) return;
+  if (!confirm(`Verwijder "${k}"?`)) return;
+
+  const nextItems = { ...items };
+  delete nextItems[k];
+  const nextOrder = order.filter(x=>x!==k);
+  items = nextItems;
+  order = nextOrder;
   render();
 
-  // --- Firestore: oude key echt verwijderen, nieuwe zetten, order bewaren ---
-  await updateDoc(doc(db, "lists", DOC_ID), {
-    [`items.${oldKey}`]: deleteField(),
-    [`items.${newKey}`]: mergedValue,
+  await updateDoc(doc(db,"lists",DOC_ID),{
+    [`items.${k}`]: deleteField(),
     order: nextOrder,
     updatedAt: serverTimestamp()
   });
 }
-/* ===== UI state ===== */
-function updateUI(){
-  [elNew, btnAdd].forEach(el=>{
-    if(!el) return;
-    el.disabled = !canEdit;
-    el.style.opacity = canEdit ? 1 : .6;
-    el.style.pointerEvents = canEdit ? "auto" : "none";
-  });
-  btnReset.disabled = false; btnReset.style.opacity = 1;       // iedereen mag alle vinkjes uit
-  btnSeed.disabled  = !canEdit;  btnSeed.style.opacity = canEdit ? 1 : .5; // seed alleen met slot open
-}
 
-/* ===== Events ===== */
-btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
-elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+async function renameItem(oldK){
+  if (!backUnlocked || !canEdit || !(oldK in items)) return;
+  const s = prompt("Nieuwe naam:", oldK);
+  if (s === null) return;
+  const n = (s || "").trim();
+  if (!n || n === oldK) return;
 
-btnReset.onclick = ()=>{
-  const next = Object.fromEntries(Object.keys(dataMap).map(k=>[k,false]));
-  dataMap = next;
-  save({ items: next });
-};
+  const exists = (n in items);
+  const merged = !!items[oldK] || !!items[n];
 
-btnSeed.onclick = async ()=>{
-  if(!canEdit) return;
-  if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  const s = getSeed();
-  dataMap = s.items; order = s.order;
-  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+  let nextItems = { ...items };
+  let nextOrder = order.slice();
+
+  if (exists){
+    nextItems[n] = merged;
+    delete nextItems[oldK];
+    nextOrder = nextOrder.filter(k => k !== oldK);
+  } else {
+    nextItems[n] = !!nextItems[oldK];
+    delete nextItems[oldK];
+    nextOrder = nextOrder.map(k => k === oldK ? n : k);
+  }
+
+  items = nextItems;
+  order = nextOrder;
   render();
-};
+
+  await updateDoc(doc(db,"lists",DOC_ID),{
+    [`items.${oldK}`]: deleteField(),
+    [`items.${n}`]: merged,
+    order: nextOrder,
+    updatedAt: serverTimestamp()
+  });
+}
 </script>
 </body>
 </html>
