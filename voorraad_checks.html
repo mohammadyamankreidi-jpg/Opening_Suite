@@ -8,24 +8,130 @@
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    body{
+      margin:0;
+      background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    }
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
-    .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-    .tools{display:flex;gap:8px;flex-wrap:wrap}
-    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
-    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
-    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
-    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
-    li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
-    li.item.done{opacity:.6;text-decoration:line-through}
-    .label{flex:1;cursor:pointer}
-    .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
-    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
-    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:20px;
+      backdrop-filter:blur(6px);
+    }
+    header.panel{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:14px 16px;
+      margin-bottom:12px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px;
+    }
+    .brand{display:flex;flex-direction:column;gap:2px}
+    .brand .h{font-weight:800;font-size:18px}
+    .brand .s{color:var(--muted);font-size:12px}
+
+    .header-right{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .tools{
+      display:none;       /* alleen zichtbaar in Back Office + bewerkmodus */
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    button{
+      background:#101624;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+
+    .add{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      margin:8px 0 4px;
+    }
+    input[type="text"]{
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0b0f18;
+      color:var(--text);
+    }
+
+    ul{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    li.item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:12px;
+      padding:12px 14px;
+      cursor:default;
+    }
+    li.item.done{
+      opacity:.6;
+      text-decoration:line-through;
+    }
+    li.item.dragging{
+      opacity:.6;
+      outline:1px dashed #6aa0ff;
+      cursor:grabbing;
+    }
+
+    .label{
+      flex:1;
+      cursor:pointer;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:28px;
+      height:28px;
+      border:1px solid #444;
+      border-radius:6px;
+      background:#151a23;
+      cursor:pointer;
+      opacity:.95;
+    }
+
+    .nav{display:flex;gap:10px;margin-bottom:12px}
+    .nav a{color:#d8e6ff}
+
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
-    footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+
+    footer.note{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+    }
 
     /* Notitieblok onderaan – statisch (niet in Firestore) */
     .notes{
@@ -43,9 +149,17 @@
 <body>
   <div class="wrap">
     <nav class="nav"><a href="index.html">← Terug</a></nav>
+
     <header class="panel card">
-      <div class="brand"><div class="h">ShiftStart</div><div class="s">Voorraad & Checks</div></div>
-      <div class="tools"></div>
+      <div class="brand">
+        <div class="h">ShiftStart</div>
+        <div class="s">Voorraad & Checks</div>
+      </div>
+      <div class="header-right">
+        <button id="btnBackoffice" type="button">Back Office</button>
+        <button id="btnResetAll" type="button">Alles herstellen</button>
+        <div class="tools"></div>
+      </div>
     </header>
 
     <div class="card">
@@ -53,24 +167,23 @@
         <input id="newItem" type="text" placeholder="Nieuw item toevoegen..." />
         <button id="btnAdd">Toevoegen</button>
       </div>
-
       <ul id="list"></ul>
+      <p class="hint">Klik op de tekst of het vinkje om af te strepen. In Back Office kun je toevoegen, hernoemen, verwijderen en slepen.</p>
+    </div>
 
-      <!-- vaste notities onderaan (niet in Firestore) -->
-      <div class="notes">
-        <div class="h">Voorraad groente</div>
-        <div class="row">Minimaal 3 zakken sla (in het weekend 4 zakken)</div>
-        <div class="row">Minimaal 1 zak rode ui</div>
-        <div class="row">Minimaal 1 zak witte ui</div>
-        <div class="row">Minimaal 1 zak salade mix</div>
-        <div class="row">Minimaal 1 stuk komkommer</div>
-        <div class="row">Minimaal 1 pot kimchi</div>
-        <div class="row">Minimaal halve bak snoeptomaatjes</div>
-        <div class="divider"></div>
-        <div class="row"><em>Mocht je de bovenstaande voorraad niet hebben, noteer voor jezelf om het te halen!</em></div>
-      </div>
+    <!-- vaste notities onderaan (niet in Firestore) -->
+    <div class="notes">
+      <div class="h">Voorraad groente</div>
+      <div class="row">Minimaal 5 zakken sla (in het weekend 6 zakken)</div>
+      <div class="row">Minimaal 1 zak rode ui</div>
+      <div class="row">Minimaal 1 zak witte ui</div>
+      <div class="row">Minimaal 1 zak salade mix</div>
+      <div class="row">Minimaal 1 stuk komkommer</div>
+      <div class="row">Minimaal 1 pot kimchi</div>
+      <div class="row">Minimaal halve bak snoeptomaatjes</div>
 
-      <p class="hint">Klik op de tekst of het vinkje om af te strepen.</p>
+      <div class="divider"></div>
+      <div class="row"><em>Mocht je de bovenstaande voorraad niet hebben, noteer voor jezelf om het te halen!</em></div>
     </div>
 
     <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
@@ -86,150 +199,208 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ===== Config ===== */
-const DOC_ID     = "voorraad_checks";
-const ADMIN_CODE = "Yali313";
+const DOC_ID      = "voorraad_checks";
+const ADMIN_CODE  = "YamanBS1";
+const LS_BACK_KEY = "bo_voorraad_unlocked";
 
 /* ===== UI refs ===== */
-const elList=document.getElementById("list");
-const elNew =document.getElementById("newItem");
-const btnAdd=document.getElementById("btnAdd");
+const elList       = document.getElementById("list");
+const elNew        = document.getElementById("newItem");
+const btnAdd       = document.getElementById("btnAdd");
+const btnBackoffice= document.getElementById("btnBackoffice");
+const btnResetAll  = document.getElementById("btnResetAll");
+const toolsBar     = document.querySelector(".tools");
 
-/* ===== Toolbar / slot ===== */
-let tools = document.querySelector(".tools");
-if (!tools) {
-  tools = document.createElement("div");
-  tools.className = "tools";
-  (document.querySelector("header.panel") || document.body).appendChild(tools);
-}
-const bEdit  = document.createElement("button"); bEdit.type="button";  bEdit.textContent  = "🔓 Bewerk-modus";
-const bView  = document.createElement("button"); bView.type="button";  bView.textContent  = "🔒 Alleen afvinken";
-const bReset = document.createElement("button"); bReset.type="button"; bReset.textContent = "Alles herstellen";
-const bSeed  = document.createElement("button"); bSeed.type="button";  bSeed.textContent  = "Herstel lijst";
-tools.replaceChildren(bEdit,bView,bReset,bSeed);
+/* ===== Toolbar-knoppen (alleen in Back Office) ===== */
+const bSeed = document.createElement("button");
+bSeed.type = "button";
+bSeed.textContent = "Resetten (beginlijst)";
 
-let canEdit = (localStorage.getItem("editMode")==="1");
-bEdit.onclick = ()=>{ const c=prompt("Beheerderscode:"); if(c===ADMIN_CODE){ localStorage.setItem("editMode","1"); canEdit=true; updateUI(); render(); alert("Bewerk-modus aan ✅"); } else alert("Onjuiste code"); };
-bView.onclick = ()=>{ localStorage.removeItem("editMode"); canEdit=false; updateUI(); render(); alert("Alleen afvinken 🔒"); };
-window.addEventListener("storage", e=>{ if(e.key==="editMode"){ canEdit=(localStorage.getItem("editMode")==="1"); updateUI(); render(); }});
+const bView = document.createElement("button");
+bView.type = "button";
+bView.textContent = "Alleen afvinken";
 
-/* ===== Seed ===== */
+toolsBar.replaceChildren(bSeed, bView);
+
+/* ===== State ===== */
+let backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+let canEdit      = false;
+
+let items = {};
+let order = [];
+
+/* ===== Seed (begin-lijst) ===== */
 function getSeed(){
   const items = {
-    "Groente&salade spullen check onderaan de pagina": false,
+    "Groente & salade spullen check onderaan de pagina": false,
     "Sauzen (inclusief cheddar)": false,
     "Dresstafel en reserve sauzen boven": false,
-    "Chicken/Friet/beef/side Vriezers": false,
+    "Chicken/Friet/beef/side vriezers": false,
     "Inpak/Junior/Dresspapier": false,
     "Hamburger doosjes": false,
     "Zoutmolens": false,
-    "Snackzakken&bakken": false,
+    "Snackzakken & bakken": false,
     "Friet bakjes": false,
     "Cheezin bakjes": false,
     "Thee": false,
     "Popping": false,
-    "Matcha&Ice coffie poeders": false,
+    "Matcha & ice coffee poeders": false,
     "Siropen bubble tea": false,
-    "Siropen lemonade&Tiger": false,
+    "Siropen lemonade & Tiger": false,
     "Bubble tea bekers": false,
     "Dranken bijvullen": false,
-    "Milkshake siropen":false,
-    "Milkshake en ijs bekers&deksels": false,
-    "Milkshake&ijs": false,
-    "Plastic zakken&enkel en dubbel": false,
+    "Milkshake en ijs bekers & deksels": false,
+    "Milkshake & ijs": false,
+    "Plastic zakken enkel & dubbel": false,
     "Rietjes": false,
     "Houdertjes": false,
     "Servetten": false,
     "Inpakzakken": false,
     "Cheezin vorkjes": false,
-    "Salade deksels&bakken": false,
+    "Salade deksels & bakken": false,
     "Dipsauzen": false,
     "Kindermenu's": false,
     "Bakjes voor sauzen": false,
     "Printerrol": false,
-    "Vuilneszakken vervangen indien nodig": false
+    "Vuilniszakken vervangen indien nodig": false
   };
   const order = Object.keys(items);
   return { items, order };
 }
 
-/* ===== State + realtime ===== */
-let items={}, order=[];
+/* ===== Back Office zichtbaarheid ===== */
+function updateToolsVisible(){
+  toolsBar.style.display = (backUnlocked && canEdit) ? "flex" : "none";
+}
+updateToolsVisible();
+
+/* ===== UI enable/disable ===== */
+function updateUI(){
+  const canType = backUnlocked && canEdit;
+  [elNew, btnAdd].forEach(el=>{
+    if (!el) return;
+    el.disabled       = !canType;
+    el.style.opacity  = canType ? 1 : .6;
+    el.style.pointerEvents = canType ? "auto" : "none";
+  });
+}
+
+/* ===== Back Office knop ===== */
+btnBackoffice.onclick = () => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE){
+    backUnlocked = true;
+    canEdit      = true;
+    localStorage.setItem(LS_BACK_KEY,"1");
+    updateToolsVisible();
+    updateUI();
+    render();
+    alert("Back Office geopend ✅");
+  } else {
+    alert("Onjuiste code");
+  }
+};
+
+/* ===== "Alles herstellen" – altijd beschikbaar ===== */
+btnResetAll.onclick = () => {
+  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
+  items = next;
+  save({ items: next });
+};
+
+/* ===== "Alleen afvinken" – verberg Back Office tools ===== */
+bView.onclick = () => {
+  canEdit = false;
+  updateToolsVisible();
+  updateUI();
+  render();
+  alert("Alleen afvinken 🔒");
+};
+
+/* ===== Firestore sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
   if (snap.exists()){
-    const d=snap.data();
-    items=d.items||{};
-    order=Array.isArray(d.order)? d.order.filter(k=>k in items) : Object.keys(items);
+    const d = snap.data();
+    items = d.items || {};
+    order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
     Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    const s=getSeed();
-    items=s.items; order=s.order;
-    await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+    const s = getSeed();
+    items = s.items;
+    order = s.order;
+    await setDoc(doc(db,"lists",DOC_ID), { items, order, updatedAt: serverTimestamp() }, { merge:false });
   }
   render();
 });
 
-/* ===== Persist helpers ===== */
+/* ===== Save helper ===== */
 async function save(p){
   await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
 }
 
-/* ===== UI helpers ===== */
+/* ===== Button helper ===== */
 function makeBtn(txt,title,onClick){
   const b=document.createElement("button");
-  b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
+  b.className="btn";
+  b.textContent=txt;
+  b.title=title;
+  b.type="button";
   b.addEventListener("click",(e)=>{
     e.preventDefault();
     e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+    e.stopImmediatePropagation?.();
     onClick();
   },{capture:true});
   return b;
 }
 
-/* ===== Render ===== */
+/* ===== Render + drag ===== */
 function render(){
-  elList.innerHTML="";
-  const labels = order.length? order.slice() : Object.keys(items);
+  elList.innerHTML = "";
+
+  const labels = order.length ? order.slice() : Object.keys(items);
+
   labels.forEach((k,idx)=>{
     if (!(k in items)) return;
-    const li=document.createElement("li");
-    li.className="item"+(items[k]?" done":"");
-    li.dataset.index=String(idx);
 
-    const cb=document.createElement("input");
-    cb.type="checkbox"; cb.checked=!!items[k];
-    cb.onchange=()=>toggle(k);
+    const li = document.createElement("li");
+    li.className = "item" + (items[k] ? " done" : "");
+    li.dataset.index = String(idx);
 
-    const span=document.createElement("div");
-    span.className="label";
-    span.textContent=k;
-    if (!canEdit) span.onclick=()=>toggle(k);
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!items[k];
+    cb.onchange = ()=> toggle(k);
 
-    if (canEdit){
-      const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
-      const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
+    const span = document.createElement("div");
+    span.className = "label";
+    span.textContent = k;
+    if (!canEdit) span.onclick = ()=> toggle(k);
 
-      li.draggable=true;
+    if (backUnlocked && canEdit){
+      // drag & drop
+      li.draggable = true;
       li.addEventListener("dragstart", e=>{
         li.classList.add("dragging");
         e.dataTransfer.setData("text/plain", String(idx));
       });
-      li.addEventListener("dragend", ()=>li.classList.remove("dragging"));
-      li.addEventListener("dragover", e=>e.preventDefault());
+      li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
+      li.addEventListener("dragover", e=> e.preventDefault());
       li.addEventListener("drop", e=>{
         e.preventDefault();
-        const from=Number(e.dataTransfer.getData("text/plain"));
-        const to=Number(li.dataset.index);
-        if(Number.isFinite(from)&&Number.isFinite(to)&&from!==to){
-          const next=order.slice();
-          const [moved]=next.splice(from,1);
-          next.splice(to,0,moved);
-          order=next;
-          save({order});
-          render();
-        }
+        const from = Number(e.dataTransfer.getData("text/plain"));
+        const to   = Number(li.dataset.index);
+        if (!Number.isFinite(from) || !Number.isFinite(to) || from===to) return;
+        const next = order.slice();
+        const [moved] = next.splice(from,1);
+        next.splice(to,0,moved);
+        order = next;
+        save({ order: next });
+        render();
       });
 
+      const pen = makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
+      const del = makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
       li.append(cb,span,pen,del);
     } else {
       li.append(cb,span);
@@ -237,53 +408,52 @@ function render(){
 
     elList.appendChild(li);
   });
+
   updateUI();
 }
 
 /* ===== Actions ===== */
-function updateUI(){
-  [elNew, btnAdd].forEach(el=>{
-    if(!el) return;
-    el.disabled=!canEdit;
-    el.style.opacity=canEdit?1:.6;
-    el.style.pointerEvents=canEdit?"auto":"none";
-  });
-  bReset.disabled=false; bReset.style.opacity=1;             // iedereen mag reset (alle vinkjes uit)
-  bSeed.disabled=!canEdit; bSeed.style.opacity=canEdit?1:.5; // seed alleen met slot open
-}
-
 function toggle(k){
-  const next={...items,[k]:!items[k]};
-  items=next;
-  save({items:next});
+  const next = { ...items, [k]: !items[k] };
+  items = next;
+  save({ items: next });
 }
 
-function addItem(t){
-  if(!canEdit) return;
-  const x=(t||"").trim();
-  if(!x) return;
-  if(x in items){ alert("Bestaat al."); return; }
+btnAdd.onclick = ()=>{
+  if (!backUnlocked || !canEdit) return;
+  const x = (elNew.value || "").trim();
+  if (!x) return;
+  if (x in items){ alert("Bestaat al."); return; }
 
-  const next={...items,[x]:false};
-  const nextOrder=order.concat(x);
-
-  items=next; order=nextOrder;
+  const nextItems = { ...items, [x]: false };
+  const nextOrder = order.concat(x);
+  items = nextItems;
+  order = nextOrder;
+  elNew.value = "";
+  elNew.focus();
+  save({ items: nextItems, order: nextOrder });
   render();
-  save({items:next,order:nextOrder});
-}
+};
+
+elNew.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    btnAdd.click();
+  }
+});
 
 async function removeItemConfirm(k){
-  if(!canEdit) return;
-  if(!(k in items)) return;
-  if(!confirm(`Verwijder "${k}"?`)) return;
+  if (!backUnlocked || !canEdit) return;
+  if (!(k in items)) return;
+  if (!confirm(`Verwijder "${k}"?`)) return;
 
-  // 1) lokaal
-  const next={...items}; delete next[k];
-  const nextOrder=order.filter(x=>x!==k);
-  items=next; order=nextOrder;
+  const nextItems = { ...items };
+  delete nextItems[k];
+  const nextOrder = order.filter(x=>x!==k);
+  items = nextItems;
+  order = nextOrder;
   render();
 
-  // 2) Firestore veld echt verwijderen
   await updateDoc(doc(db,"lists",DOC_ID),{
     [`items.${k}`]: deleteField(),
     order: nextOrder,
@@ -292,14 +462,11 @@ async function removeItemConfirm(k){
 }
 
 async function renameItem(oldK){
-  if(!canEdit || !(oldK in items)) return;
-
+  if (!backUnlocked || !canEdit || !(oldK in items)) return;
   const s = prompt("Nieuwe naam:", oldK);
-  if (s===null) return;
-  const n = (s||"").trim();
-  if(!n) return;
-
-  if (n === oldK) return;
+  if (s === null) return;
+  const n = (s || "").trim();
+  if (!n || n === oldK) return;
 
   const exists = (n in items);
   const merged = !!items[oldK] || !!items[n];
@@ -328,27 +495,6 @@ async function renameItem(oldK){
     updatedAt: serverTimestamp()
   });
 }
-
-/* ===== Events ===== */
-btnAdd.onclick=()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
-elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
-
-bReset.onclick = ()=>{
-  const next=Object.fromEntries(Object.keys(items).map(k=>[k,false]));
-  items=next;
-  save({items:next});
-};
-
-bSeed.onclick  = async ()=>{
-  if(!canEdit) return;
-  if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  const s=getSeed();
-  items=s.items; order=s.order;
-  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
-  render();
-};
-
-updateUI();
 </script>
 </body>
 </html>
