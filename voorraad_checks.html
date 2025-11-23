@@ -13,7 +13,19 @@
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
     header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
     .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-    .tools{display:flex;gap:8px;flex-wrap:wrap}
+
+    .header-right{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .tools{
+      display:none; /* alleen zichtbaar in Back Office + bewerk-modus */
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
     button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
     .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
     input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
@@ -43,12 +55,17 @@
 <body>
   <div class="wrap">
     <nav class="nav"><a href="index.html">← Terug</a></nav>
+
     <header class="panel card">
       <div class="brand">
         <div class="h">ShiftStart</div>
         <div class="s">Voorraad & Checks</div>
       </div>
-      <div class="tools"></div>
+      <div class="header-right">
+        <button id="btnBackoffice" type="button">Back Office</button>
+        <button id="btnResetAll" type="button">Alles herstellen</button>
+        <div class="tools"></div>
+      </div>
     </header>
 
     <div class="card">
@@ -89,49 +106,104 @@ const db  = getFirestore(app);
 
 /* ===== Config ===== */
 const DOC_ID     = "voorraad_checks";
-const ADMIN_CODE = "YamanBS1";
+const ADMIN_CODE = "YamanBS1"; // zelfde code als bij de andere pagina's
+const LS_BACK_KEY = "bo_voorraad_unlocked";
+const LS_EDIT_KEY = "editMode_voorraad";
 
 /* ===== UI refs ===== */
-const elList=document.getElementById("list");
-const elNew =document.getElementById("newItem");
-const btnAdd=document.getElementById("btnAdd");
+const elList    = document.getElementById("list");
+const elNew     = document.getElementById("newItem");
+const btnAdd    = document.getElementById("btnAdd");
+const toolsBar  = document.querySelector(".tools");
+const btnBackoffice = document.getElementById("btnBackoffice");
+const btnResetAll   = document.getElementById("btnResetAll");
 
-/* ===== Toolbar / slot ===== */
-let tools = document.querySelector(".tools");
-if (!tools) {
-  tools = document.createElement("div");
-  tools.className = "tools";
-  (document.querySelector("header.panel") || document.body).appendChild(tools);
+/* ===== Toolbar-knoppen (alleen in Back Office zichtbaar) ===== */
+const bEdit = document.createElement("button"); bEdit.type="button"; bEdit.textContent  = "Bewerk-modus";
+const bSeed = document.createElement("button"); bSeed.type="button"; bSeed.textContent  = "Herstel lijst";
+const bView = document.createElement("button"); bView.type="button"; bView.textContent  = "Alleen afvinken";
+toolsBar.replaceChildren(bEdit,bSeed,bView);
+
+/* ===== State ===== */
+let backUnlocked = (localStorage.getItem(LS_BACK_KEY) === "1");
+let canEdit      = backUnlocked && (localStorage.getItem(LS_EDIT_KEY) === "1");
+let items = {};
+let order = [];
+
+/* ===== Back Office zichtbaarheid ===== */
+function updateToolsVisible(){
+  // tools alleen zichtbaar als je in Back Office + bewerk-modus bent
+  toolsBar.style.display = (backUnlocked && canEdit) ? "flex" : "none";
 }
-const bEdit  = document.createElement("button"); bEdit.type="button";  bEdit.textContent  = "🔓 Bewerk-modus";
-const bView  = document.createElement("button"); bView.type="button";  bView.textContent  = "🔒 Alleen afvinken";
-const bReset = document.createElement("button"); bReset.type="button"; bReset.textContent = "Alles herstellen";
-const bSeed  = document.createElement("button"); bSeed.type="button";  bSeed.textContent  = "Herstel lijst";
-tools.replaceChildren(bEdit,bView,bReset,bSeed);
+updateToolsVisible();
 
-let canEdit = (localStorage.getItem("editMode")==="1");
-bEdit.onclick = ()=>{
-  const c=prompt("Beheerderscode:");
-  if(c===ADMIN_CODE){
-    localStorage.setItem("editMode","1");
-    canEdit=true;
+/* ===== Back Office klikken (met sterretjes prompt) ===== */
+btnBackoffice.onclick = () => {
+  const code = prompt("Beheerderscode:");
+  if (code === ADMIN_CODE){
+    backUnlocked = true;
+    canEdit      = true;
+    localStorage.setItem(LS_BACK_KEY,"1");
+    localStorage.setItem(LS_EDIT_KEY,"1");
+    updateToolsVisible();
     updateUI();
     render();
-    alert("Bewerk-modus aan ✅");
+    alert("Back Office geopend ✅ (bewerk-modus aan)");
   } else {
     alert("Onjuiste code");
   }
 };
-bView.onclick = ()=>{
-  localStorage.removeItem("editMode");
-  canEdit=false;
+
+/* ===== Alles herstellen – altijd beschikbaar (alle vinkjes uit) ===== */
+btnResetAll.onclick = () => {
+  const next = Object.fromEntries(Object.keys(items).map(k => [k,false]));
+  items = next;
+  save({ items: next });
+};
+
+/* ===== Alleen afvinken (Back Office dicht qua knoppen) ===== */
+bView.onclick = () => {
+  canEdit = false;
+  localStorage.removeItem(LS_EDIT_KEY);
+  updateToolsVisible();
   updateUI();
   render();
   alert("Alleen afvinken 🔒");
 };
+
+/* ===== Bewerk-modus opnieuw aan vanuit Back Office ===== */
+bEdit.onclick = () => {
+  // je zit al in Back Office (anders zie je deze knop niet)
+  canEdit = true;
+  localStorage.setItem(LS_EDIT_KEY,"1");
+  updateToolsVisible();
+  updateUI();
+  render();
+  alert("Bewerk-modus aan ✅");
+};
+
+/* ===== Seed terugzetten (alleen met Back Office + bewerk-modus) ===== */
+bSeed.onclick = async ()=>{
+  if (!backUnlocked || !canEdit) return;
+  if (!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
+  const s = getSeed();
+  items = s.items;
+  order = s.order;
+  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+  render();
+};
+
+/* ===== Storage sync (andere tabbladen) ===== */
 window.addEventListener("storage", e=>{
-  if(e.key==="editMode"){
-    canEdit=(localStorage.getItem("editMode")==="1");
+  if (e.key === LS_BACK_KEY){
+    backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
+    updateToolsVisible();
+    updateUI();
+    render();
+  }
+  if (e.key === LS_EDIT_KEY){
+    canEdit = backUnlocked && (localStorage.getItem(LS_EDIT_KEY)==="1");
+    updateToolsVisible();
     updateUI();
     render();
   }
@@ -177,7 +249,6 @@ function getSeed(){
 }
 
 /* ===== State + realtime ===== */
-let items={}, order=[];
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
   if (snap.exists()){
     const d=snap.data();
@@ -210,6 +281,16 @@ function makeBtn(txt,title,onClick){
   return b;
 }
 
+function updateUI(){
+  const canType = backUnlocked && canEdit;
+  [elNew, btnAdd].forEach(el=>{
+    if(!el) return;
+    el.disabled=!canType;
+    el.style.opacity=canType?1:.6;
+    el.style.pointerEvents=canType?"auto":"none";
+  });
+}
+
 /* ===== Render ===== */
 function render(){
   elList.innerHTML="";
@@ -229,7 +310,7 @@ function render(){
     span.textContent=k;
     if (!canEdit) span.onclick=()=>toggle(k);
 
-    if (canEdit){
+    if (backUnlocked && canEdit){
       const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
       const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
 
@@ -266,17 +347,6 @@ function render(){
 }
 
 /* ===== Actions ===== */
-function updateUI(){
-  [elNew, btnAdd].forEach(el=>{
-    if(!el) return;
-    el.disabled=!canEdit;
-    el.style.opacity=canEdit?1:.6;
-    el.style.pointerEvents=canEdit?"auto":"none";
-  });
-  bReset.disabled=false; bReset.style.opacity=1;             // iedereen mag reset (alle vinkjes uit)
-  bSeed.disabled=!canEdit; bSeed.style.opacity=canEdit?1:.5; // seed alleen met slot open
-}
-
 function toggle(k){
   const next={...items,[k]:!items[k]};
   items=next;
@@ -284,7 +354,7 @@ function toggle(k){
 }
 
 function addItem(t){
-  if(!canEdit) return;
+  if(!backUnlocked || !canEdit) return;
   const x=(t||"").trim();
   if(!x) return;
   if(x in items){ alert("Bestaat al."); return; }
@@ -298,17 +368,15 @@ function addItem(t){
 }
 
 async function removeItemConfirm(k){
-  if(!canEdit) return;
+  if(!backUnlocked || !canEdit) return;
   if(!(k in items)) return;
   if(!confirm(`Verwijder "${k}"?`)) return;
 
-  // 1) lokaal
   const next={...items}; delete next[k];
   const nextOrder=order.filter(x=>x!==k);
   items=next; order=nextOrder;
   render();
 
-  // 2) Firestore veld echt verwijderen
   await updateDoc(doc(db,"lists",DOC_ID),{
     [`items.${k}`]: deleteField(),
     order: nextOrder,
@@ -317,7 +385,7 @@ async function removeItemConfirm(k){
 }
 
 async function renameItem(oldK){
-  if(!canEdit || !(oldK in items)) return;
+  if(!backUnlocked || !canEdit || !(oldK in items)) return;
 
   const s = prompt("Nieuwe naam:", oldK);
   if (s===null) return;
@@ -328,7 +396,6 @@ async function renameItem(oldK){
   const exists = (n in items);
   const merged = !!items[oldK] || !!items[n];
 
-  // 1) lokaal
   let nextItems = { ...items };
   let nextOrder = order.slice();
 
@@ -346,7 +413,6 @@ async function renameItem(oldK){
   order = nextOrder;
   render();
 
-  // 2) Firestore
   await updateDoc(doc(db,"lists",DOC_ID),{
     [`items.${oldK}`]: deleteField(),
     [`items.${n}`]: merged,
@@ -359,23 +425,6 @@ async function renameItem(oldK){
 btnAdd.onclick=()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
 elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
 
-bReset.onclick = ()=>{
-  // alleen alle vinkjes uit
-  const next=Object.fromEntries(Object.keys(items).map(k=>[k,false]));
-  items=next;
-  save({items:next});
-};
-
-bSeed.onclick  = async ()=>{
-  if(!canEdit) return;
-  if(!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  const s=getSeed();
-  items=s.items; order=s.order;
-  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
-  render();
-};
-
-updateUI();
 </script>
 </body>
 </html>
