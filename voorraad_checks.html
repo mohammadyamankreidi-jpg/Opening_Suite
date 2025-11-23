@@ -26,8 +26,9 @@
     .brand .s{color:var(--muted);font-size:12px}
     .header-right{display:flex;align-items:center;gap:8px}
 
+    /* tools: alleen zichtbaar in Back Office */
     .tools{
-      display:none;        /* alleen zichtbaar in Back Office */
+      display:none;
       gap:8px;
       flex-wrap:wrap;
     }
@@ -143,8 +144,10 @@
         <div class="s">Voorraad & Checks</div>
       </div>
       <div class="header-right">
+        <!-- altijd zichtbaar -->
         <button id="btnBackoffice" type="button">Back Office</button>
         <button id="btnResetAll" type="button">Alles herstellen</button>
+        <!-- alleen in Back Office zichtbaar -->
         <div class="tools"></div>
       </div>
     </header>
@@ -198,9 +201,8 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ===== Config ===== */
-const DOC_ID      = "voorraad_checks";
-const ADMIN_CODE  = "YamanBS1";
-const LS_BACK_KEY = "bo_voorraad_unlocked";
+const DOC_ID     = "voorraad_checks";
+const ADMIN_CODE = "YamanBS1";
 
 /* ===== UI refs ===== */
 const elList  = document.getElementById("list");
@@ -211,19 +213,18 @@ const toolsBar      = document.querySelector(".tools");
 const btnBackoffice = document.getElementById("btnBackoffice");
 const btnResetAll   = document.getElementById("btnResetAll");
 
-/* Backoffice lock UI */
-const lockBo     = document.getElementById("lockBo");
-const boCodeInput= document.getElementById("boCodeInput");
-const boOpen     = document.getElementById("boOpen");
+/* Backoffice popup */
+const lockBo      = document.getElementById("lockBo");
+const boCodeInput = document.getElementById("boCodeInput");
+const boOpen      = document.getElementById("boOpen");
 
-/* ===== Toolbar knoppen binnen Back Office ===== */
+/* ===== Toolbar knoppen (alleen in Back Office) ===== */
 const bSeed = document.createElement("button"); bSeed.type="button"; bSeed.textContent = "Herstel lijst";
 const bView = document.createElement("button"); bView.type="button"; bView.textContent = "Alleen afvinken";
 toolsBar.replaceChildren(bSeed, bView);
 
 /* ===== State ===== */
-let backUnlocked = (localStorage.getItem(LS_BACK_KEY) === "1");
-let canEdit      = backUnlocked;   // als eerder ontgrendeld → direct bewerkbaar
+let canEdit = false;   // standaard: geen bewerken
 
 let items = {};
 let order = [];
@@ -267,7 +268,7 @@ function getSeed(){
   return { items, order };
 }
 
-/* ===== Firestore state + realtime ===== */
+/* ===== Firestore sync ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
   if (snap.exists()){
     const d = snap.data();
@@ -301,7 +302,7 @@ function makeBtn(txt,title,onClick){
 }
 
 function updateUI(){
-  const canType = backUnlocked && canEdit;
+  const canType = canEdit;
   [elNew, btnAdd].forEach(el=>{
     if (!el) return;
     el.disabled = !canType;
@@ -310,15 +311,13 @@ function updateUI(){
   });
 }
 
-/* Back Office tools tonen/verbergen */
 function updateToolsVisible(){
-  toolsBar.style.display = (backUnlocked && canEdit) ? "flex" : "none";
+  toolsBar.style.display = canEdit ? "flex" : "none";
 }
 updateToolsVisible();
 
-/* ===== Back Office popup (met sterretjes) ===== */
+/* ===== Back Office open (met sterretjes + Enter) ===== */
 btnBackoffice.onclick = () => {
-  // toon overlay
   lockBo.style.display = "flex";
   boCodeInput.value = "";
   boCodeInput.focus();
@@ -327,9 +326,7 @@ btnBackoffice.onclick = () => {
 boOpen.onclick = () => {
   const val = (boCodeInput.value || "").trim();
   if (val === ADMIN_CODE){
-    backUnlocked = true;
     canEdit = true;
-    localStorage.setItem(LS_BACK_KEY,"1");
     lockBo.style.display = "none";
     updateToolsVisible();
     updateUI();
@@ -342,7 +339,13 @@ boOpen.onclick = () => {
   }
 };
 
-/* sluit popup met Escape */
+boCodeInput.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    boOpen.click();   // zelfde als op de knop drukken
+  }
+});
+
 document.addEventListener("keydown", e=>{
   if (e.key === "Escape" && lockBo.style.display === "flex"){
     lockBo.style.display = "none";
@@ -386,7 +389,7 @@ function render(){
     span.textContent=k;
     if (!canEdit) span.onclick=()=>toggle(k);
 
-    if (backUnlocked && canEdit){
+    if (canEdit){
       const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
       const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
 
@@ -431,7 +434,7 @@ function toggle(k){
 }
 
 function addItem(t){
-  if (!backUnlocked || !canEdit) return;
+  if (!canEdit) return;
   const x=(t||"").trim();
   if(!x) return;
   if(x in items){ alert("Bestaat al."); return; }
@@ -445,7 +448,7 @@ function addItem(t){
 }
 
 async function removeItemConfirm(k){
-  if (!backUnlocked || !canEdit) return;
+  if(!canEdit) return;
   if(!(k in items)) return;
   if(!confirm(`Verwijder "${k}"?`)) return;
 
@@ -462,7 +465,7 @@ async function removeItemConfirm(k){
 }
 
 async function renameItem(oldK){
-  if(!backUnlocked || !canEdit || !(oldK in items)) return;
+  if(!canEdit || !(oldK in items)) return;
 
   const s = prompt("Nieuwe naam:", oldK);
   if (s===null) return;
