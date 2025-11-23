@@ -368,6 +368,24 @@ bView.onclick = () => {
   alert("Alleen afvinken 🔒");
 };
 
+/* ===== ✅ Herstel lijst (seed) – FIX ===== */
+bSeed.onclick = async () => {
+  if (!canEdit) return;
+  if (!confirm("Herstellen naar begin-lijst? (Iedereen ziet dit)")) return;
+
+  const s = getSeed();
+  items = s.items;
+  order = s.order;
+
+  await setDoc(doc(db,"lists",DOC_ID), {
+    items,
+    order,
+    updatedAt: serverTimestamp()
+  }, { merge:false });
+
+  render();
+};
+
 /* ===== Render ===== */
 function render(){
   elList.innerHTML = "";
