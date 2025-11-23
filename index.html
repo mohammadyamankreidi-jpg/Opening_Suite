@@ -169,6 +169,44 @@ toolsBar.replaceChildren(bEdit, bView);
 /* ===== State ===== */
 let canEdit = (localStorage.getItem("editMode") === "1");
 let pages = [];
+  /* === Back Office popup === */
+const boDialog    = document.getElementById("boDialog");
+const boCodeInput = document.getElementById("boCodeInput");
+const boConfirm   = document.getElementById("boConfirm");
+
+function openBoDialog(){
+  boDialog.style.display = "flex";
+  boCodeInput.value = "";
+  setTimeout(()=>boCodeInput.focus(), 50);
+}
+function closeBoDialog(){
+  boDialog.style.display = "none";
+}
+
+btnBackoffice.onclick = () => {
+  openBoDialog();
+};
+
+boConfirm.onclick = () => {
+  const val = boCodeInput.value.trim();
+  if (val === ADMIN_CODE){
+    canEdit = true;
+    localStorage.setItem("editMode","1");
+    closeBoDialog();
+    updateUI();
+    render();
+    alert("Back Office geopend ✅");
+  } else {
+    alert("Onjuiste code");
+  }
+};
+
+boCodeInput.addEventListener("keydown", e=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    boConfirm.click();
+  }
+});
 
 /* ===== Helpers ===== */
 function normaliseerLink(h, t){
@@ -320,18 +358,26 @@ btnAdd.onclick = async ()=>{
 };
 
 /* ===== Back Office knop ===== */
-btnBackoffice.addEventListener("click", () => {
-  const code = prompt("Beheerderscode:");
-  if (code === ADMIN_CODE) {
-    canEdit = true;
-    localStorage.setItem("editMode","1");  // alle andere pagina’s zien dit ook
-    updateUI();
-    render();
-    alert("Back Office geopend ✅\nBewerk-modus staat nu aan.");
-  } else {
-    alert("Onjuiste code");
-  }
-});
+<!-- Back Office code popup -->
+<div id="boDialog" style="
+  position:fixed; inset:0; background:rgba(0,0,0,.7);
+  display:none; align-items:center; justify-content:center; z-index:50;">
+  <div style="
+    background:#0f1320; border:1px solid #262c39; border-radius:14px;
+    padding:20px; min-width:260px; max-width:90%;">
+    <h2 style="margin-top:0;margin-bottom:10px;font-size:18px">Back Office</h2>
+    <p style="color:#9fb0cb;font-size:12px;margin-top:0">
+      Voer de beheerderscode in.
+    </p>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <input id="boCodeInput" type="password" placeholder="Code"
+             style="flex:1;padding:10px 12px;border-radius:10px;
+             border:1px solid #2a2f3a;background:#0b0f18;color:#eef2f8;">
+      <button id="boConfirm"
+              style="padding:10px 12px;border-radius:10px;">Open</button>
+    </div>
+  </div>
+</div>
 
 /* ===== Toolbar-knoppen ===== */
 bEdit.onclick = () => {
