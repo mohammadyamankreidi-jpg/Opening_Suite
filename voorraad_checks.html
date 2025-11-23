@@ -8,38 +8,90 @@
   <style>
     :root{--red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);--line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb}
     *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    body{
+      margin:0;
+      background:linear-gradient(90deg,var(--black) 50%,var(--red) 50%);
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial
+    }
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;backdrop-filter:blur(6px)}
-    header.panel{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
-    .brand{display:flex;flex-direction:column;gap:2px}.brand .h{font-weight:800;font-size:18px}.brand .s{color:var(--muted);font-size:12px}
-
-    .header-right{
-      display:flex;
-      align-items:center;
-      gap:8px;
+    header.panel{
+      display:flex;justify-content:space-between;align-items:center;
+      gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;
+      background:var(--panel);border:1px solid var(--line);border-radius:14px
     }
+    .brand{display:flex;flex-direction:column;gap:2px}
+    .brand .h{font-weight:800;font-size:18px}
+    .brand .s{color:var(--muted);font-size:12px}
+    .header-right{display:flex;align-items:center;gap:8px}
 
     .tools{
-      display:none; /* alleen zichtbaar in Back Office + bewerk-modus */
+      display:none;        /* alleen zichtbaar in Back Office */
       gap:8px;
       flex-wrap:wrap;
     }
 
-    button{background:#101624;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:600}
-    .add{display:grid;grid-template-columns:1fr auto;gap:10px;margin:8px 0 4px}
-    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0b0f18;color:var(--text)}
-    ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
-    li.item{display:flex;align-items:center;gap:8px;background:#0f1320;border:1px solid #262c39;border-radius:12px;padding:12px 14px}
+    button{
+      background:#101624;color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .add{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      margin:8px 0 4px;
+    }
+    input[type="text"]{
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0b0f18;
+      color:var(--text);
+    }
+    ul{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    li.item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:12px;
+      padding:12px 14px;
+      cursor:grab;
+    }
     li.item.done{opacity:.6;text-decoration:line-through}
+    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff;cursor:grabbing}
     .label{flex:1;cursor:pointer}
-    .btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #444;border-radius:6px;background:#151a23;cursor:pointer;opacity:.95}
-    li.item.dragging{opacity:.6;outline:1px dashed #6aa0ff}
-    .nav{display:flex;gap:10px;margin-bottom:12px}.nav a{color:#d8e6ff}
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:28px;height:28px;
+      border:1px solid #444;
+      border-radius:6px;
+      background:#151a23;
+      cursor:pointer;
+      opacity:.95;
+    }
+    .nav{display:flex;gap:10px;margin-bottom:12px}
+    .nav a{color:#d8e6ff}
     .hint{color:var(--muted);font-size:12px;margin:6px 2px 0}
     footer.note{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
 
-    /* Notitieblok onderaan – statisch (niet in Firestore) */
+    /* Notitieblok onderaan – statisch */
     .notes{
       margin-top:14px;
       background:#0f1320;
@@ -50,6 +102,35 @@
     .notes .h{font-weight:800;margin-bottom:6px}
     .notes .row{opacity:.9}
     .notes .divider{height:1px;background:#2a2f3a;margin:10px 0;border-radius:1px}
+
+    /* Back Office code-popup (met sterretjes) */
+    .lock{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.7);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    .lock .panel{
+      background:#0f1320;
+      border:1px solid #262c39;
+      border-radius:14px;
+      padding:20px;
+      min-width:260px;
+      max-width:90%;
+    }
+    .lock h1{margin:0 0 10px;font-size:18px}
+    .lock .row{display:flex;gap:8px;margin-top:8px}
+    .lock input{
+      flex:1;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #2a2f3a;
+      background:#0b0f18;
+      color:#eef2f8;
+    }
   </style>
 </head>
 <body>
@@ -76,7 +157,6 @@
       <ul id="list"></ul>
       <p class="hint">Klik op de tekst of het vinkje om af te strepen.</p>
     </div>
-    <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
 
     <!-- vaste notities onderaan (niet in Firestore) -->
     <div class="notes">
@@ -90,10 +170,23 @@
       <div class="row">Minimaal halve bak snoeptomaatjes</div>
 
       <div class="divider"></div>
+      <div class="row"><em>Mocht je de bovenstaande voorraad niet hebben, noteer voor jezelf om het te halen!</em></div>
+    </div>
+
+    <footer class="note">ShiftStart · gedeelde opslag via Firebase</footer>
+  </div>
+
+  <!-- 🔐 Back Office code-popup met sterretjes -->
+  <div id="lockBo" class="lock">
+    <div class="panel">
+      <h1>Back Office</h1>
+      <p class="hint">Voer de beheerderscode in om te bewerken.</p>
       <div class="row">
-        <em>Mocht je de bovenstaande voorraad niet hebben, noteer voor jezelf om het te halen!</em>
+        <input id="boCodeInput" type="password" placeholder="Beheerderscode" />
+        <button id="boOpen">Open</button>
       </div>
     </div>
+  </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
@@ -105,111 +198,37 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ===== Config ===== */
-const DOC_ID     = "voorraad_checks";
-const ADMIN_CODE = "YamanBS1"; // zelfde code als bij de andere pagina's
+const DOC_ID      = "voorraad_checks";
+const ADMIN_CODE  = "YamanBS1";
 const LS_BACK_KEY = "bo_voorraad_unlocked";
-const LS_EDIT_KEY = "editMode_voorraad";
 
 /* ===== UI refs ===== */
-const elList    = document.getElementById("list");
-const elNew     = document.getElementById("newItem");
-const btnAdd    = document.getElementById("btnAdd");
-const toolsBar  = document.querySelector(".tools");
+const elList  = document.getElementById("list");
+const elNew   = document.getElementById("newItem");
+const btnAdd  = document.getElementById("btnAdd");
+
+const toolsBar      = document.querySelector(".tools");
 const btnBackoffice = document.getElementById("btnBackoffice");
 const btnResetAll   = document.getElementById("btnResetAll");
 
-/* ===== Toolbar-knoppen (alleen in Back Office zichtbaar) ===== */
-const bEdit = document.createElement("button"); bEdit.type="button"; bEdit.textContent  = "Bewerk-modus";
-const bSeed = document.createElement("button"); bSeed.type="button"; bSeed.textContent  = "Herstel lijst";
-const bView = document.createElement("button"); bView.type="button"; bView.textContent  = "Alleen afvinken";
-toolsBar.replaceChildren(bEdit,bSeed,bView);
+/* Backoffice lock UI */
+const lockBo     = document.getElementById("lockBo");
+const boCodeInput= document.getElementById("boCodeInput");
+const boOpen     = document.getElementById("boOpen");
+
+/* ===== Toolbar knoppen binnen Back Office ===== */
+const bSeed = document.createElement("button"); bSeed.type="button"; bSeed.textContent = "Herstel lijst";
+const bView = document.createElement("button"); bView.type="button"; bView.textContent = "Alleen afvinken";
+toolsBar.replaceChildren(bSeed, bView);
 
 /* ===== State ===== */
 let backUnlocked = (localStorage.getItem(LS_BACK_KEY) === "1");
-let canEdit      = backUnlocked && (localStorage.getItem(LS_EDIT_KEY) === "1");
+let canEdit      = backUnlocked;   // als eerder ontgrendeld → direct bewerkbaar
+
 let items = {};
 let order = [];
 
-/* ===== Back Office zichtbaarheid ===== */
-function updateToolsVisible(){
-  // tools alleen zichtbaar als je in Back Office + bewerk-modus bent
-  toolsBar.style.display = (backUnlocked && canEdit) ? "flex" : "none";
-}
-updateToolsVisible();
-
-/* ===== Back Office klikken (met sterretjes prompt) ===== */
-btnBackoffice.onclick = () => {
-  const code = prompt("Beheerderscode:");
-  if (code === ADMIN_CODE){
-    backUnlocked = true;
-    canEdit      = true;
-    localStorage.setItem(LS_BACK_KEY,"1");
-    localStorage.setItem(LS_EDIT_KEY,"1");
-    updateToolsVisible();
-    updateUI();
-    render();
-    alert("Back Office geopend ✅ (bewerk-modus aan)");
-  } else {
-    alert("Onjuiste code");
-  }
-};
-
-/* ===== Alles herstellen – altijd beschikbaar (alle vinkjes uit) ===== */
-btnResetAll.onclick = () => {
-  const next = Object.fromEntries(Object.keys(items).map(k => [k,false]));
-  items = next;
-  save({ items: next });
-};
-
-/* ===== Alleen afvinken (Back Office dicht qua knoppen) ===== */
-bView.onclick = () => {
-  canEdit = false;
-  localStorage.removeItem(LS_EDIT_KEY);
-  updateToolsVisible();
-  updateUI();
-  render();
-  alert("Alleen afvinken 🔒");
-};
-
-/* ===== Bewerk-modus opnieuw aan vanuit Back Office ===== */
-bEdit.onclick = () => {
-  // je zit al in Back Office (anders zie je deze knop niet)
-  canEdit = true;
-  localStorage.setItem(LS_EDIT_KEY,"1");
-  updateToolsVisible();
-  updateUI();
-  render();
-  alert("Bewerk-modus aan ✅");
-};
-
-/* ===== Seed terugzetten (alleen met Back Office + bewerk-modus) ===== */
-bSeed.onclick = async ()=>{
-  if (!backUnlocked || !canEdit) return;
-  if (!confirm("Herstel naar begin-lijst? (Iedereen ziet dit)")) return;
-  const s = getSeed();
-  items = s.items;
-  order = s.order;
-  await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
-  render();
-};
-
-/* ===== Storage sync (andere tabbladen) ===== */
-window.addEventListener("storage", e=>{
-  if (e.key === LS_BACK_KEY){
-    backUnlocked = (localStorage.getItem(LS_BACK_KEY)==="1");
-    updateToolsVisible();
-    updateUI();
-    render();
-  }
-  if (e.key === LS_EDIT_KEY){
-    canEdit = backUnlocked && (localStorage.getItem(LS_EDIT_KEY)==="1");
-    updateToolsVisible();
-    updateUI();
-    render();
-  }
-});
-
-/* ===== Seed ===== */
+/* ===== Seed: jouw zinnen ===== */
 function getSeed(){
   const items = {
     "Groente&salade spullen check onderaan de pagina":false,
@@ -229,10 +248,10 @@ function getSeed(){
     "Siropen lemonade&Tiger":false,
     "Bubble tea bekers":false,
     "Dranken bijvullen":false,
-    "Milkshake en ijs bekers&deksels": false,
-    "Milkshake&ijs": false,
+    "Milkshake en ijs bekers&deksels":false,
+    "Milkshake&ijs":false,
     "Plastic zakken&enkel en dubbel":false,
-    "Rietjes": false,
+    "Rietjes":false,
     "Houdertjes":false,
     "Servetten":false,
     "Inpakzakken":false,
@@ -248,34 +267,34 @@ function getSeed(){
   return { items, order };
 }
 
-/* ===== State + realtime ===== */
+/* ===== Firestore state + realtime ===== */
 onSnapshot(doc(db,"lists",DOC_ID), async snap=>{
   if (snap.exists()){
-    const d=snap.data();
-    items=d.items||{};
-    order=Array.isArray(d.order)? d.order.filter(k=>k in items) : Object.keys(items);
+    const d = snap.data();
+    items = d.items || {};
+    order = Array.isArray(d.order) ? d.order.filter(k=>k in items) : Object.keys(items);
     Object.keys(items).forEach(k=>{ if(!order.includes(k)) order.push(k); });
   } else {
-    // eerste keer: schrijf clean document (merge:false)
-    const s=getSeed();
-    items=s.items; order=s.order;
-    await setDoc(doc(db,"lists",DOC_ID), { items:s.items, order:s.order, updatedAt: serverTimestamp() }, { merge:false });
+    const s = getSeed();
+    items = s.items;
+    order = s.order;
+    await setDoc(doc(db,"lists",DOC_ID), { items, order, updatedAt: serverTimestamp() }, { merge:false });
   }
   render();
 });
 
-/* ===== Persist helpers ===== */
+/* ===== Helpers ===== */
 async function save(p){
   await setDoc(doc(db,"lists",DOC_ID), { ...(p||{}), updatedAt: serverTimestamp() }, { merge:true });
 }
 
-/* ===== UI helpers ===== */
 function makeBtn(txt,title,onClick){
   const b=document.createElement("button");
   b.className="btn"; b.textContent=txt; b.title=title; b.type="button";
   b.addEventListener("click",(e)=>{
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation?.();
     onClick();
   },{capture:true});
   return b;
@@ -284,17 +303,73 @@ function makeBtn(txt,title,onClick){
 function updateUI(){
   const canType = backUnlocked && canEdit;
   [elNew, btnAdd].forEach(el=>{
-    if(!el) return;
-    el.disabled=!canType;
-    el.style.opacity=canType?1:.6;
-    el.style.pointerEvents=canType?"auto":"none";
+    if (!el) return;
+    el.disabled = !canType;
+    el.style.opacity = canType ? 1 : .6;
+    el.style.pointerEvents = canType ? "auto" : "none";
   });
 }
 
+/* Back Office tools tonen/verbergen */
+function updateToolsVisible(){
+  toolsBar.style.display = (backUnlocked && canEdit) ? "flex" : "none";
+}
+updateToolsVisible();
+
+/* ===== Back Office popup (met sterretjes) ===== */
+btnBackoffice.onclick = () => {
+  // toon overlay
+  lockBo.style.display = "flex";
+  boCodeInput.value = "";
+  boCodeInput.focus();
+};
+
+boOpen.onclick = () => {
+  const val = (boCodeInput.value || "").trim();
+  if (val === ADMIN_CODE){
+    backUnlocked = true;
+    canEdit = true;
+    localStorage.setItem(LS_BACK_KEY,"1");
+    lockBo.style.display = "none";
+    updateToolsVisible();
+    updateUI();
+    render();
+    alert("Back Office geopend ✅");
+  } else {
+    alert("Onjuiste code");
+    boCodeInput.value = "";
+    boCodeInput.focus();
+  }
+};
+
+/* sluit popup met Escape */
+document.addEventListener("keydown", e=>{
+  if (e.key === "Escape" && lockBo.style.display === "flex"){
+    lockBo.style.display = "none";
+  }
+});
+
+/* ===== Alles herstellen – altijd beschikbaar ===== */
+btnResetAll.onclick = () => {
+  const next = Object.fromEntries(Object.keys(items).map(k=>[k,false]));
+  items = next;
+  save({ items: next });
+};
+
+/* ===== Alleen afvinken ===== */
+bView.onclick = () => {
+  canEdit = false;
+  updateToolsVisible();
+  updateUI();
+  render();
+  alert("Alleen afvinken 🔒");
+};
+
 /* ===== Render ===== */
 function render(){
-  elList.innerHTML="";
-  const labels = order.length? order.slice() : Object.keys(items);
+  elList.innerHTML = "";
+  const labels = order.length ? order.slice() : Object.keys(items);
+
   labels.forEach((k,idx)=>{
     if (!(k in items)) return;
     const li=document.createElement("li");
@@ -302,7 +377,8 @@ function render(){
     li.dataset.index=String(idx);
 
     const cb=document.createElement("input");
-    cb.type="checkbox"; cb.checked=!!items[k];
+    cb.type="checkbox";
+    cb.checked=!!items[k];
     cb.onchange=()=>toggle(k);
 
     const span=document.createElement("div");
@@ -314,7 +390,7 @@ function render(){
       const pen=makeBtn("✏️","Naam aanpassen",()=>renameItem(k));
       const del=makeBtn("🗑️","Verwijderen",()=>removeItemConfirm(k));
 
-      // drag & drop volgorde
+      // drag & drop
       li.draggable=true;
       li.addEventListener("dragstart", e=>{
         li.classList.add("dragging");
@@ -343,6 +419,7 @@ function render(){
 
     elList.appendChild(li);
   });
+
   updateUI();
 }
 
@@ -354,7 +431,7 @@ function toggle(k){
 }
 
 function addItem(t){
-  if(!backUnlocked || !canEdit) return;
+  if (!backUnlocked || !canEdit) return;
   const x=(t||"").trim();
   if(!x) return;
   if(x in items){ alert("Bestaat al."); return; }
@@ -368,7 +445,7 @@ function addItem(t){
 }
 
 async function removeItemConfirm(k){
-  if(!backUnlocked || !canEdit) return;
+  if (!backUnlocked || !canEdit) return;
   if(!(k in items)) return;
   if(!confirm(`Verwijder "${k}"?`)) return;
 
@@ -422,9 +499,16 @@ async function renameItem(oldK){
 }
 
 /* ===== Events ===== */
-btnAdd.onclick=()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
-elNew.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addItem(elNew.value); elNew.value=""; }});
+btnAdd.onclick = ()=>{ addItem(elNew.value); elNew.value=""; elNew.focus(); };
+elNew.addEventListener("keydown", e=>{
+  if(e.key==="Enter"){
+    e.preventDefault();
+    addItem(elNew.value);
+    elNew.value="";
+  }
+});
 
+updateUI();
 </script>
 </body>
 </html>
