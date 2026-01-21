@@ -6,7 +6,7 @@
   <title>ShiftStart – Opslag</title>
   <link rel="icon" href="data:,">
   <style>
-    :root {
+    :root{
       --red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);
       --line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb;
     }
@@ -57,22 +57,11 @@
       background:#0f1320;
       display:block;
     }
-    .head{
-      font-weight:800;
-      letter-spacing:.4px;
-      margin:0 0 8px;
-      cursor:pointer;
-      user-select:none;
-      display:inline-block;
-      padding:6px 8px;
-      border-radius:10px;
-    }
-    .head.active{
-      outline:1px solid rgba(255,255,255,.25);
-    }
     .section.is-hidden{display:none}
 
+    .head{font-weight:800;letter-spacing:.4px;margin:0 0 8px}
     .divider{height:1px;background:rgba(255,255,255,.15);margin:8px 0 10px;border-radius:1px}
+
     .add{
       display:grid;
       grid-template-columns:1fr auto auto;
@@ -88,6 +77,7 @@
       color:var(--text);
     }
     select{min-width:140px}
+
     .search{margin:4px 0 8px}
     .search input{
       width:100%;
@@ -97,6 +87,28 @@
       background:#0b0f18;
       color:#eef2f8;
     }
+
+    /* ✅ Filter knoppen bovenaan */
+    .filters{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin:8px 0 12px;
+    }
+    .fbtn{
+      background:#0b0f18;
+      border:1px solid var(--line);
+      color:var(--text);
+      border-radius:999px;
+      padding:8px 10px;
+      font-weight:800;
+      cursor:pointer;
+      font-size:12px;
+      line-height:1;
+    }
+    .fbtn.active{outline:1px solid rgba(255,255,255,.25)}
+    .fbtn.reset{opacity:.9}
+
     ul{
       list-style:none;
       padding:0;
@@ -215,6 +227,9 @@
       <div class="search">
         <input id="search" type="text" placeholder="Zoeken in alle items..." />
       </div>
+
+      <!-- ✅ Filterbalk -->
+      <div class="filters" id="filtersBar"></div>
 
       <div class="add">
         <input id="newItem" type="text" placeholder="Nieuw item..." />
@@ -368,50 +383,86 @@ const lists = {
   "OVERIG":     document.getElementById("list-OVERIG"),
 };
 
-/* ===== Categorie filter (klik op kop) ===== */
-let activeCat = null;
-
-function applyCategoryFilter(){
-  const sections = document.querySelectorAll(".section");
-  sections.forEach(sec => {
-    const cat  = sec.dataset.cat;
-    const head = sec.querySelector(".head");
-    const hide = activeCat && cat !== activeCat;
-
-    sec.classList.toggle("is-hidden", !!hide);
-    if (head){
-      head.classList.toggle("active", !!activeCat && cat === activeCat);
-    }
-  });
-}
-
-function setupCategoryClicks(){
-  document.querySelectorAll(".section .head").forEach(head => {
-    if (head.dataset.bound === "1") return;
-    head.dataset.bound = "1";
-
-    head.addEventListener("click", () => {
-      const sec = head.closest(".section");
-      const cat = sec?.dataset?.cat;
-      if (!cat) return;
-
-      activeCat = (activeCat === cat) ? null : cat;
-
-      // bij filter: zoekbalk leeg
-      if (activeCat){
-        searchTerm = "";
-        elSearch.value = "";
-      }
-      render();
-    });
-  });
-}
-setupCategoryClicks();
+const filtersBar = document.getElementById("filtersBar");
 
 /* ===== Firestore state ===== */
 let items = {};
 let orderPerCat = {};
 let searchTerm = "";
+
+/* ===== Categorie filter state ===== */
+let activeCat = null;
+
+const CAT_LABELS = {
+  PAPIER: "PAPIER",
+  BALIE: "BALIE",
+  VERPAKKING: "VERPAKKING",
+  BUBBLETEA: "BUBBLE TEA",
+  SAUZEN: "SAUZEN",
+  IJS_SHAKE: "IJS/ SHAKE",
+  DRANK: "DRANKEN",
+  OVERIG: "OVERIG",
+};
+
+function applyCategoryFilter(){
+  const sections = document.querySelectorAll(".section");
+  sections.forEach(sec => {
+    const cat = sec.dataset.cat;
+    const hide = activeCat && cat !== activeCat;
+    sec.classList.toggle("is-hidden", !!hide);
+  });
+}
+
+function updateFilterButtons(){
+  if (!filtersBar) return;
+  filtersBar.querySelectorAll(".fbtn").forEach(btn => {
+    const cat = btn.dataset.cat;
+    if (!cat) return;
+    btn.classList.toggle("active", activeCat === cat);
+  });
+}
+
+function buildFilterButtons(){
+  if (!filtersBar) return;
+  filtersBar.innerHTML = "";
+
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "fbtn reset";
+  reset.textContent = "Toon alles";
+  reset.addEventListener("click", () => {
+    activeCat = null;
+    applyCategoryFilter();
+    updateFilterButtons();
+  });
+  filtersBar.appendChild(reset);
+
+  Object.keys(lists).forEach(cat => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "fbtn";
+    b.dataset.cat = cat;
+    b.textContent = CAT_LABELS[cat] || cat;
+
+    b.addEventListener("click", () => {
+      activeCat = (activeCat === cat) ? null : cat;
+
+      // bij filter: zoek leeg
+      if (activeCat){
+        searchTerm = "";
+        elSearch.value = "";
+      }
+
+      applyCategoryFilter();
+      updateFilterButtons();
+    });
+
+    filtersBar.appendChild(b);
+  });
+
+  updateFilterButtons();
+}
+buildFilterButtons();
 
 /* ===== Seed ===== */
 function baseCats(){
@@ -475,6 +526,12 @@ function getSeed(){
 /* live search */
 elSearch.addEventListener("input", () => {
   searchTerm = (elSearch.value || "").toLowerCase().trim();
+
+  // als je typt: filter uit zodat zoeken overal werkt
+  if (searchTerm){
+    activeCat = null;
+    updateFilterButtons();
+  }
   render();
 });
 
@@ -557,11 +614,6 @@ function render(){
 
   const hasSearch = !!searchTerm;
 
-  // Als je zoekt: zet categorie-filter uit (zoeken is dan over alles)
-  if (hasSearch && activeCat){
-    activeCat = null;
-  }
-
   for (const [cat, ul] of Object.entries(lists)){
     if (!ul) continue;
     const keys = (orderPerCat[cat] || []).filter(k => k in items);
@@ -620,7 +672,7 @@ function render(){
       const pen = makeBtn("✏️","Naam aanpassen", () => renameItem(k));
       const del = makeBtn("🗑️","Verwijderen",   () => removeItemConfirm(k));
 
-      // drag & drop alleen als er NIET gezocht wordt (anders wordt het chaotisch)
+      // drag & drop alleen als er NIET gezocht wordt
       if (!hasSearch){
         li.draggable = true;
         li.addEventListener("dragstart", e => {
@@ -629,9 +681,7 @@ function render(){
             JSON.stringify({ cat, from: idx })
           );
         });
-        li.addEventListener("dragend", () => {
-          li.classList.remove("dragging");
-        });
+        li.addEventListener("dragend", () => li.classList.remove("dragging"));
         li.addEventListener("dragover", e => e.preventDefault());
         li.addEventListener("drop", e => {
           e.preventDefault();
@@ -659,6 +709,7 @@ function render(){
   }
 
   applyCategoryFilter();
+  updateFilterButtons();
 }
 
 /* ===== Acties ===== */
