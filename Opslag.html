@@ -6,6 +6,13 @@
   <title>ShiftStart – Opslag</title>
   <link rel="icon" href="data:,">
   <style>
+
+
+    /* ✅ Categorie-filter */
+.section { display:block; }
+.section.is-hidden { display:none; }
+.section .head { cursor:pointer; user-select:none; }
+.section .head.active { outline:1px solid rgba(255,255,255,.25); border-radius:10px; padding:6px 8px; display:inline-block; }
     :root {
       --red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);
       --line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb;
@@ -219,53 +226,37 @@
       </div>
 
       <div class="cols">
-        <section class="section">
-          <div class="head">PAPIER & ZAKKEN</div>
-          <div class="divider"></div>
-          <ul id="list-PAPIER"></ul>
-        </section>
+       <section class="section" data-cat="PAPIER">
+...
+</section>
 
-        <section class="section">
-          <div class="head">BALIE & SERVIES</div>
-          <div class="divider"></div>
-          <ul id="list-BALIE"></ul>
-        </section>
+<section class="section" data-cat="BALIE">
+...
+</section>
 
-        <section class="section">
-          <div class="head">VERPAKKING</div>
-          <div class="divider"></div>
-          <ul id="list-VERPAKKING"></ul>
-        </section>
+<section class="section" data-cat="VERPAKKING">
+...
+</section>
 
-        <section class="section">
-          <div class="head">BUBBLE TEA</div>
-          <div class="divider"></div>
-          <ul id="list-BUBBLETEA"></ul>
-        </section>
+<section class="section" data-cat="BUBBLETEA">
+...
+</section>
 
-        <section class="section">
-          <div class="head">SAUZEN</div>
-          <div class="divider"></div>
-          <ul id="list-SAUZEN"></ul>
-        </section>
+<section class="section" data-cat="SAUZEN">
+...
+</section>
 
-        <section class="section">
-          <div class="head">IJS · SHAKE · TOPPING</div>
-          <div class="divider"></div>
-          <ul id="list-IJS_SHAKE"></ul>
-        </section>
+<section class="section" data-cat="IJS_SHAKE">
+...
+</section>
 
-        <section class="section">
-          <div class="head">DRANKEN</div>
-          <div class="divider"></div>
-          <ul id="list-DRANK"></ul>
-        </section>
+<section class="section" data-cat="DRANK">
+...
+</section>
 
-        <section class="section">
-          <div class="head">OVERIG</div>
-          <div class="divider"></div>
-          <ul id="list-OVERIG"></ul>
-        </section>
+<section class="section" data-cat="OVERIG">
+...
+</section>
       </div>
 
       <p class="hint">
@@ -297,6 +288,7 @@ const codeInput = document.getElementById("codeInput");
 const btnUnlock = document.getElementById("btnUnlock");
 
 function updateLockUI(){
+  setupCategoryClicks();
   const unlocked = localStorage.getItem(LS_KEY_UNLOCK) === "1";
   if (unlocked){
     lockedEl.style.display  = "none";
@@ -365,6 +357,46 @@ const btnAdd   = document.getElementById("btnAdd");
 const elSearch = document.getElementById("search");
 
 const lists   = {
+
+  /* ===== Categorie filter (klik op kop) ===== */
+let activeCat = null;
+
+function applyCategoryFilter(){
+  const sections = document.querySelectorAll(".section");
+  sections.forEach(sec => {
+    const cat = sec.dataset.cat;
+    const head = sec.querySelector(".head");
+    const hide = activeCat && cat !== activeCat;
+    sec.classList.toggle("is-hidden", !!hide);
+
+    if (head){
+      head.classList.toggle("active", !!activeCat && cat === activeCat);
+    }
+  });
+}
+
+function setupCategoryClicks(){
+  document.querySelectorAll(".section .head").forEach(head => {
+    head.addEventListener("click", () => {
+      const sec = head.closest(".section");
+      const cat = sec?.dataset?.cat;
+      if (!cat) return;
+
+      // toggle: klik op dezelfde cat -> uit
+      activeCat = (activeCat === cat) ? null : cat;
+
+      // als je filtert, leeg de zoekbalk zodat het niet “raar” voelt
+      // (optioneel, maar werkt meestal fijner)
+      if (activeCat){
+        searchTerm = "";
+        elSearch.value = "";
+      }
+
+      applyCategoryFilter();
+      render(); // opnieuw renderen zodat je meteen juiste view ziet
+    });
+  });
+}
   "PAPIER":     document.getElementById("list-PAPIER"),
   "BALIE":      document.getElementById("list-BALIE"),
   "VERPAKKING": document.getElementById("list-VERPAKKING"),
@@ -510,7 +542,10 @@ function render(){
   Object.values(lists).forEach(ul => { if (ul) ul.innerHTML = ""; });
 
   const hasSearch = !!searchTerm;
-
+  // als je zoekt: zet categorie-filter uit (zoeken is dan over alles)
+  if (hasSearch && activeCat){
+    activeCat = null;
+  }
   for (const [cat, ul] of Object.entries(lists)){
     if (!ul) continue;
     const keys = (orderPerCat[cat] || []).filter(k => k in items);
@@ -644,6 +679,7 @@ async function removeItemConfirm(k){
   delete items[k];
   orderPerCat[c] = (orderPerCat[c] || []).filter(x => x !== k);
   await save({ items, orderPerCat });
+    applyCategoryFilter();
   render();
 }
 
