@@ -6,13 +6,6 @@
   <title>ShiftStart – Opslag</title>
   <link rel="icon" href="data:,">
   <style>
-
-
-    /* ✅ Categorie-filter */
-.section { display:block; }
-.section.is-hidden { display:none; }
-.section .head { cursor:pointer; user-select:none; }
-.section .head.active { outline:1px solid rgba(255,255,255,.25); border-radius:10px; padding:6px 8px; display:inline-block; }
     :root {
       --red:#a31212;--black:#0b0b0f;--panel:rgba(21,25,34,.86);
       --line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb;
@@ -62,8 +55,23 @@
       border-radius:14px;
       padding:12px 12px 14px;
       background:#0f1320;
+      display:block;
     }
-    .head{font-weight:800;letter-spacing:.4px;margin:0 0 8px}
+    .head{
+      font-weight:800;
+      letter-spacing:.4px;
+      margin:0 0 8px;
+      cursor:pointer;
+      user-select:none;
+      display:inline-block;
+      padding:6px 8px;
+      border-radius:10px;
+    }
+    .head.active{
+      outline:1px solid rgba(255,255,255,.25);
+    }
+    .section.is-hidden{display:none}
+
     .divider{height:1px;background:rgba(255,255,255,.15);margin:8px 0 10px;border-radius:1px}
     .add{
       display:grid;
@@ -80,9 +88,7 @@
       color:var(--text);
     }
     select{min-width:140px}
-    .search{
-      margin:4px 0 8px;
-    }
+    .search{margin:4px 0 8px}
     .search input{
       width:100%;
       padding:10px 12px;
@@ -226,37 +232,53 @@
       </div>
 
       <div class="cols">
-       <section class="section" data-cat="PAPIER">
-...
-</section>
+        <section class="section" data-cat="PAPIER">
+          <div class="head">PAPIER & ZAKKEN</div>
+          <div class="divider"></div>
+          <ul id="list-PAPIER"></ul>
+        </section>
 
-<section class="section" data-cat="BALIE">
-...
-</section>
+        <section class="section" data-cat="BALIE">
+          <div class="head">BALIE & SERVIES</div>
+          <div class="divider"></div>
+          <ul id="list-BALIE"></ul>
+        </section>
 
-<section class="section" data-cat="VERPAKKING">
-...
-</section>
+        <section class="section" data-cat="VERPAKKING">
+          <div class="head">VERPAKKING</div>
+          <div class="divider"></div>
+          <ul id="list-VERPAKKING"></ul>
+        </section>
 
-<section class="section" data-cat="BUBBLETEA">
-...
-</section>
+        <section class="section" data-cat="BUBBLETEA">
+          <div class="head">BUBBLE TEA</div>
+          <div class="divider"></div>
+          <ul id="list-BUBBLETEA"></ul>
+        </section>
 
-<section class="section" data-cat="SAUZEN">
-...
-</section>
+        <section class="section" data-cat="SAUZEN">
+          <div class="head">SAUZEN</div>
+          <div class="divider"></div>
+          <ul id="list-SAUZEN"></ul>
+        </section>
 
-<section class="section" data-cat="IJS_SHAKE">
-...
-</section>
+        <section class="section" data-cat="IJS_SHAKE">
+          <div class="head">IJS · SHAKE · TOPPING</div>
+          <div class="divider"></div>
+          <ul id="list-IJS_SHAKE"></ul>
+        </section>
 
-<section class="section" data-cat="DRANK">
-...
-</section>
+        <section class="section" data-cat="DRANK">
+          <div class="head">DRANKEN</div>
+          <div class="divider"></div>
+          <ul id="list-DRANK"></ul>
+        </section>
 
-<section class="section" data-cat="OVERIG">
-...
-</section>
+        <section class="section" data-cat="OVERIG">
+          <div class="head">OVERIG</div>
+          <div class="divider"></div>
+          <ul id="list-OVERIG"></ul>
+        </section>
       </div>
 
       <p class="hint">
@@ -269,7 +291,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=15";
 
 /* ===== Firebase ===== */
@@ -288,7 +310,6 @@ const codeInput = document.getElementById("codeInput");
 const btnUnlock = document.getElementById("btnUnlock");
 
 function updateLockUI(){
-  setupCategoryClicks();
   const unlocked = localStorage.getItem(LS_KEY_UNLOCK) === "1";
   if (unlocked){
     lockedEl.style.display  = "none";
@@ -330,73 +351,13 @@ const bSeed  = document.createElement("button"); bSeed.textContent  = "Reset naa
 const bLock  = document.createElement("button"); bLock.textContent  = "🔐 Vergrendel";
 tools.replaceChildren(bReset,bSeed,bLock);
 
-bReset.onclick = () => {
-  for (const k in items){
-    if (!items[k]) continue;
-    items[k].done = false;
-    items[k].qty  = 0;
-  }
-  save({ items });
-};
-
-bSeed.onclick  = async () => {
-  if(!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
-  await hardSeed();
-  render();
-};
-
-bLock.onclick  = () => {
-  localStorage.removeItem(LS_KEY_UNLOCK);
-  window.location.href = "index.html";
-};
-
 /* ===== UI refs ===== */
 const elNew    = document.getElementById("newItem");
 const elCat    = document.getElementById("newCat");
 const btnAdd   = document.getElementById("btnAdd");
 const elSearch = document.getElementById("search");
 
-const lists   = {
-
-  /* ===== Categorie filter (klik op kop) ===== */
-let activeCat = null;
-
-function applyCategoryFilter(){
-  const sections = document.querySelectorAll(".section");
-  sections.forEach(sec => {
-    const cat = sec.dataset.cat;
-    const head = sec.querySelector(".head");
-    const hide = activeCat && cat !== activeCat;
-    sec.classList.toggle("is-hidden", !!hide);
-
-    if (head){
-      head.classList.toggle("active", !!activeCat && cat === activeCat);
-    }
-  });
-}
-
-function setupCategoryClicks(){
-  document.querySelectorAll(".section .head").forEach(head => {
-    head.addEventListener("click", () => {
-      const sec = head.closest(".section");
-      const cat = sec?.dataset?.cat;
-      if (!cat) return;
-
-      // toggle: klik op dezelfde cat -> uit
-      activeCat = (activeCat === cat) ? null : cat;
-
-      // als je filtert, leeg de zoekbalk zodat het niet “raar” voelt
-      // (optioneel, maar werkt meestal fijner)
-      if (activeCat){
-        searchTerm = "";
-        elSearch.value = "";
-      }
-
-      applyCategoryFilter();
-      render(); // opnieuw renderen zodat je meteen juiste view ziet
-    });
-  });
-}
+const lists = {
   "PAPIER":     document.getElementById("list-PAPIER"),
   "BALIE":      document.getElementById("list-BALIE"),
   "VERPAKKING": document.getElementById("list-VERPAKKING"),
@@ -407,6 +368,51 @@ function setupCategoryClicks(){
   "OVERIG":     document.getElementById("list-OVERIG"),
 };
 
+/* ===== Categorie filter (klik op kop) ===== */
+let activeCat = null;
+
+function applyCategoryFilter(){
+  const sections = document.querySelectorAll(".section");
+  sections.forEach(sec => {
+    const cat  = sec.dataset.cat;
+    const head = sec.querySelector(".head");
+    const hide = activeCat && cat !== activeCat;
+
+    sec.classList.toggle("is-hidden", !!hide);
+    if (head){
+      head.classList.toggle("active", !!activeCat && cat === activeCat);
+    }
+  });
+}
+
+function setupCategoryClicks(){
+  document.querySelectorAll(".section .head").forEach(head => {
+    if (head.dataset.bound === "1") return;
+    head.dataset.bound = "1";
+
+    head.addEventListener("click", () => {
+      const sec = head.closest(".section");
+      const cat = sec?.dataset?.cat;
+      if (!cat) return;
+
+      activeCat = (activeCat === cat) ? null : cat;
+
+      // bij filter: zoekbalk leeg
+      if (activeCat){
+        searchTerm = "";
+        elSearch.value = "";
+      }
+      render();
+    });
+  });
+}
+setupCategoryClicks();
+
+/* ===== Firestore state ===== */
+let items = {};
+let orderPerCat = {};
+let searchTerm = "";
+
 /* ===== Seed ===== */
 function baseCats(){
   return {
@@ -415,9 +421,7 @@ function baseCats(){
       "Inpakkzakken groot","Inpakzakken medium","Inpakzakken klein",
       "Servetten","Tork"
     ],
-    BALIE: [
-      "Houdertjes 2","Houdertjes 4"
-    ],
+    BALIE: ["Houdertjes 2","Houdertjes 4"],
     VERPAKKING: [
       "Dunnerbox klein","Dunnerbox medium","Dunnerbox groot",
       "Groot frietdoos","Medium frietdoos",
@@ -427,9 +431,7 @@ function baseCats(){
       "Saladebakken 1000mm","Saladebakken 500mm",
       "Cheezin bakjes","Cheezin vorkjes"
     ],
-    BUBBLETEA: [
-      "Matcha","Ice coffee","Thee"
-    ],
+    BUBBLETEA: ["Matcha","Ice coffee","Thee"],
     SAUZEN: [
       "Knoflook saus","Curry saus","Tartaar saus","Truffel saus",
       "Big saus","Chicken saus","Samurai saus","Bacon saus",
@@ -464,20 +466,11 @@ function baseCats(){
 function getSeed(){
   const cats = baseCats();
   const items = {};
-  Object.values(cats).flat().forEach(k => {
-    items[k] = { done:false, qty:0 };
-  });
+  Object.values(cats).flat().forEach(k => items[k] = { done:false, qty:0 });
   const orderPerCat = {};
-  Object.keys(cats).forEach(cat => {
-    orderPerCat[cat] = cats[cat].slice();
-  });
+  Object.keys(cats).forEach(cat => orderPerCat[cat] = cats[cat].slice());
   return { items, orderPerCat };
 }
-
-/* ===== Firestore state ===== */
-let items = {};
-let orderPerCat = {};
-let searchTerm = "";
 
 /* live search */
 elSearch.addEventListener("input", () => {
@@ -515,6 +508,27 @@ async function hardSeed(){
   );
 }
 
+/* toolbar actions */
+bReset.onclick = () => {
+  for (const k in items){
+    if (!items[k]) continue;
+    items[k].done = false;
+    items[k].qty  = 0;
+  }
+  save({ items });
+};
+
+bSeed.onclick = async () => {
+  if(!confirm("Resetten naar begin-lijst? (Iedereen ziet dit)")) return;
+  await hardSeed();
+  render();
+};
+
+bLock.onclick = () => {
+  localStorage.removeItem(LS_KEY_UNLOCK);
+  window.location.href = "index.html";
+};
+
 /* ===== Helpers ===== */
 function catOf(lbl){
   for (const [c, arr] of Object.entries(orderPerCat)){
@@ -542,10 +556,12 @@ function render(){
   Object.values(lists).forEach(ul => { if (ul) ul.innerHTML = ""; });
 
   const hasSearch = !!searchTerm;
-  // als je zoekt: zet categorie-filter uit (zoeken is dan over alles)
+
+  // Als je zoekt: zet categorie-filter uit (zoeken is dan over alles)
   if (hasSearch && activeCat){
     activeCat = null;
   }
+
   for (const [cat, ul] of Object.entries(lists)){
     if (!ul) continue;
     const keys = (orderPerCat[cat] || []).filter(k => k in items);
@@ -616,18 +632,14 @@ function render(){
         li.addEventListener("dragend", () => {
           li.classList.remove("dragging");
         });
-        li.addEventListener("dragover", e => {
-          e.preventDefault();
-        });
+        li.addEventListener("dragover", e => e.preventDefault());
         li.addEventListener("drop", e => {
           e.preventDefault();
           let data;
-          try {
-            data = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
-          } catch {
-            data = null;
-          }
+          try { data = JSON.parse(e.dataTransfer.getData("text/plain") || "{}"); }
+          catch { data = null; }
           if (!data || data.cat !== cat) return;
+
           const from = data.from;
           const to   = Number(li.dataset.idx);
           if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return;
@@ -645,6 +657,8 @@ function render(){
       ul.appendChild(li);
     });
   }
+
+  applyCategoryFilter();
 }
 
 /* ===== Acties ===== */
@@ -657,12 +671,7 @@ async function renameItem(oldK){
   const c = catOf(oldK);
   if (!items[oldK]) return;
 
-  const exists = !!items[n];
-  if (exists){
-    items[n] = items[oldK];
-  } else {
-    items[n] = items[oldK];
-  }
+  items[n] = items[oldK];
   delete items[oldK];
 
   const arr = (orderPerCat[c] || []).map(x => x === oldK ? n : x);
@@ -679,7 +688,6 @@ async function removeItemConfirm(k){
   delete items[k];
   orderPerCat[c] = (orderPerCat[c] || []).filter(x => x !== k);
   await save({ items, orderPerCat });
-    applyCategoryFilter();
   render();
 }
 
