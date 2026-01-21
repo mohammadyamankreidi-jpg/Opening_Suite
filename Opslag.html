@@ -6,34 +6,16 @@
   <title>ShiftStart – Opslag</title>
   <link rel="icon" href="data:,">
   <style>
-    /* ===== Licht thema fixes ===== */
-body{
-  color:#0b0b0f;
-}
+ :root {
+  --red:#a31212;
 
-.head,
-.label,
-.h,
-.brand .h{
-  color:#0b0b0f;
+  /* ✅ licht thema kleuren */
+  --black:#ffffff;
+  --panel:#ffffff;
+  --line:#e2e6ef;
+  --text:#0b0b0f;     /* 👈 DIT IS DE BELANGRIJKE */
+  --muted:#5f6b85;
 }
-
-.brand .s,
-.hint,
-footer.note{
-  color:#5f6b85;
-}
-
-li.item{
-  background:#ffffff;
-  border:1px solid #e2e6ef;
-  color:#0b0b0f;
-}
-
-li.item.done{
-  color:#6b7280;
-}
-
 input,
 select{
   background:#ffffff;
@@ -65,10 +47,10 @@ select{
       --line:#2a2f3a;--text:#eef2f8;--muted:#9fb0cb;
     }
     *{box-sizing:border-box} html,body{height:100%}
-   body{
+  body{
   margin:0;
-  background:#ffffff; /* ✅ rustige witte achtergrond */
-  color:#0b0b0f;
+  background:#ffffff;
+  color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
 }
     .wrap{max-width:980px;margin:0 auto;padding:28px 18px 40px}
